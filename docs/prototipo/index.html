@@ -1,0 +1,793 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>APP FET Pasantías</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+<style>
+/*
+  Sistema visual APP FET
+  - Neutros fríos (slate) + un solo acento cobalto. Verde, ámbar y rojo solo para estados.
+  - Radios: controles 8px, paneles 12px, chips y estados en píldora. Sin excepciones.
+  - Tipografía: Geist (texto e interfaz), Geist Mono (códigos, cifras de repositorio).
+  - Íconos: Tabler Icons (outline), trazo 1.75.
+*/
+:root{
+  --bg:#F5F6F8; --surface:#FCFCFD; --surface-2:#EFF1F4; --line:#E1E4EA; --line-strong:#CDD2DB;
+  --ink:#15171C; --ink-2:#474D5B; --ink-3:#646B7B;
+  --accent:#2E4BC6; --accent-hover:#253FAA; --accent-ink:#FCFCFD; --accent-soft:#E9EDFB; --accent-text:#2A44B3;
+  --ok:#1A7349; --ok-bg:#E2F2E9; --warn:#8F5405; --warn-bg:#FAEFD9; --bad:#AF2A20; --bad-bg:#FAE6E3;
+  --gh0:#E7EAEF; --gh1:#C3CEF3; --gh2:#8FA3E8; --gh3:#5670D6; --gh4:#2E4BC6;
+  --shadow:0 1px 2px rgb(21 30 60 / .06), 0 4px 16px rgb(21 30 60 / .05);
+  --r-ctl:8px; --r-panel:12px;
+  --f:"Geist", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1014; --surface:#15181E; --surface-2:#1C2028; --line:#262B35; --line-strong:#353B47;
+    --ink:#ECEEF2; --ink-2:#B4B9C4; --ink-3:#8D93A1;
+    --accent:#8FA3F0; --accent-hover:#A7B7F4; --accent-ink:#0E1014; --accent-soft:#1D2542; --accent-text:#A9B8F5;
+    --ok:#74CF9E; --ok-bg:#15352A; --warn:#EDB45F; --warn-bg:#3A2B12; --bad:#F2998F; --bad-bg:#3F1E1B;
+    --gh0:#1F232C; --gh1:#243462; --gh2:#34509A; --gh3:#5B77D8; --gh4:#8FA3F0;
+    --shadow:0 1px 2px rgb(0 0 0 / .3), 0 4px 16px rgb(0 0 0 / .25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1014; --surface:#15181E; --surface-2:#1C2028; --line:#262B35; --line-strong:#353B47;
+  --ink:#ECEEF2; --ink-2:#B4B9C4; --ink-3:#8D93A1;
+  --accent:#8FA3F0; --accent-hover:#A7B7F4; --accent-ink:#0E1014; --accent-soft:#1D2542; --accent-text:#A9B8F5;
+  --ok:#74CF9E; --ok-bg:#15352A; --warn:#EDB45F; --warn-bg:#3A2B12; --bad:#F2998F; --bad-bg:#3F1E1B;
+  --gh0:#1F232C; --gh1:#243462; --gh2:#34509A; --gh3:#5B77D8; --gh4:#8FA3F0;
+  --shadow:0 1px 2px rgb(0 0 0 / .3), 0 4px 16px rgb(0 0 0 / .25);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p{margin:0}
+h1{font-size:clamp(24px,2.4vw,30px);font-weight:600;letter-spacing:-.02em;line-height:1.15;text-wrap:balance}
+h2{font-size:17px;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+code,.mono{font-family:var(--f-mono);font-size:.9em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ic{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--ink-2)}
+.fine{font-size:13px;color:var(--ink-3)}
+
+/* ---------- Botones ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:var(--r-ctl);padding:9px 16px;font-weight:600;font-size:14px;white-space:nowrap;background:var(--accent);color:var(--accent-ink);transition:background-color .15s, transform .1s}
+.btn:hover{background:var(--accent-hover)}
+.btn:active{transform:translateY(1px)}
+.btn.sec{background:var(--surface);color:var(--ink);border-color:var(--line-strong)}
+.btn.sec:hover{background:var(--surface-2)}
+.btn.good{background:var(--ok);color:var(--surface)}
+.btn.danger{background:transparent;color:var(--bad);border-color:currentColor}
+.btn.danger:hover{background:var(--bad-bg)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.btn[disabled]{background:var(--surface-2);color:var(--ink-3);border-color:transparent;cursor:not-allowed;transform:none}
+.btn .ic{width:16px;height:16px}
+
+/* ---------- Estados y etiquetas ---------- */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.b-ok{background:var(--ok-bg);color:var(--ok)} .b-warn{background:var(--warn-bg);color:var(--warn)} .b-bad{background:var(--bad-bg);color:var(--bad)}
+.b-info{background:var(--accent-soft);color:var(--accent-text)} .b-neutral{background:var(--surface-2);color:var(--ink-2)}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--ink-2);border:1px solid var(--line-strong);border-radius:999px;padding:2px 10px 2px 8px;white-space:nowrap}
+.tag .ic{width:14px;height:14px}
+.tag.on{border-color:var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+
+/* ---------- Formularios ---------- */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:13px;font-weight:600;color:var(--ink-2)}
+.input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-ctl);padding:10px 12px;width:100%}
+.input::placeholder{color:var(--ink-3)}
+.input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.input[readonly]{background:var(--surface-2);color:var(--ink-2)}
+.help{font-size:12.5px;color:var(--ink-3)}
+.error{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--bad);background:var(--bad-bg);border-radius:var(--r-ctl);padding:10px 12px}
+.error .ic{margin-top:1px}
+.input-ic{position:relative}
+.input-ic .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);pointer-events:none}
+.input-ic .input{padding-left:38px}
+
+/* ---------- Login ---------- */
+.login{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:100%}
+.l-art{background:var(--accent-soft);padding:clamp(24px,4vw,56px);display:flex;flex-direction:column;gap:40px;position:relative;overflow:hidden}
+/* Espacio para foto real del campus: define --login-photo:url(...) en .l-art para mostrarla detrás del contenido */
+.l-art::before{content:"";position:absolute;inset:0;background:var(--login-photo,none) center/cover;opacity:.18;pointer-events:none}
+.l-art > *{position:relative}
+.l-body{margin-block:auto;display:flex;flex-direction:column;gap:32px}
+.l-copy{display:flex;flex-direction:column;gap:14px;max-width:36rem}
+.l-copy h1{font-size:clamp(28px,2.9vw,40px);letter-spacing:-.03em;line-height:1.05}
+.l-copy p{font-size:16px;color:var(--ink-2);max-width:36ch}
+.preview{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-panel);box-shadow:var(--shadow);max-width:30rem;overflow:hidden}
+.preview-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 16px}
+.preview-row + .preview-row{border-top:1px solid var(--line)}
+.preview-cap{font-size:12.5px;color:var(--ink-3);padding:10px 16px;background:var(--surface-2)}
+.l-form{display:flex;align-items:center;justify-content:center;padding-block:40px;padding-inline:16px;background:var(--bg)}
+.l-card{width:min(400px,100%);display:flex;flex-direction:column;gap:18px}
+.l-card h2{font-size:22px;letter-spacing:-.02em}
+.btn.block{width:100%;padding:12px 16px}
+.demo-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding-top:6px;border-top:1px solid var(--line)}
+.demo-groups h3{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-bottom:6px}
+.demo-groups ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.demo{width:100%;text-align:left;background:transparent;border:0;border-radius:var(--r-ctl);padding:7px 8px;display:flex;flex-direction:column;gap:1px}
+.demo:hover{background:var(--surface-2)}
+.demo b{font-size:13.5px;font-weight:600}
+.demo span{font-size:12px;color:var(--ink-3)}
+
+/* ---------- Estructura de la app ---------- */
+.app{display:grid;grid-template-columns:256px minmax(0,1fr);min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:env(safe-area-inset-top,0px);height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding-inline:6px}
+.mark{width:30px;height:30px;border-radius:var(--r-ctl);background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:15px;letter-spacing:-.02em}
+.brand b{font-weight:700;letter-spacing:-.01em;display:block;line-height:1.2}
+.brand small{font-size:12px;color:var(--ink-3)}
+.me{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:var(--r-panel)}
+.av{width:38px;height:38px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center;font-weight:600;font-size:13.5px;letter-spacing:.02em}
+.av.lg{width:44px;height:44px;font-size:15px}
+.me b{display:block;font-size:14px;line-height:1.3}
+.me span{display:block;font-size:12.5px;color:var(--ink-3);line-height:1.35}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;background:transparent;border:0;border-radius:var(--r-ctl);padding:9px 10px;text-align:left;color:var(--ink-2);width:100%;font-weight:500}
+.nav button:hover{background:var(--surface-2);color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.count{font-family:var(--f-mono);font-size:11.5px;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 7px;font-weight:500}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:6px}
+.side-foot button{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:var(--r-ctl);padding:9px 10px;color:var(--ink-2);font-weight:500;width:100%}
+.side-foot button:hover{background:var(--surface-2);color:var(--ink)}
+
+.main{min-width:0;padding-block:32px 56px;padding-inline:clamp(16px,3.5vw,40px)}
+.main-in{max-width:1120px;display:flex;flex-direction:column;gap:20px}
+.ph{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between}
+.ph > div:first-child{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ph p{color:var(--ink-2);max-width:62ch}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-panel);padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel.flush{padding:0;gap:0;overflow:hidden}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.callout{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px 20px;align-items:center;background:var(--accent-soft);border-radius:var(--r-panel);padding:14px 18px}
+.callout > .ic{width:22px;height:22px;color:var(--accent-text)}
+.callout p{color:var(--ink-2)}
+.callout p b{color:var(--ink)}
+.figs{display:flex;gap:24px}
+.fig b{display:block;font-size:22px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.fig span{font-size:12.5px;color:var(--ink-3)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--surface-2);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:500;color:var(--ink-2);display:inline-flex;gap:8px;align-items:center}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.seg .n{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
+.search{width:min(320px,100%)}
+
+/* ---------- Filas de vacantes y solicitudes ---------- */
+.rowi{display:grid;grid-template-columns:44px minmax(0,1fr) 210px;gap:16px;padding:18px 20px;align-items:start}
+.rowi + .rowi{border-top:1px solid var(--line)}
+.rowi.dim .rowi-main{opacity:.62}
+.logo{width:44px;height:44px;border-radius:var(--r-ctl);background:var(--surface-2);display:grid;place-items:center;font-weight:600;color:var(--ink-2);font-size:14px}
+.rowi-main{display:flex;flex-direction:column;gap:8px;min-width:0}
+.rowi h3{font-size:15.5px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.rowi .sub{font-size:13.5px;color:var(--ink-2)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.facts{display:flex;flex-wrap:wrap;gap:4px 22px;margin:0}
+.facts div{display:flex;gap:6px;font-size:13px}
+.facts dt{color:var(--ink-3)} .facts dd{margin:0;font-weight:500}
+.rowi-act{display:flex;flex-direction:column;align-items:flex-end;gap:8px;text-align:right}
+.rowi-act .fine{max-width:210px}
+.empty{padding:40px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--ink-2)}
+.empty .ic{width:28px;height:28px;color:var(--ink-3)}
+
+.req{display:flex;flex-wrap:wrap;gap:6px}
+.decide{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:end}
+.note-box{font-size:13.5px;color:var(--ink-2);background:var(--surface-2);border-radius:var(--r-ctl);padding:9px 12px}
+.who{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
+.who b{display:block;font-size:15px;font-weight:600}
+.who span{font-size:13px;color:var(--ink-3)}
+
+/* ---------- Tablas ---------- */
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:11px 20px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface-2)}
+td{padding:13px 20px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td small{display:block;color:var(--ink-3);font-size:12.5px;margin-top:2px}
+
+/* ---------- Pasantía ---------- */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r-panel);background:var(--surface);overflow:hidden}
+.kpi{padding:16px 18px}
+.kpi + .kpi{border-left:1px solid var(--line)}
+.kpi b{display:block;font-size:26px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi span{font-size:13px;color:var(--ink-3)}
+.meter{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.meter span{display:block;height:100%;background:var(--accent);border-radius:999px}
+.split{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 20px;margin:0}
+.kv dt{font-size:12.5px;color:var(--ink-3)} .kv dd{margin:2px 0 0;font-weight:500}
+.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:end}
+.form-grid .wide{grid-column:1 / -1}
+.lines{display:flex;flex-direction:column}
+.line{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0}
+.line + .line{border-top:1px solid var(--line)}
+.line b{display:block;font-weight:600}
+.line span{font-size:13px;color:var(--ink-3)}
+
+/* ---------- Repositorio ---------- */
+.repo-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--f-mono);font-size:13.5px}
+.repo-h .ic{color:var(--ink-3)}
+.bars{display:flex;align-items:flex-end;gap:4px;height:44px}
+.bars i{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:3px;opacity:.85}
+.commits{display:flex;flex-direction:column}
+.commit{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:9px 0;font-size:13.5px}
+.commit + .commit{border-top:1px solid var(--line)}
+.commit code{color:var(--ink-3);font-size:12px}
+.commit small{color:var(--ink-3);font-size:12.5px;white-space:nowrap}
+.gh-top{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:center}
+.gh-top .av{width:52px;height:52px;font-size:17px}
+.gh-nums{display:flex;flex-wrap:wrap;gap:28px}
+.contrib-wrap{overflow-x:auto}
+.contrib{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px;width:max-content}
+.contrib i{width:11px;height:11px;border-radius:2px;background:var(--gh0)}
+.contrib i[data-l="1"]{background:var(--gh1)} .contrib i[data-l="2"]{background:var(--gh2)} .contrib i[data-l="3"]{background:var(--gh3)} .contrib i[data-l="4"]{background:var(--gh4)}
+.langbar{display:flex;height:8px;border-radius:999px;overflow:hidden;gap:2px}
+.langs{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:13px;color:var(--ink-2)}
+.langs span{display:inline-flex;align-items:center;gap:6px}
+.langs i{width:8px;height:8px;border-radius:999px}
+.repos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.repo{border:1px solid var(--line);border-radius:var(--r-ctl);padding:14px;display:flex;flex-direction:column;gap:6px}
+.repo .nm{font-family:var(--f-mono);font-size:13.5px;color:var(--accent-text)}
+.repo p{font-size:13.5px;color:var(--ink-2);flex:1}
+.repo .ft{display:flex;gap:16px;font-size:12.5px;color:var(--ink-3);align-items:center}
+.repo .ft span{display:inline-flex;gap:5px;align-items:center}
+.repo .ft .ic{width:14px;height:14px}
+.sub-h{font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:10px}
+
+/* ---------- Admin ---------- */
+.semgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 32px}
+.semrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.semrow b{font-weight:600;font-variant-numeric:tabular-nums}
+.seg.sm button{padding:5px 11px;font-size:12.5px}
+
+/* ---------- Carga ---------- */
+.sk{background:var(--surface-2);border-radius:var(--r-ctl);position:relative;overflow:hidden}
+@media (prefers-reduced-motion: no-preference){
+  .sk::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgb(255 255 255 / .35),transparent);transform:translateX(-100%);animation:sh 1.1s infinite}
+  @keyframes sh{to{transform:translateX(100%)}}
+  .fade{animation:fade .25s ease-out both}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r-ctl);font-size:14px;font-weight:500;z-index:10;max-width:calc(100% - 32px);display:flex;gap:8px;align-items:center;box-shadow:var(--shadow)}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi:nth-child(3){border-left:0}
+  .kpi:nth-child(n+3){border-top:1px solid var(--line)}
+  .split{grid-template-columns:1fr}
+}
+@media (max-width: 860px){
+  .login{grid-template-columns:1fr}
+  .l-art{padding:28px 16px;gap:24px}
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:14px 16px;gap:12px}
+  .me{display:none}
+  .nav{flex-direction:row;overflow-x:auto;gap:4px}
+  .nav button{grid-template-columns:18px auto auto;width:auto;flex:none}
+  .side-foot{margin-top:0;flex-direction:row}
+  .side-foot button{width:auto}
+  .semgrid{grid-template-columns:1fr}
+}
+@media (max-width: 640px){
+  .rowi{grid-template-columns:40px minmax(0,1fr);padding:16px}
+  .rowi-act{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:space-between;text-align:left}
+  .callout{grid-template-columns:auto minmax(0,1fr)}
+  .callout .figs{grid-column:1 / -1}
+  .form-grid{grid-template-columns:1fr}
+  .decide{grid-template-columns:1fr 1fr}
+  .decide .field{grid-column:1 / -1}
+  .demo-groups{grid-template-columns:1fr}
+  .repos{grid-template-columns:1fr}
+  .who{grid-template-columns:40px minmax(0,1fr)}
+  .who > :last-child{grid-column:1 / -1;justify-self:start}
+  .gh-top{grid-template-columns:44px minmax(0,1fr)}
+  .gh-top > :last-child{grid-column:1 / -1}
+  th,td{padding-inline:14px}
+}
+</style>
+
+<div id="app"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const ICONS={"school": "<path d=\"M22 9l-10 -4l-10 4l10 4l10 -4v6\" /><path d=\"M6 10.6v5.4a6 3 0 0 0 12 0v-5.4\" />", "briefcase": "<path d=\"M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9\" /><path d=\"M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2\" /><path d=\"M12 12l0 .01\" /><path d=\"M3 13a20 20 0 0 0 18 0\" />", "contract": "<path d=\"M8 21h-2a3 3 0 0 1 -3 -3v-1h5.5\" /><path d=\"M17 8.5v-3.5a2 2 0 1 1 2 2h-2\" /><path d=\"M19 3h-11a3 3 0 0 0 -3 3v11\" /><path d=\"M9 7h4\" /><path d=\"M9 11h4\" /><path d=\"M18.42 12.61a2.1 2.1 0 0 1 2.97 2.97l-6.39 6.42h-3v-3l6.42 -6.39\" />", "file-cv": "<path d=\"M14 3v4a1 1 0 0 0 1 1h4\" /><path d=\"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2\" /><path d=\"M11 12.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0\" /><path d=\"M13 11l1.5 6l1.5 -6\" />", "certificate": "<path d=\"M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0\" /><path d=\"M13 17.5v4.5l2 -1.5l2 1.5v-4.5\" /><path d=\"M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73\" /><path d=\"M6 9l12 0\" /><path d=\"M6 12l3 0\" /><path d=\"M6 15l2 0\" />", "shield-check": "<path d=\"M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06\" /><path d=\"M15 19l2 2l4 -4\" />", "brand-github": "<path d=\"M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5\" />", "git-commit": "<path d=\"M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0\" /><path d=\"M12 3l0 6\" /><path d=\"M12 15l0 6\" />", "git-branch": "<path d=\"M5 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /><path d=\"M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /><path d=\"M15 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /><path d=\"M7 8l0 8\" /><path d=\"M9 18h6a2 2 0 0 0 2 -2v-5\" /><path d=\"M14 14l3 -3l3 3\" />", "check": "<path d=\"M5 12l5 5l10 -10\" />", "x": "<path d=\"M18 6l-12 12\" /><path d=\"M6 6l12 12\" />", "search": "<path d=\"M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0\" /><path d=\"M21 21l-6 -6\" />", "logout": "<path d=\"M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2\" /><path d=\"M9 12h12l-3 -3\" /><path d=\"M18 15l3 -3\" />", "inbox": "<path d=\"M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12\" /><path d=\"M4 13h3l3 3h4l3 -3h3\" />", "clock-hour-4": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0\" /><path d=\"M12 12l3 2\" /><path d=\"M12 7v5\" />", "trending-up": "<path d=\"M3 17l6 -6l4 4l8 -8\" /><path d=\"M14 7l7 0l0 7\" />", "users": "<path d=\"M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\" /><path d=\"M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2\" /><path d=\"M16 3.13a4 4 0 0 1 0 7.75\" /><path d=\"M21 21v-2a4 4 0 0 0 -3 -3.85\" />", "building": "<path d=\"M3 21l18 0\" /><path d=\"M9 8l1 0\" /><path d=\"M9 12l1 0\" /><path d=\"M9 16l1 0\" /><path d=\"M14 8l1 0\" /><path d=\"M14 12l1 0\" /><path d=\"M14 16l1 0\" /><path d=\"M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16\" />", "settings": "<path d=\"M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065\" /><path d=\"M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" />", "calendar-event": "<path d=\"M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12\" /><path d=\"M16 3l0 4\" /><path d=\"M8 3l0 4\" /><path d=\"M4 11l16 0\" /><path d=\"M8 15h2v2h-2l0 -2\" />", "upload": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\" /><path d=\"M7 9l5 -5l5 5\" /><path d=\"M12 4l0 12\" />", "arrow-right": "<path d=\"M5 12l14 0\" /><path d=\"M13 18l6 -6\" /><path d=\"M13 6l6 6\" />", "lock": "<path d=\"M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6\" /><path d=\"M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0\" /><path d=\"M8 11v-4a4 4 0 1 1 8 0v4\" />", "mail": "<path d=\"M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10\" /><path d=\"M3 7l9 6l9 -6\" />", "alert-circle": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" />", "circle-check": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0\" /><path d=\"M9 12l2 2l4 -4\" />", "star": "<path d=\"M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245\" />", "id-badge-2": "<path d=\"M7 12h3v4h-3l0 -4\" /><path d=\"M10 6h-6a1 1 0 0 0 -1 1v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1 -1v-12a1 1 0 0 0 -1 -1h-6\" /><path d=\"M10 4a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v3a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -3\" /><path d=\"M14 16h2\" /><path d=\"M14 12h4\" />", "list-check": "<path d=\"M3.5 5.5l1.5 1.5l2.5 -2.5\" /><path d=\"M3.5 11.5l1.5 1.5l2.5 -2.5\" /><path d=\"M3.5 17.5l1.5 1.5l2.5 -2.5\" /><path d=\"M11 6l9 0\" /><path d=\"M11 12l9 0\" /><path d=\"M11 18l9 0\" />", "file-text": "<path d=\"M14 3v4a1 1 0 0 0 1 1h4\" /><path d=\"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2\" /><path d=\"M9 9l1 0\" /><path d=\"M9 13l6 0\" /><path d=\"M9 17l6 0\" />", "user-check": "<path d=\"M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0\" /><path d=\"M6 21v-2a4 4 0 0 1 4 -4h4\" /><path d=\"M15 19l2 2l4 -4\" />"};
+const ic=(n,cls='')=>`<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
+
+/* ================= Configuración y datos de ejemplo ================= */
+const cfg={sem:{1:'none',2:'none',3:'apply',4:'control',5:'apply',6:'control',7:'none',8:'none',9:'apply',10:'control'},prom:3.5,domain:'fet.edu.co'};
+const semsOf=k=>Object.keys(cfg.sem).map(Number).filter(n=>cfg.sem[n]===k);
+const semList=a=>a.length?a.map(n=>n+'.º').join(', ').replace(/, (?=[^,]*$)/,' y '):'ninguno';
+const fmt=n=>Number(n).toFixed(1).replace('.',',');
+const hf=n=>Number.isInteger(n)?String(n):fmt(n);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const initials=n=>n.split(' ').map(x=>x[0]).slice(0,2).join('');
+
+const MOD={pas:['Pasantía','school'],pra:['Práctica profesional','briefcase'],dir:['Contratación directa','contract']};
+const modTag=(k,on)=>`<span class="tag${on?' on':''}">${ic(MOD[k][1])}${MOD[k][0]}</span>`;
+const badge=(k,t)=>`<span class="badge b-${k}">${t}</span>`;
+
+const COMP={
+  nodo:{name:'Nodo Digital S.A.S.',nit:'901.234.567-1',city:'Neiva',ini:'ND',int:['pas','dir'],valid:'ok'},
+  agro:{name:'Cooperativa Agroandina',nit:'891.100.222-4',city:'Pitalito',ini:'CA',int:['pra'],valid:'ok'},
+  huila:{name:'Huila Tech Labs',nit:'901.555.010-7',city:'Neiva',ini:'HT',int:['dir'],valid:'ok'},
+  csg:{name:'Clínica San Gabriel',nit:'800.765.432-9',city:'Neiva',ini:'SG',int:['pas'],valid:'ok'},
+  movilix:{name:'Movilix Colombia',nit:'901.888.123-0',city:'Bogotá',ini:'MX',int:['pra','dir'],valid:'ok'},
+  agrosur:{name:'AgroSur Exportaciones',nit:'901.777.456-2',city:'Garzón',ini:'AS',int:['pas'],valid:'pend'}
+};
+const VAC=[
+  {id:1,c:'nodo',m:'pas',acc:['pas','dir'],t:'Pasante de desarrollo web (Laravel y Vue)',city:'Neiva, híbrido',dur:'6 meses',hor:'Tiempo completo',pay:'Apoyo de sostenimiento',dias:'Hace 2 días'},
+  {id:2,c:'agro',m:'pra',acc:['pra'],t:'Practicante de soporte y redes',city:'Pitalito, presencial',dur:'6 meses',hor:'Medio tiempo',pay:'Apoyo de sostenimiento',dias:'Hace 4 días'},
+  {id:3,c:'huila',m:'dir',acc:['dir'],t:'Desarrollador junior front-end',city:'Remoto',dur:'Indefinido',hor:'Medio tiempo',pay:'Salario a convenir',dias:'Hace 1 día'},
+  {id:4,c:'csg',m:'pas',acc:['pas'],t:'Pasante de análisis de datos',city:'Neiva, presencial',dur:'6 meses',hor:'Tiempo completo',pay:'Apoyo de sostenimiento',dias:'Hace 5 días'},
+  {id:5,c:'nodo',m:'pas',acc:['pas'],t:'Pasante de QA y pruebas',city:'Neiva, híbrido',dur:'4 meses',hor:'Medio tiempo',pay:'Apoyo de sostenimiento',dias:'Hace 3 días'},
+  {id:6,c:'movilix',m:'pra',acc:['pra','dir'],t:'Practicante de desarrollo móvil (Flutter)',city:'Remoto',dur:'5 meses',hor:'Tiempo completo',pay:'Apoyo de sostenimiento',dias:'Hace 1 semana'}
+];
+const STU={
+  laura:{name:'Laura Méndez',email:'laura.mendez@fet.edu.co',sem:5,prom:4.2,prog:'Ingeniería de Software',code:'20231045',gh:'lauramendez',hv:86},
+  mateo:{name:'Mateo Suárez',email:'mateo.suarez@fet.edu.co',sem:9,prom:3.2,prog:'Ingeniería de Software',code:'20211130',gh:'msuarez',hv:71},
+  julian:{name:'Julián Castro',email:'julian.castro@fet.edu.co',sem:3,prom:4.6,prog:'Técnica en Programación de Software',code:'20252018',gh:'jcastro-dev',hv:100},
+  sofia:{name:'Sofía Ramírez',email:'sofia.ramirez@fet.edu.co',sem:9,prom:3.9,prog:'Ingeniería de Software',code:'20211077',gh:'sofiaramirez',hv:100},
+  andres:{name:'Andrés Rojas',email:'andres.rojas@fet.edu.co',sem:6,prom:4.1,prog:'Tecnología en Desarrollo de Software',code:'20231190',gh:'andresrojas',hv:100,
+    pas:{c:'nodo',rol:'Pasante de desarrollo web',repo:'nodo-digital/portal-clientes',branch:'feature/modulo-facturas',tutor:'Ing. Diana Herrera',ini:'4 ago 2026',fin:'4 dic 2026',meta:480,prev:196,
+      commits:[['c81e2a0','Agrega filtros por fecha al listado de facturas','Hoy'],['5d0b9f3','Pruebas del servicio de facturación','Ayer'],['a17c4de','Corrige paginación en la tabla de clientes','Hace 3 días']],week:[2,4,3,5,0,0,1,3,6,4,2,5,0,1]}},
+  valentina:{name:'Valentina Torres',email:'valentina.torres@fet.edu.co',sem:10,prom:4.4,prog:'Ingeniería de Software',code:'20201055',gh:'vtorres',hv:100,
+    pas:{c:'csg',rol:'Pasante de análisis de datos',repo:'csg-ti/tablero-indicadores',branch:'main',tutor:'Dr. Hernán Ortiz',ini:'28 jul 2026',fin:'28 nov 2026',meta:480,prev:268,
+      commits:[['f3a91bb','Consulta de ocupación de camas por servicio','Ayer']],week:[1,2,2,3,0,0,0,2,3,1,2,2,0,0]}},
+  camila:{name:'Camila Pérez',email:'camila.perez@fet.edu.co',sem:2,prom:4.0,prog:'Ingeniería de Software',code:'20261004',gh:'',hv:40}
+};
+const STAFF=[
+  {email:'p.vargas@fet.edu.co',role:'docente',name:'Patricia Vargas',sub:'Coordinación de prácticas'},
+  {email:'talento@nododigital.co',role:'empresa',c:'nodo',name:'Diana Herrera',sub:'Nodo Digital S.A.S.'},
+  {email:'rrhh@agrosur.co',role:'empresa',c:'agrosur',name:'Carlos Ome',sub:'AgroSur Exportaciones'},
+  {email:'admin@fet.edu.co',role:'admin',name:'Administración',sub:'APP FET'}
+];
+let APPS=[
+  {id:1,s:'julian',v:1,via:'pas',st:'aprobada',note:'Cumple semestre y promedio.',date:'22 sep'},
+  {id:2,s:'sofia',v:5,via:'pas',st:'pendiente',note:'',date:'26 sep'},
+  {id:3,s:'mateo',v:3,via:'dir',st:'pendiente',note:'',date:'27 sep'},
+  {id:4,s:'mateo',v:1,via:'dir',st:'denegada',note:'Completa tu hoja de vida (referencias y perfil) antes de postularte.',date:'20 sep'}
+];
+let nextApp=5;
+const ATT={
+  andres:[
+    {d:'Lun 21 sep',i:'08:00',o:'12:00',a:'Maquetación de la vista de facturas',ok:true},
+    {d:'Mar 22 sep',i:'08:00',o:'12:00',a:'Servicio REST de facturación',ok:true},
+    {d:'Mié 23 sep',i:'08:00',o:'12:30',a:'Reunión de sprint y ajustes de interfaz',ok:true},
+    {d:'Jue 24 sep',i:'08:00',o:'12:00',a:'Pruebas unitarias del servicio',ok:true},
+    {d:'Vie 25 sep',i:'08:00',o:'12:00',a:'Revisión de código con el tutor',ok:false},
+    {d:'Lun 28 sep',i:'08:00',o:'12:00',a:'Filtros por fecha en el listado',ok:false}
+  ],
+  valentina:[{d:'Lun 28 sep',i:'07:00',o:'13:00',a:'Limpieza de datos de ocupación',ok:true}]
+};
+const ADV={
+  andres:[
+    {tipo:'Informe de avance',t:'Informe mensual de agosto',f:'1 sep',st:'Revisado'},
+    {tipo:'Diario de campo',t:'Semana 7: integración con la API de pagos',f:'19 sep',st:'Revisado'},
+    {tipo:'Diario de campo',t:'Semana 8: módulo de facturas',f:'26 sep',st:'Pendiente'}
+  ],
+  valentina:[
+    {tipo:'Informe de avance',t:'Informe mensual de agosto',f:'29 ago',st:'Revisado'},
+    {tipo:'Diario de campo',t:'Semana 9: tablero de ocupación',f:'26 sep',st:'Con observaciones'}
+  ]
+};
+
+/* ================= Reglas ================= */
+const stage=s=>cfg.sem[s.sem]||'none';
+const promOk=s=>s.prom>=cfg.prom;
+function canApply(v,s){
+  if(promOk(s)){const via=v.acc.find(x=>x!=='dir');return via?{ok:true,via}:{ok:false,why:'Estás habilitado como pasante. Esta vacante es solo de contratación directa.'};}
+  return v.acc.includes('dir')?{ok:true,via:'dir'}:{ok:false,why:`Con promedio menor a ${fmt(cfg.prom)} solo aplicas por contratación directa.`};
+}
+const hrs=(i,o)=>{const[a,b]=i.split(':').map(Number),[c,d]=o.split(':').map(Number);return Math.max(0,(c*60+d-a*60-b)/60);};
+const hoursDone=k=>STU[k].pas.prev+ATT[k].filter(x=>x.ok).reduce((t,x)=>t+hrs(x.i,x.o),0);
+const APP_ST={pendiente:['warn','En revisión docente'],aprobada:['info','Aprobada, en la empresa'],denegada:['bad','Denegada'],aceptada:['ok','Aceptada por la empresa'],descartada:['neutral','No seleccionada']};
+const ADV_ST={Revisado:['ok','Revisado'],Pendiente:['warn','Por revisar'],'Con observaciones':['bad','Con observaciones']};
+
+/* ================= Estado ================= */
+const S={me:null,view:null,err:'',email:'',filter:'todas',q:'',dFilter:'pendiente',loading:false};
+const $=s=>document.querySelector(s);
+const app=$('#app');
+function toast(t){const el=$('#toast');el.innerHTML=ic('circle-check')+esc(t);el.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>el.hidden=true,2600);}
+
+/* ================= Inicio de sesión ================= */
+const DEMO=[
+  ['Estudiantes',[['laura.mendez@fet.edu.co','Laura Méndez','5.º semestre, promedio 4,2'],['mateo.suarez@fet.edu.co','Mateo Suárez','9.º semestre, promedio 3,2'],['andres.rojas@fet.edu.co','Andrés Rojas','6.º semestre, en pasantía'],['camila.perez@fet.edu.co','Camila Pérez','2.º semestre, sin acceso']]],
+  ['Docente, empresas y admin',[['p.vargas@fet.edu.co','Patricia Vargas','Docente de prácticas'],['talento@nododigital.co','Nodo Digital','Empresa validada'],['rrhh@agrosur.co','AgroSur Exportaciones','Empresa sin validar'],['admin@fet.edu.co','Administración','Configuración general']]]
+];
+function viewLogin(){
+  app.innerHTML=`
+  <div class="login">
+    <!-- TODO: foto real del campus FET (1200x1600). Asignar con style="--login-photo:url(...)" en .l-art -->
+    <section class="l-art" aria-label="Presentación">
+      <div class="brand"><div class="mark">F</div><div><b>APP FET</b><small>Pasantías y prácticas</small></div></div>
+      <div class="l-body"><div class="l-copy">
+        <h1>Tu pasantía, de la postulación al informe final</h1>
+        <p>Hoja de vida, vacantes, aprobación docente y seguimiento en un solo lugar.</p>
+      </div>
+      <div class="preview" aria-hidden="true">
+        <div class="preview-row"><div class="logo">ND</div><div><b style="font-weight:600">Pasante de desarrollo web</b><div class="fine">Nodo Digital S.A.S.</div></div>${badge('info','Aprobada')}</div>
+        <div class="preview-row"><div class="logo">SG</div><div><b style="font-weight:600">Pasante de análisis de datos</b><div class="fine">Clínica San Gabriel</div></div>${badge('warn','En revisión')}</div>
+        <div class="preview-cap">Así sigues el estado de cada postulación.</div>
+      </div></div>
+    </section>
+    <section class="l-form">
+      <form class="l-card" id="loginForm" novalidate>
+        <div style="display:flex;flex-direction:column;gap:6px"><h2>Ingresar</h2><p class="muted">Usa tu correo @${esc(cfg.domain)} o el correo registrado de tu empresa.</p></div>
+        <div class="field"><label for="lemail">Correo</label>
+          <div class="input-ic">${ic('mail')}<input class="input" id="lemail" type="email" autocomplete="username" placeholder="nombre.apellido@${esc(cfg.domain)}" value="${esc(S.email)}" aria-describedby="lerr"></div></div>
+        <div class="field"><label for="lpass">Contraseña</label>
+          <div class="input-ic">${ic('lock')}<input class="input" id="lpass" type="password" autocomplete="current-password" value="${S.email?'demo1234':''}"></div></div>
+        ${S.err?`<p class="error" id="lerr" role="alert">${ic('alert-circle')}<span>${S.err}</span></p>`:''}
+        <button class="btn block" type="submit">Ingresar ${ic('arrow-right')}</button>
+        <div class="demo-groups" aria-label="Cuentas de ejemplo">
+          ${DEMO.map(([g,list])=>`<div><h3>${g}</h3><ul>${list.map(([e,n,d])=>`<li><button type="button" class="demo" data-demo="${e}"><b>${n}</b><span>${d}</span></button></li>`).join('')}</ul></div>`).join('')}
+        </div>
+        <p class="help">Cuentas de ejemplo: al elegir una se llenan el correo y la contraseña.</p>
+      </form>
+    </section>
+  </div>`;
+  $('#loginForm').addEventListener('submit',ev=>{ev.preventDefault();doLogin($('#lemail').value,$('#lpass').value);});
+}
+function enter(me,view){S.me=me;S.view=view;S.email='';S.loading=true;render();setTimeout(()=>{S.loading=false;render();},450);}
+function doLogin(email,pass){
+  email=email.trim().toLowerCase();S.email=email;S.err='';
+  if(!email||!pass){S.err='Escribe tu correo y tu contraseña.';return render();}
+  const k=Object.keys(STU).find(x=>STU[x].email===email);
+  if(k){
+    const s=STU[k],st=stage(s);
+    if(st==='none'){S.err=`Tu cuenta existe, pero en ${s.sem}.º semestre aún no tienes acceso. Pueden ingresar estudiantes de ${semList([...semsOf('apply'),...semsOf('control')].sort((a,b)=>a-b))} semestre.`;return render();}
+    if(st==='control'&&!s.pas){S.err=`Estás en ${s.sem}.º semestre, pero todavía no tienes una pasantía asignada. Consulta con la coordinación de prácticas.`;return render();}
+    return enter({role:'estudiante',key:k,stage:st},st==='apply'?'vacantes':'pasantia');
+  }
+  const u=STAFF.find(x=>x.email===email);
+  if(u){
+    if(u.role==='empresa'&&COMP[u.c].valid!=='ok'){S.err=`${COMP[u.c].name} está pendiente de validación por la FET. Podrás ingresar cuando la administración apruebe el registro.`;return render();}
+    return enter({...u},{docente:'aplicaciones',empresa:'postulantes',admin:'config'}[u.role]);
+  }
+  S.err=email.endsWith('@'+cfg.domain)?'No encontramos una cuenta con este correo institucional.':`Este correo no está registrado. Usa tu correo @${cfg.domain} o el correo con el que tu empresa se registró.`;
+  render();
+}
+
+/* ================= Estructura ================= */
+function navFor(){
+  const me=S.me;
+  if(me.role==='estudiante'){
+    if(me.stage==='apply') return [['vacantes','Vacantes','briefcase'],['postulaciones','Mis postulaciones','inbox',APPS.filter(a=>a.s===me.key&&a.st==='pendiente').length],['hv','Hoja de vida','file-cv'],['semestre','Semestre','certificate'],['viabilidad','Viabilidad','shield-check']];
+    return [['pasantia','Mi pasantía','building'],['asistencias','Asistencias','clock-hour-4',ATT[me.key].filter(x=>!x.ok).length],['avances','Avances','trending-up'],['hv','Hoja de vida','file-cv']];
+  }
+  if(me.role==='docente') return [['aplicaciones','Aplicaciones','inbox',APPS.filter(a=>a.st==='pendiente').length],['encurso','Pasantes en curso','users']];
+  if(me.role==='empresa') return [['postulantes','Postulantes','inbox',APPS.filter(a=>VAC.find(v=>v.id===a.v).c===me.c&&a.st==='aprobada').length],['pasantes','Mis pasantes','users'],['misvacantes','Mis vacantes','briefcase']];
+  return [['config','Configuración','settings'],['empresas','Empresas','building',Object.values(COMP).filter(c=>c.valid==='pend').length],['usuarios','Usuarios','users']];
+}
+function who(){
+  const me=S.me;
+  if(me.role==='estudiante'){const s=STU[me.key];return {name:s.name,sub:me.stage==='apply'?`${s.sem}.º semestre, postulación`:`${s.sem}.º semestre, en pasantía`};}
+  return {name:me.name,sub:me.sub};
+}
+function shell(inner){
+  const w=who();
+  app.innerHTML=`
+  <div class="app">
+    <aside class="side" aria-label="Navegación">
+      <div class="brand"><div class="mark">F</div><div><b>APP FET</b><small>Pasantías y prácticas</small></div></div>
+      <div class="me"><div class="av">${initials(w.name)}</div><div><b>${esc(w.name)}</b><span>${esc(w.sub)}</span></div></div>
+      <nav class="nav">${navFor().map(([k,t,i,n])=>`<button data-view="${k}" aria-current="${S.view===k?'page':'false'}">${ic(i)}<span>${t}</span>${n?`<span class="count" aria-label="${n} pendientes">${n}</span>`:'<span></span>'}</button>`).join('')}</nav>
+      <div class="side-foot"><button id="logout">${ic('logout')}Cerrar sesión</button></div>
+    </aside>
+    <main class="main"><div class="main-in ${S.loading?'':'fade'}">${inner}</div></main>
+  </div>`;
+}
+const ph=(title,sub='',act='')=>`<header class="ph"><div><h1>${title}</h1>${sub?`<p>${sub}</p>`:''}</div>${act}</header>`;
+function skeleton(){
+  return `<div style="display:flex;flex-direction:column;gap:10px"><div class="sk" style="height:30px;width:min(420px,70%)"></div><div class="sk" style="height:16px;width:min(560px,90%)"></div></div>
+  <div class="sk" style="height:64px;border-radius:12px"></div>
+  <div class="panel flush">${[0,1,2].map(()=>`<div class="rowi"><div class="sk" style="width:44px;height:44px"></div><div style="display:flex;flex-direction:column;gap:8px"><div class="sk" style="height:16px;width:60%"></div><div class="sk" style="height:13px;width:40%"></div><div class="sk" style="height:13px;width:75%"></div></div><div class="sk" style="height:36px;width:110px;justify-self:end"></div></div>`).join('')}</div>`;
+}
+
+/* ================= Estudiante que aplica ================= */
+function vVacantes(){
+  const k=S.me.key,s=STU[k],ok=promOk(s);
+  const counts={todas:VAC.length,pas:0,pra:0,dir:0};VAC.forEach(v=>v.acc.forEach(x=>counts[x]++));
+  const q=S.q.trim().toLowerCase();
+  const list=VAC.filter(v=>(S.filter==='todas'||v.acc.includes(S.filter))&&(!q||(v.t+COMP[v.c].name+v.city).toLowerCase().includes(q)));
+  const row=v=>{
+    const a=canApply(v,s),mine=APPS.find(x=>x.s===k&&x.v===v.id);
+    let act;
+    if(mine){const[c,l]=APP_ST[mine.st];act=`${badge(c,l)}<span class="fine">Aplicaste por ${MOD[mine.via][0].toLowerCase()}</span>`;}
+    else if(a.ok) act=`<button class="btn" data-apply="${v.id}" data-via="${a.via}">Aplicar</button><span class="fine">Aplicas por ${MOD[a.via][0].toLowerCase()}</span>`;
+    else act=`<button class="btn" disabled>No disponible</button><span class="fine">${a.why}</span>`;
+    return `<article class="rowi${a.ok||mine?'':' dim'}">
+      <div class="logo" aria-hidden="true">${COMP[v.c].ini}</div>
+      <div class="rowi-main">
+        <div><h3>${v.t}</h3><div class="sub">${COMP[v.c].name}, ${v.city}</div></div>
+        <div class="tags">${v.acc.map(x=>modTag(x,(mine?mine.via:a.via)===x)).join('')}</div>
+        <dl class="facts"><div><dt>Duración</dt><dd>${v.dur}</dd></div><div><dt>Jornada</dt><dd>${v.hor}</dd></div><div><dt>Pago</dt><dd>${v.pay}</dd></div><div><dt>Publicada</dt><dd>${v.dias}</dd></div></dl>
+      </div>
+      <div class="rowi-act">${act}</div></article>`;
+  };
+  return ph(`Hola, ${s.name.split(' ')[0]}`,'Vacantes de empresas validadas por la FET. Tu docente revisa cada postulación antes de enviarla.')+`
+    <section class="callout">${ic(ok?'school':'contract')}
+      <p>${ok?`<b>Aplicas como pasante.</b> Estás en ${s.sem}.º semestre con promedio ${fmt(s.prom)}, así que te postulas por pasantía o práctica.`:`<b>Aplicas por contratación directa.</b> Tu promedio (${fmt(s.prom)}) es menor a ${fmt(cfg.prom)}. La experiencia queda registrada para un posible reconocimiento.`}</p>
+      <div class="figs"><div class="fig"><b>${APPS.filter(a=>a.s===k).length}</b><span>Postulaciones</span></div><div class="fig"><b>${VAC.filter(v=>canApply(v,s).ok).length}</b><span>Disponibles</span></div></div>
+    </section>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Filtrar por modalidad">${[['todas','Todas'],['pas','Pasantías'],['pra','Prácticas'],['dir','Directa']].map(([x,l])=>`<button data-f="${x}" aria-pressed="${S.filter===x}">${l}<span class="n">${counts[x]}</span></button>`).join('')}</div>
+      <label class="input-ic search">${ic('search')}<input class="input" id="q" type="search" placeholder="Buscar cargo o empresa" value="${esc(S.q)}" aria-label="Buscar vacantes"></label>
+    </div>
+    <section class="panel flush">${list.length?list.map(row).join(''):`<div class="empty">${ic('search')}<b>No hay vacantes con ese filtro</b><span class="fine">Prueba con otra modalidad o borra la búsqueda.</span></div>`}</section>`;
+}
+function vPostulaciones(){
+  const mine=APPS.filter(a=>a.s===S.me.key).slice().reverse();
+  return ph('Mis postulaciones','Primero las revisa tu docente. Si la aprueba, la empresa la recibe.')+
+  (mine.length?`<section class="panel flush"><div class="tbl"><table><thead><tr><th>Vacante</th><th>Modalidad</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+    ${mine.map(a=>{const v=VAC.find(x=>x.id===a.v);const[c,l]=APP_ST[a.st];return `<tr><td><b>${v.t}</b><small>${COMP[v.c].name}</small></td><td>${modTag(a.via)}</td><td class="num">${a.date}</td><td>${badge(c,l)}${a.note?`<small>Docente: ${esc(a.note)}</small>`:''}</td></tr>`}).join('')}
+  </tbody></table></div></section>`:`<section class="panel"><div class="empty">${ic('inbox')}<b>Aún no te has postulado</b><span class="fine">Elige una vacante y aplica desde la sección Vacantes.</span><button class="btn sec" data-view="vacantes">Ver vacantes</button></div></section>`);
+}
+function vSemestre(){
+  const s=STU[S.me.key];
+  return ph('Semestre',`${s.prog}. Datos sincronizados con el registro académico.`)+`
+    <section class="panel">
+      <div class="kv"><div><dt>Semestre actual</dt><dd>${s.sem}.º</dd></div><div><dt>Promedio acumulado</dt><dd>${fmt(s.prom)}</dd></div><div><dt>Periodo</dt><dd>2026-2</dd></div><div><dt>Código</dt><dd class="mono">${s.code}</dd></div></div>
+    </section>
+    <section class="panel"><h2>Etapas por semestre</h2>
+      <div class="lines">
+        <div class="line"><div><b>Aplican a vacantes</b><span>${semList(semsOf('apply'))} semestre</span></div>${cfg.sem[s.sem]==='apply'?badge('info','Tu etapa'):''}</div>
+        <div class="line"><div><b>Pasantía en curso</b><span>${semList(semsOf('control'))} semestre: asistencias y avances</span></div>${cfg.sem[s.sem]==='control'?badge('info','Tu etapa'):''}</div>
+      </div></section>`;
+}
+function vViabilidad(){
+  const s=STU[S.me.key],ok=promOk(s);
+  const st=v=>v===true?badge('ok','Cumple'):v===false?badge('bad','No cumple'):badge('neutral','En cada postulación');
+  const rows=[['Semestre que aplica',`${semList(semsOf('apply'))}. Estás en ${s.sem}.º`,cfg.sem[s.sem]==='apply'],['Promedio para pasantía',`${fmt(cfg.prom)} o más. Tienes ${fmt(s.prom)}`,ok],['Hoja de vida completa',`Formato FET al ${s.hv} %`,s.hv===100],['Repositorio conectado','GitHub vinculado',!!s.gh],['Aprobación docente','La da tu docente',null]];
+  return ph('Viabilidad',ok?'Cumples semestre y promedio: aplicas únicamente por pasantía o práctica.':`Tu promedio es menor a ${fmt(cfg.prom)}: aplicas únicamente por contratación directa.`)+`
+    <section class="panel"><div class="lines">${rows.map(r=>`<div class="line"><div><b>${r[0]}</b><span>${r[1]}</span></div>${st(r[2])}</div>`).join('')}</div></section>`;
+}
+
+/* ---- Hoja de vida y GitHub ---- */
+const LANG_COL={TypeScript:'#3178C6',PHP:'#777BB4',Python:'#3572A5',Dart:'#00A99D',CSS:'#8E5CC4',Otros:'#8C94A3'};
+function contrib(seed){let x=seed,o='';const r=()=>(x=(x*9301+49297)%233280)/233280;for(let w=0;w<30;w++)for(let d=0;d<7;d++){const v=r()+(w>18?.15:0)+((d===0||d===6)?-.2:0);o+=`<i data-l="${v<.35?0:v<.6?1:v<.8?2:v<.95?3:4}"></i>`;}return o;}
+function ghPanel(s,compact){
+  const langs=[['TypeScript',36],['PHP',27],['Python',17],['Dart',9],['CSS',7],['Otros',4]];
+  return `<section class="panel">
+    <div class="gh-top"><div class="av">${initials(s.name)}</div><div><b>${s.name}</b><div class="fine mono">github.com/${s.gh}</div></div>${badge('ok','Conectado')}</div>
+    <div class="gh-nums"><div class="fig"><b>14</b><span>Repositorios</span></div><div class="fig"><b>486</b><span>Contribuciones en el año</span></div><div class="fig"><b>23</b><span>Estrellas</span></div></div>
+    <div><div class="sub-h">Actividad de los últimos 7 meses</div><div class="contrib-wrap"><div class="contrib" role="img" aria-label="Mapa de contribuciones">${contrib(Number(s.code.slice(-3))||7)}</div></div></div>
+    <div><div class="sub-h">Lenguajes</div><div class="langbar">${langs.map(([n,p])=>`<span style="width:${p}%;background:${LANG_COL[n]}"></span>`).join('')}</div><div class="langs">${langs.map(([n,p])=>`<span><i style="background:${LANG_COL[n]}"></i>${n} ${p} %</span>`).join('')}</div></div>
+    ${compact?'':`<div><div class="sub-h">Repositorios destacados</div><div class="repos">${[['citas-clinica-api','API REST para agendar citas médicas.','PHP',9],['finanzas-app','App móvil para controlar gastos personales.','Dart',6],['portafolio-vue','Portafolio personal con Vue 3 y Vite.','TypeScript',5],['analisis-desercion','Análisis de deserción estudiantil con datos abiertos.','Python',3]].map(r=>`<article class="repo"><div class="nm">${r[0]}</div><p>${r[1]}</p><div class="ft"><span><i style="width:8px;height:8px;border-radius:999px;background:${LANG_COL[r[2]]}"></i>${r[2]}</span><span>${ic('star')}${r[3]}</span></div></article>`).join('')}</div></div>`}
+    <p class="help">Datos de ejemplo. En producción se conecta con GitHub (OAuth) y se muestra aquí, sin abrir otra pestaña.</p>
+  </section>`;
+}
+function vHV(){
+  const s=STU[S.me.key];
+  const secs=[['Datos personales',true],['Perfil profesional',s.hv>=86],['Formación académica',true],['Experiencia laboral',true],['Competencias y herramientas',true],['Repositorio de proyectos',!!s.gh],['Referencias',s.hv===100]];
+  const miss=secs.filter(x=>!x[1]);
+  return ph('Hoja de vida','Formato institucional FET. Las empresas la ven junto con tu repositorio.','<button class="btn sec">'+ic('file-text')+'Descargar PDF</button>')+`
+    <section class="panel">
+      <div class="panel-h"><h2>Completada al ${s.hv} %</h2>${miss.length?badge('warn',`${miss.length} por completar`):badge('ok','Completa')}</div>
+      <div class="meter"><span style="width:${s.hv}%"></span></div>
+      <div class="tags">${secs.map(([n,ok])=>`<span class="tag${ok?'':' on'}">${ic(ok?'check':'alert-circle')}${n}</span>`).join('')}</div>
+      ${miss.length?`<div><button class="btn sec sm">Completar ${miss.map(m=>m[0].toLowerCase()).join(' y ')}</button></div>`:''}
+    </section>
+    ${s.gh?ghPanel(s):''}`;
+}
+
+/* ================= Estudiante en pasantía ================= */
+function repoBox(k){
+  const p=STU[k].pas,max=Math.max(...p.week);
+  return `<div class="repo-h">${ic('brand-github')}${p.repo}</div>
+    <div class="fine" style="display:flex;gap:6px;align-items:center">${ic('git-branch')}<span class="mono">${p.branch}</span></div>
+    <div><div class="sub-h">Commits de ${STU[k].name.split(' ')[0]} en las últimas 2 semanas</div><div class="bars">${p.week.map(n=>`<i style="height:${Math.max(6,n/max*100)}%" title="${n} commits"></i>`).join('')}</div></div>
+    <div class="commits">${p.commits.map(c=>`<div class="commit"><code>${c[0]}</code><span>${c[1]}</span><small>${c[2]}</small></div>`).join('')}</div>`;
+}
+function vPasantia(){
+  const k=S.me.key,s=STU[k],p=s.pas,h=hoursDone(k),pct=Math.min(100,Math.round(h/p.meta*100));
+  const pend=ATT[k].filter(x=>!x.ok).length,advP=ADV[k].filter(a=>a.st!=='Revisado').length;
+  return ph(p.rol,`${COMP[p.c].name}, del ${p.ini} al ${p.fin}.`,`<button class="btn" data-view="asistencias">${ic('clock-hour-4')}Registrar asistencia</button>`)+`
+    <section class="kpis">
+      <div class="kpi"><b>${hf(h)} h</b><span>de ${p.meta} h validadas</span></div>
+      <div class="kpi"><b>${pct} %</b><span>de la pasantía</span></div>
+      <div class="kpi"><b>${pend}</b><span>asistencias por validar</span></div>
+      <div class="kpi"><b>${advP}</b><span>avances en revisión</span></div>
+    </section>
+    <div class="split">
+      <section class="panel"><h2>Datos de la pasantía</h2>
+        <div class="meter" aria-label="Avance de horas"><span style="width:${pct}%"></span></div>
+        <dl class="kv"><div><dt>Empresa</dt><dd>${COMP[p.c].name}</dd></div><div><dt>Tutor en la empresa</dt><dd>${p.tutor}</dd></div><div><dt>Docente FET</dt><dd>Patricia Vargas</dd></div><div><dt>Semestre</dt><dd>${s.sem}.º</dd></div></dl>
+        <div><button class="btn sec" data-view="avances">${ic('upload')}Subir avance</button></div>
+      </section>
+      <section class="panel"><h2>Repositorio del proyecto</h2>${repoBox(k)}<p class="help">Tu empresa y tu docente ven este mismo repositorio.</p></section>
+    </div>`;
+}
+function vAsistencias(){
+  const k=S.me.key;
+  return ph('Asistencias',`La empresa valida cada registro. Solo las horas validadas cuentan para la meta de ${STU[k].pas.meta} h.`)+`
+    <section class="panel"><h2>Registro de hoy</h2>
+      <form id="attForm" class="form-grid" novalidate>
+        <div class="field"><label for="aDate">Fecha</label><input class="input" id="aDate" value="Mar 29 sep" readonly></div>
+        <div class="field"><label for="aIn">Entrada</label><input class="input" id="aIn" type="time" value="08:00"></div>
+        <div class="field"><label for="aOut">Salida</label><input class="input" id="aOut" type="time" value="12:00"></div>
+        <div class="field wide"><label for="aAct">Actividad realizada</label><input class="input" id="aAct" placeholder="Ej.: ajustes al módulo de facturas"><span class="help" id="aHelp">Describe en una línea lo que hiciste.</span></div>
+        <div><button class="btn" type="submit">Registrar</button></div>
+      </form></section>
+    <section class="panel flush"><div class="tbl"><table><thead><tr><th>Fecha</th><th>Horario</th><th>Horas</th><th>Actividad</th><th>Estado</th></tr></thead><tbody>
+      ${ATT[k].slice().reverse().map(r=>`<tr><td class="num">${r.d}</td><td class="num">${r.i} a ${r.o}</td><td class="num">${hf(hrs(r.i,r.o))}</td><td>${esc(r.a)}</td><td>${r.ok?badge('ok','Validada'):badge('warn','Por validar')}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
+}
+function vAvances(){
+  const k=S.me.key;
+  return ph('Avances','Diarios de campo e informes. Tu docente los revisa.')+`
+    <section class="panel"><h2>Subir avance</h2>
+      <form id="advForm" class="form-grid" novalidate>
+        <div class="field"><label for="vTipo">Tipo</label><select class="input" id="vTipo"><option>Diario de campo</option><option>Informe de avance</option><option>Informe final</option></select></div>
+        <div class="field" style="grid-column:span 2"><label for="vTit">Título</label><input class="input" id="vTit" placeholder="Ej.: Semana 9, pruebas de integración"><span class="help" id="vHelp">Un título corto que identifique la entrega.</span></div>
+        <div class="field wide"><label for="vFile">Archivo PDF</label><input class="input" id="vFile" type="file" accept=".pdf"></div>
+        <div><button class="btn" type="submit">${ic('upload')}Enviar a revisión</button></div>
+      </form></section>
+    <section class="panel flush"><div class="tbl"><table><thead><tr><th>Entrega</th><th>Tipo</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+      ${ADV[k].slice().reverse().map(a=>{const[c,l]=ADV_ST[a.st];return `<tr><td><b>${esc(a.t)}</b></td><td>${a.tipo}</td><td class="num">${a.f}</td><td>${badge(c,l)}</td></tr>`}).join('')}
+    </tbody></table></div></section>`;
+}
+
+/* ================= Docente ================= */
+function vDocApps(){
+  const grp=a=>a.st==='pendiente'?'pendiente':a.st==='denegada'?'denegada':'aprobada';
+  const tabs=[['pendiente','Pendientes'],['aprobada','Aprobadas'],['denegada','Denegadas'],['todas','Todas']];
+  const cnt=t=>APPS.filter(a=>t==='todas'||grp(a)===t).length;
+  const list=APPS.filter(a=>S.dFilter==='todas'||grp(a)===S.dFilter).slice().reverse();
+  const row=a=>{
+    const s=STU[a.s],v=VAC.find(x=>x.id===a.v),[c,l]=APP_ST[a.st];
+    const semOk=cfg.sem[s.sem]==='apply',pOk=promOk(s);
+    return `<article class="rowi" style="grid-template-columns:44px minmax(0,1fr)">
+      <div class="av lg">${initials(s.name)}</div>
+      <div class="rowi-main">
+        <div class="panel-h"><div><h3>${s.name}</h3><div class="sub">${s.prog}, ${s.sem}.º semestre</div></div>${badge(c,l)}</div>
+        <dl class="facts"><div><dt>Vacante</dt><dd>${v.t}</dd></div><div><dt>Empresa</dt><dd>${COMP[v.c].name}</dd></div><div><dt>Enviada</dt><dd>${a.date}</dd></div></dl>
+        <div class="req">${modTag(a.via,true)}${badge(semOk?'ok':'bad',`${s.sem}.º semestre ${semOk?'habilitado':'no habilitado'}`)}${a.via==='dir'?badge('neutral',`Promedio ${fmt(s.prom)}, no aplica`):badge(pOk?'ok':'bad',`Promedio ${fmt(s.prom)}`)}${badge(s.hv===100?'ok':'warn',`Hoja de vida ${s.hv} %`)}</div>
+        ${a.st==='pendiente'?`<div class="decide"><div class="field"><label for="obs${a.id}">Observación para el estudiante</label><input class="input" id="obs${a.id}" placeholder="Obligatoria si deniegas"></div><button class="btn good" data-dec="aprobada" data-id="${a.id}">${ic('check')}Aprobar</button><button class="btn danger" data-dec="denegada" data-id="${a.id}">${ic('x')}Denegar</button></div>`:(a.note?`<p class="note-box">Tu observación: ${esc(a.note)}</p>`:'')}
+      </div></article>`;
+  };
+  return ph('Aplicaciones','Revisa cada postulación con los requisitos de la FET. Las aprobadas pasan a la empresa.')+`
+    <div class="toolbar"><div class="seg" role="group" aria-label="Filtrar aplicaciones">${tabs.map(([t,l])=>`<button data-df="${t}" aria-pressed="${S.dFilter===t}">${l}<span class="n">${cnt(t)}</span></button>`).join('')}</div></div>
+    <section class="panel flush">${list.length?list.map(row).join(''):`<div class="empty">${ic('circle-check')}<b>No hay aplicaciones aquí</b><span class="fine">Cuando un estudiante se postule, aparecerá en Pendientes.</span></div>`}</section>`;
+}
+function vDocCurso(){
+  const ks=Object.keys(STU).filter(k=>STU[k].pas);
+  return ph('Pasantes en curso','Horas validadas por la empresa y avances por revisar.')+`
+    <section class="panel flush"><div class="tbl"><table><thead><tr><th>Estudiante</th><th>Empresa</th><th>Horas</th><th>Asistencias</th><th>Último avance</th><th><span class="fine">Acción</span></th></tr></thead><tbody>
+    ${ks.map(k=>{const s=STU[k],p=s.pas,h=hoursDone(k),last=ADV[k][ADV[k].length-1],pend=ATT[k].filter(x=>!x.ok).length,[c,l]=ADV_ST[last.st];
+      return `<tr><td><b>${s.name}</b><small>${s.sem}.º semestre</small></td><td>${COMP[p.c].name}<small>${p.rol}</small></td><td class="num">${hf(h)} de ${p.meta}<small>${Math.round(h/p.meta*100)} %</small></td><td>${pend?badge('warn',pend+' por validar'):badge('ok','Al día')}</td><td>${esc(last.t)}<small>${last.f}</small></td><td>${last.st==='Pendiente'?`<button class="btn sm" data-rev="${k}">Marcar revisado</button>`:badge(c,l)}</td></tr>`}).join('')}
+    </tbody></table></div></section>`;
+}
+
+/* ================= Empresa ================= */
+function vEmpPost(){
+  const c=S.me.c;
+  const mine=APPS.filter(a=>VAC.find(v=>v.id===a.v).c===c&&['aprobada','aceptada','descartada'].includes(a.st)).slice().reverse();
+  const row=a=>{
+    const s=STU[a.s],v=VAC.find(x=>x.id===a.v),[cl,l]=APP_ST[a.st];
+    return `<article class="rowi" style="grid-template-columns:44px minmax(0,1fr)">
+      <div class="av lg">${initials(s.name)}</div>
+      <div class="rowi-main">
+        <div class="panel-h"><div><h3>${s.name}</h3><div class="sub">${s.prog}, ${s.sem}.º semestre, promedio ${fmt(s.prom)}</div></div>${badge(cl,a.st==='aprobada'?'Por decidir':l)}</div>
+        <dl class="facts"><div><dt>Vacante</dt><dd>${v.t}</dd></div><div><dt>Aprobada por docente</dt><dd>${a.date}</dd></div><div><dt>Hoja de vida</dt><dd>${s.hv} %</dd></div></dl>
+        <div class="tags">${modTag(a.via,true)}</div>
+        ${s.gh?`<details><summary class="fine" style="cursor:pointer;display:inline-flex;gap:6px;align-items:center">${ic('brand-github')}Ver GitHub de ${s.name.split(' ')[0]}</summary><div style="margin-top:12px">${ghPanel(s,true)}</div></details>`:''}
+        ${a.st==='aprobada'?`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn good" data-emp="aceptada" data-id="${a.id}">${ic('user-check')}Aceptar</button><button class="btn danger" data-emp="descartada" data-id="${a.id}">Descartar</button></div>`:''}
+      </div></article>`;
+  };
+  return ph('Postulantes',`${COMP[c].name}. Solo ves postulaciones que un docente de la FET ya aprobó.`)+
+    `<section class="panel flush">${mine.length?mine.map(row).join(''):`<div class="empty">${ic('inbox')}<b>Aún no hay postulantes aprobados</b><span class="fine">Aparecerán aquí cuando un docente apruebe una postulación a tus vacantes.</span></div>`}</section>`;
+}
+function vEmpPasantes(){
+  const c=S.me.c,ks=Object.keys(STU).filter(k=>STU[k].pas&&STU[k].pas.c===c);
+  const nuevos=APPS.filter(a=>a.st==='aceptada'&&VAC.find(v=>v.id===a.v).c===c);
+  return ph('Mis pasantes','Valida asistencias y revisa el repositorio en el que trabaja cada pasante.')+
+    ks.map(k=>{const s=STU[k],p=s.pas,h=hoursDone(k),pend=ATT[k].filter(x=>!x.ok);
+      return `<section class="panel">
+        <div class="who"><div class="av lg">${initials(s.name)}</div><div><b>${s.name}</b><span>${p.rol}, ${s.sem}.º semestre</span></div>${badge('ok','En pasantía')}</div>
+        <div class="split">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div><div class="sub-h">${hf(h)} de ${p.meta} horas validadas</div><div class="meter"><span style="width:${Math.round(h/p.meta*100)}%"></span></div></div>
+            <div><div class="sub-h">Asistencias por validar</div>
+            ${pend.length?`<div class="lines">${pend.map(r=>`<div class="line"><div><b>${r.d}, ${r.i} a ${r.o}</b><span>${esc(r.a)}</span></div></div>`).join('')}</div><button class="btn good" style="margin-top:8px" data-valid="${k}">${ic('check')}Validar ${pend.length}</button>`:'<p class="fine">No hay registros pendientes.</p>'}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px"><div class="sub-h" style="margin:0">Repositorio en el que trabaja</div>${repoBox(k)}</div>
+        </div></section>`;}).join('')+
+    (nuevos.length?`<section class="panel"><h2>Por iniciar</h2><div class="lines">${nuevos.map(a=>{const s=STU[a.s];return `<div class="line"><div><b>${s.name}</b><span>${VAC.find(v=>v.id===a.v).t}. Inicia al pasar a ${s.sem+1}.º semestre.</span></div>${modTag(a.via)}</div>`}).join('')}</div></section>`:'')+
+    (!ks.length&&!nuevos.length?`<section class="panel"><div class="empty">${ic('users')}<b>No tienes pasantes activos</b></div></section>`:'');
+}
+function vEmpVac(){
+  const c=S.me.c;
+  return ph('Mis vacantes',`Modalidades registradas ante la FET: ${COMP[c].int.map(x=>MOD[x][0].toLowerCase()).join(' y ')}.`,`<button class="btn">${ic('briefcase')}Publicar vacante</button>`)+`
+    <section class="panel flush"><div class="tbl"><table><thead><tr><th>Vacante</th><th>Acepta</th><th>Postulaciones</th><th>Publicada</th></tr></thead><tbody>
+    ${VAC.filter(v=>v.c===c).map(v=>{const n=APPS.filter(a=>a.v===v.id);return `<tr><td><b>${v.t}</b><small>${v.city}, ${v.dur}</small></td><td><div class="tags">${v.acc.map(x=>modTag(x)).join('')}</div></td><td class="num">${n.filter(a=>a.st!=='pendiente'&&a.st!=='denegada').length} aprobadas<small>${n.filter(a=>a.st==='pendiente').length} en revisión docente</small></td><td class="num">${v.dias}</td></tr>`}).join('')}
+    </tbody></table></div></section>`;
+}
+
+/* ================= Administrador ================= */
+function vAdmConfig(){
+  const opts=[['none','Sin acceso'],['apply','Aplica'],['control','Pasantía']];
+  return ph('Configuración','Reglas de acceso y postulación. Los cambios aplican al guardar.','<button class="btn" id="saveCfg">Guardar cambios</button>')+`
+    <section class="panel"><div><h2>Acceso por semestre</h2><p class="fine" style="margin-top:4px">Aplica: ve vacantes y se postula. Pasantía: registra asistencias y avances.</p></div>
+      <div class="semgrid">${Array.from({length:10},(_,i)=>{const n=i+1;return `<div class="semrow"><b>${n}.º semestre</b><div class="seg sm" role="radiogroup" aria-label="${n}.º semestre">${opts.map(([o,l])=>`<button type="button" data-cs="${n}" data-val="${o}" aria-pressed="${(S.draft||cfg.sem)[n]===o}">${l}</button>`).join('')}</div></div>`}).join('')}</div>
+    </section>
+    <section class="panel"><h2>Reglas de postulación</h2>
+      <div class="form-grid">
+        <div class="field"><label for="cProm">Promedio mínimo para pasantía</label><input class="input" id="cProm" type="number" step="0.1" min="0" max="5" value="${cfg.prom}"><span class="help">Debajo de este valor solo se aplica por contratación directa.</span></div>
+        <div class="field"><label for="cDom">Dominio del correo institucional</label><input class="input" id="cDom" value="${esc(cfg.domain)}"><span class="help">Sin la arroba.</span></div>
+        <div class="field"><label for="cHv">Hoja de vida para postularse</label><select class="input" id="cHv"><option>El docente decide</option><option>Completa al 100 %</option></select><span class="help">Requisito mínimo antes de aplicar.</span></div>
+      </div></section>`;
+}
+function vAdmEmp(){
+  return ph('Empresas','Solo las empresas validadas pueden ingresar y publicar vacantes.')+`
+    <section class="panel flush"><div class="tbl"><table><thead><tr><th>Empresa</th><th>NIT</th><th>Interés</th><th>Estado</th><th><span class="fine">Acción</span></th></tr></thead><tbody>
+    ${Object.entries(COMP).map(([k,c])=>`<tr><td><b>${c.name}</b><small>${c.city}</small></td><td class="num mono">${c.nit}</td><td><div class="tags">${c.int.map(x=>modTag(x)).join('')}</div></td><td>${c.valid==='ok'?badge('ok','Validada'):c.valid==='no'?badge('bad','Rechazada'):badge('warn','Pendiente')}</td><td>${c.valid==='pend'?`<div style="display:flex;gap:6px"><button class="btn good sm" data-comp="ok" data-k="${k}">Validar</button><button class="btn danger sm" data-comp="no" data-k="${k}">Rechazar</button></div>`:''}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
+}
+function vAdmUsers(){
+  const acc={none:badge('bad','Sin acceso'),apply:badge('info','Aplica'),control:badge('ok','Pasantía')};
+  const rows=[...Object.values(STU).map(s=>[s.name,s.email,'Estudiante',`${s.sem}.º`,acc[stage(s)]]),...STAFF.map(u=>[u.name,u.email,{docente:'Docente',empresa:'Empresa',admin:'Administrador'}[u.role],'No aplica',u.role==='empresa'&&COMP[u.c].valid!=='ok'?badge('warn','Sin validar'):badge('ok','Activo')])];
+  return ph('Usuarios','Quién puede ingresar y con qué rol.')+`
+    <section class="kpis">
+      <div class="kpi"><b>${Object.values(STU).filter(s=>stage(s)==='apply').length}</b><span>Estudiantes que aplican</span></div>
+      <div class="kpi"><b>${Object.values(STU).filter(s=>stage(s)==='control').length}</b><span>Estudiantes en pasantía</span></div>
+      <div class="kpi"><b>${STAFF.filter(u=>u.role==='docente').length}</b><span>Docentes</span></div>
+      <div class="kpi"><b>${Object.values(COMP).filter(c=>c.valid==='ok').length}</b><span>Empresas validadas</span></div>
+    </section>
+    <section class="panel flush"><div class="tbl"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Semestre</th><th>Acceso</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><b>${r[0]}</b></td><td class="mono">${r[1]}</td><td>${r[2]}</td><td class="num">${r[3]}</td><td>${r[4]}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
+}
+
+/* ================= Render y eventos ================= */
+const VIEWS={vacantes:vVacantes,postulaciones:vPostulaciones,hv:vHV,semestre:vSemestre,viabilidad:vViabilidad,pasantia:vPasantia,asistencias:vAsistencias,avances:vAvances,aplicaciones:vDocApps,encurso:vDocCurso,postulantes:vEmpPost,pasantes:vEmpPasantes,misvacantes:vEmpVac,config:vAdmConfig,empresas:vAdmEmp,usuarios:vAdmUsers};
+function fieldErr(input,help,msg){input.setAttribute('aria-invalid','true');input.style.borderColor='var(--bad)';help.textContent=msg;help.style.color='var(--bad)';input.focus();}
+function render(){
+  if(!S.me) return viewLogin();
+  shell(S.loading?skeleton():(VIEWS[S.view]||(()=>''))());
+  if(S.loading) return;
+  const q=$('#q');
+  if(q) q.addEventListener('input',ev=>{S.q=ev.target.value;const pos=ev.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);});
+  const af=$('#attForm');
+  if(af) af.addEventListener('submit',ev=>{ev.preventDefault();const a=$('#aAct').value.trim();if(!a) return fieldErr($('#aAct'),$('#aHelp'),'Escribe la actividad realizada para poder registrar la asistencia.');if(hrs($('#aIn').value,$('#aOut').value)<=0) return fieldErr($('#aOut'),$('#aHelp'),'La hora de salida debe ser posterior a la de entrada.');ATT[S.me.key].push({d:'Mar 29 sep',i:$('#aIn').value,o:$('#aOut').value,a,ok:false});render();toast('Asistencia registrada. La empresa debe validarla.');});
+  const vf=$('#advForm');
+  if(vf) vf.addEventListener('submit',ev=>{ev.preventDefault();const t=$('#vTit').value.trim();if(!t) return fieldErr($('#vTit'),$('#vHelp'),'Escribe un título para la entrega.');ADV[S.me.key].push({tipo:$('#vTipo').value,t,f:'29 sep',st:'Pendiente'});render();toast('Avance enviado a revisión.');});
+}
+document.addEventListener('click',ev=>{
+  const t=ev.target;
+  const demo=t.closest('[data-demo]'); if(demo){S.email=demo.dataset.demo;S.err='';render();$('#loginForm button[type=submit]').focus();return;}
+  if(t.closest('#logout')){Object.assign(S,{me:null,view:null,err:'',filter:'todas',q:'',draft:null});render();return;}
+  const nav=t.closest('[data-view]'); if(nav){S.view=nav.dataset.view;S.draft=null;render();window.scrollTo({top:0});return;}
+  const f=t.closest('[data-f]'); if(f){S.filter=f.dataset.f;render();return;}
+  const df=t.closest('[data-df]'); if(df){S.dFilter=df.dataset.df;render();return;}
+  const ap=t.closest('[data-apply]'); if(ap){APPS.push({id:nextApp++,s:S.me.key,v:+ap.dataset.apply,via:ap.dataset.via,st:'pendiente',note:'',date:'29 sep'});render();toast('Postulación enviada. Tu docente la revisará.');return;}
+  const dec=t.closest('[data-dec]'); if(dec){const a=APPS.find(x=>x.id===+dec.dataset.id),inp=$('#obs'+a.id),obs=inp.value.trim();
+    if(dec.dataset.dec==='denegada'&&!obs){inp.setAttribute('aria-invalid','true');inp.style.borderColor='var(--bad)';inp.placeholder='Escribe el motivo para denegar';inp.focus();return;}
+    a.st=dec.dataset.dec;a.note=obs;render();toast(a.st==='aprobada'?'Aprobada. Ahora la ve la empresa.':'Denegada. El estudiante verá tu observación.');return;}
+  const emp=t.closest('[data-emp]'); if(emp){const a=APPS.find(x=>x.id===+emp.dataset.id);a.st=emp.dataset.emp;render();toast(a.st==='aceptada'?'Estudiante aceptado.':'Postulación descartada.');return;}
+  const va=t.closest('[data-valid]'); if(va){ATT[va.dataset.valid].forEach(x=>x.ok=true);render();toast('Asistencias validadas.');return;}
+  const rv=t.closest('[data-rev]'); if(rv){ADV[rv.dataset.rev].forEach(a=>{if(a.st==='Pendiente')a.st='Revisado'});render();toast('Avance marcado como revisado.');return;}
+  const cp=t.closest('[data-comp]'); if(cp){COMP[cp.dataset.k].valid=cp.dataset.comp;render();toast(cp.dataset.comp==='ok'?'Empresa validada. Ya puede ingresar.':'Registro rechazado.');return;}
+  const cs=t.closest('[data-cs]'); if(cs){S.draft=S.draft||{...cfg.sem};S.draft[cs.dataset.cs]=cs.dataset.val;const p=$('#cProm').value,d=$('#cDom').value;render();$('#cProm').value=p;$('#cDom').value=d;return;}
+  if(t.closest('#saveCfg')){
+    if(S.draft){cfg.sem={...S.draft};S.draft=null;}
+    const p=parseFloat($('#cProm').value);if(!isNaN(p)&&p>=0&&p<=5)cfg.prom=p;
+    const d=$('#cDom').value.trim().replace(/^@/,'');if(d)cfg.domain=d;
+    render();toast('Configuración guardada.');return;}
+});
+render();
+</script>
+
+</body></html>

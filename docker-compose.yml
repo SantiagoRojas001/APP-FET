@@ -1,0 +1,55 @@
+name: app-fet
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: app_fet
+      POSTGRES_USER: app_fet
+      POSTGRES_PASSWORD: app_fet
+    ports:
+      - "5433:5432" # 5433 para no chocar con un PostgreSQL instalado en el equipo
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_fet -d app_fet"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./docker/php
+    volumes:
+      - ./backend:/var/www/backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    # Buzón de pruebas: los correos de la app se ven en http://localhost:8025
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+
+  web:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_PROXY: http://api:8000
+    volumes:
+      - ./frontend:/app
+      - web-node-modules:/app/node_modules # dependencias de Linux separadas de las del Mac
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  db-data:
+  web-node-modules:

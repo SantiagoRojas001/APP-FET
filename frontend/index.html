@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="APP FET: pasantías y prácticas de la Fundación Escuela Tecnológica de Neiva." />
+    <title>APP FET · Pasantías y prácticas</title>
+    <script>
+      // Aplica el tema antes de pintar, para evitar un parpadeo (ver src/lib/theme.js):
+      // con sesión abierta, el de la cuenta; si no, el del equipo.
+      try {
+        var t = localStorage.getItem('appfet.token')
+          ? localStorage.getItem('appfet.tema.usuario')
+          : localStorage.getItem('appfet.tema');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap"
+    />
+  </head>
+  <body>
+    <div id="app"></div>
+    <div class="theme-float" id="themeFloat" hidden></div>
+    <div class="toast" id="toast" role="status" hidden></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
