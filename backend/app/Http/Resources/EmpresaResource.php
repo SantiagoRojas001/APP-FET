@@ -12,6 +12,7 @@ class EmpresaResource extends Recurso
     {
         return [
             'id' => $this->id,
+            'usuario_id' => $this->usuario_id,
             'nit' => $this->nit,
             'razon_social' => $this->razon_social,
             'sector' => $this->sector,
@@ -21,6 +22,8 @@ class EmpresaResource extends Recurso
             'estado_validacion' => $this->enum($this->estado_validacion),
             'validada_en' => $this->validada_en?->toIso8601String(),
             'correo' => $this->whenLoaded('usuario', fn () => $this->usuario->correo),
+            // Sin política aceptada, la empresa aún no usa su invitación.
+            'pendiente_activacion' => $this->whenLoaded('usuario', fn () => isset($this->usuario->consentimientos_count) ? $this->usuario->consentimientos_count === 0 : null),
         ];
     }
 }

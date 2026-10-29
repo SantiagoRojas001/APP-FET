@@ -11,13 +11,12 @@ class DecidirPostulacionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'decision' => ['required', Rule::in([EstadoPostulacion::Aceptada->value, EstadoPostulacion::Descartada->value])],
-            'fecha_inicio' => ['nullable', 'date', 'after_or_equal:today'],
+            'decision' => ['required', Rule::in([EstadoPostulacion::Seleccionada->value, EstadoPostulacion::Descartada->value])],
         ];
     }
 
-    public function acepta(): bool
+    public function selecciona(): bool
     {
-        return $this->input('decision') === EstadoPostulacion::Aceptada->value;
+        return $this->input('decision') === EstadoPostulacion::Seleccionada->value;
     }
 }

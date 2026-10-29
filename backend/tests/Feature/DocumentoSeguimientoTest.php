@@ -25,7 +25,7 @@ class DocumentoSeguimientoTest extends TestCase
     private function subir(Vinculacion $vinculacion, array $datos = [])
     {
         return $this->postJson("/api/vinculaciones/{$vinculacion->id}/documentos", [
-            'tipo' => 'CONTROL_ASISTENCIA',
+            'tipo' => 'ARL',
             'periodo_inicio' => now()->subWeek()->toDateString(),
             'periodo_fin' => now()->toDateString(),
             'archivo' => UploadedFile::fake()->create('asistencia.pdf', 200, 'application/pdf'),
@@ -64,7 +64,7 @@ class DocumentoSeguimientoTest extends TestCase
         $this->subir($ajena)->assertForbidden();
     }
 
-    public function test_el_docente_y_la_empresa_revisan_pero_otra_empresa_no(): void
+    public function test_solo_el_docente_revisa_y_la_empresa_solo_consulta(): void
     {
         $vinculacion = Vinculacion::factory()->create();
         Sanctum::actingAs($vinculacion->estudiante->usuario);
@@ -74,9 +74,10 @@ class DocumentoSeguimientoTest extends TestCase
         $this->patchJson("/api/documentos/{$id}/revision", ['estado_revision' => 'APROBADO'])->assertForbidden();
         $this->getJson("/api/documentos/{$id}/archivo")->assertForbidden();
 
+        // La empresa de la práctica descarga el documento, pero ya no lo revisa.
         $this->comoEmpresa($vinculacion->empresa);
-        $this->patchJson("/api/documentos/{$id}/revision", ['estado_revision' => 'OBSERVADO'])
-            ->assertJsonValidationErrors('observaciones');
+        $this->get("/api/documentos/{$id}/archivo")->assertOk();
+        $this->patchJson("/api/documentos/{$id}/revision", ['estado_revision' => 'APROBADO'])->assertForbidden();
 
         $this->como(Rol::Docente);
         $this->patchJson("/api/documentos/{$id}/revision", ['estado_revision' => 'APROBADO'])

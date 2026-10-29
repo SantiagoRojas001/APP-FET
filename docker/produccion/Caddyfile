@@ -1,0 +1,40 @@
+# {$DOMINIO} viene de docker-compose.prod.yml. Con un dominio público, Caddy obtiene
+# y renueva el certificado HTTPS automáticamente (Let's Encrypt).
+{$DOMINIO} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# API de Laravel: todas las rutas /api pasan por public/index.php en PHP-FPM.
+	handle /api/* {
+		request_body {
+			max_size 12MB
+		}
+		rewrite * /index.php
+		reverse_proxy api:9000 {
+			transport fastcgi {
+				root /var/www/backend/public
+				split .php
+			}
+		}
+	}
+
+	# Registro público de empresas: ruta sin # que también sirve la aplicación.
+	handle /empresasRegistro {
+		root * /srv
+		rewrite * /index.html
+		file_server
+	}
+
+	# Aplicación de una sola página (rutas con #, así que basta servir los archivos).
+	handle {
+		root * /srv
+		file_server
+	}
+}

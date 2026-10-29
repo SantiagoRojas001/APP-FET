@@ -10,7 +10,7 @@ export default async function reglasView({ root, refresh }) {
 
   mount(
     root,
-    html`${pageHeader('Reglas de práctica', 'Semestre desde el cual cada programa autoriza la pasantía o práctica. Una regla nueva cierra la anterior, que queda en el historial.')}
+    html`${pageHeader('Reglas de práctica', 'Horas que exige cada programa y semestre desde el cual autoriza la pasantía o práctica. Una regla nueva cierra la anterior, que queda en el historial.')}
       <section class="panel">
         <h2>Nueva regla</h2>
         <form id="reglaForm" class="form-grid" novalidate>
@@ -23,6 +23,19 @@ export default async function reglasView({ root, refresh }) {
         </form>
         <div id="reglaError"></div>
       </section>
+      <section class="panel">
+        <h2>Horas de práctica por programa</h2>
+        <p class="muted">La práctica se da por cumplida cuando las horas semanales aprobadas por la empresa alcanzan este total.</p>
+        <div class="lines">${cat.programas.map(
+          (p) => html`<form class="line" data-horas="${p.id}" novalidate>
+            <div><b>${p.nombre}</b><span>${p.total_semestres} semestres</span></div>
+            <div class="actions">
+              <input class="input narrow" type="number" name="horas_requeridas" min="40" max="2000" step="1" value="${p.horas_requeridas}" aria-label="Horas requeridas de ${p.nombre}" />
+              <button class="btn sec sm" type="submit">Guardar</button>
+            </div>
+          </form>`,
+        )}</div>
+      </section>
       <section class="panel flush"><div class="tbl"><table>
         <thead><tr><th>Programa</th><th>Semestre mínimo</th><th>Vigencia</th><th>Estado</th></tr></thead>
         <tbody>${reglas.map(
@@ -33,6 +46,20 @@ export default async function reglasView({ root, refresh }) {
             <td>${vigente(r) ? badge('ok', 'Vigente') : r.vigente_desde > today ? badge('info', 'Programada') : badge('neutral', 'Histórica')}</td>
           </tr>`,
         )}</tbody></table></div></section>`,
+  );
+
+  root.querySelectorAll('[data-horas]').forEach((f) =>
+    f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      withBusy(f.querySelector('[type=submit]'), async () => {
+        try {
+          await api.patch(`/admin/programas/${f.dataset.horas}`, { horas_requeridas: Number(f.horas_requeridas.value) });
+          toast('Horas actualizadas.');
+        } catch (error) {
+          showFieldErrors(f, error.errors) || toast(error.message);
+        }
+      });
+    }),
   );
 
   const form = root.querySelector('#reglaForm');

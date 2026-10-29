@@ -74,6 +74,12 @@ class Usuario extends Authenticatable
         return $this->hasOne(Empresa::class);
     }
 
+    /** @return HasMany<Reporte, $this> */
+    public function reportes(): HasMany
+    {
+        return $this->hasMany(Reporte::class, 'autor_id');
+    }
+
     /** @return HasMany<ConsentimientoDatos, $this> */
     public function consentimientos(): HasMany
     {

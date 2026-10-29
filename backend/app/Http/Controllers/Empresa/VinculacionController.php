@@ -8,14 +8,15 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * Practicantes y contratados de la empresa autenticada.
+ * Practicantes de la empresa autenticada.
  */
 class VinculacionController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
         $vinculaciones = $request->user()->empresa->vinculaciones()
-            ->with('estudiante.programa', 'estudiante.proyectos', 'vacante', 'tutor', 'documentos')
+            ->conSeguimiento()
+            ->with('estudiante.proyectos')
             ->latest('fecha_inicio')
             ->get();
 

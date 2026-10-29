@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\Modalidad;
 use App\Enums\NivelCompetencia;
+use App\Enums\NivelFormacion;
 use App\Enums\TipoDocumento;
+use App\Enums\TipoInvestigacion;
+use App\Enums\TipoReferencia;
 use App\Http\Resources\ProgramaResource;
 use App\Models\Competencia;
 use App\Models\Programa;
@@ -26,6 +29,10 @@ class CatalogoController extends Controller
             'modalidades' => $opciones(Modalidad::cases()),
             'niveles_competencia' => $opciones(NivelCompetencia::cases()),
             'tipos_documento' => $opciones(TipoDocumento::cases()),
+            'niveles_formacion' => $opciones(NivelFormacion::cases()),
+            'tipos_investigacion' => $opciones(TipoInvestigacion::cases()),
+            'tipos_referencia' => $opciones(TipoReferencia::cases()),
+            'hoja_vida' => collect(config('fet.hoja_vida'))->except('foto_max_kb'),
             'dominio_correo' => config('fet.dominio_correo'),
             'version_politica' => config('fet.version_politica'),
         ]);

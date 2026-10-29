@@ -13,7 +13,7 @@ class VinculacionController extends Controller
     {
         $vinculaciones = $request->user()->estudiante()->firstOrFail()
             ->vinculaciones()
-            ->with('empresa', 'vacante', 'tutor', 'documentos')
+            ->conSeguimiento()
             ->latest('fecha_inicio')
             ->get();
 

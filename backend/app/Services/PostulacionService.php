@@ -5,18 +5,26 @@ namespace App\Services;
 use App\Enums\EstadoPostulacion;
 use App\Enums\EstadoVacante;
 use App\Enums\EstadoVinculacion;
+use App\Enums\Rol;
 use App\Exceptions\ReglaNegocioException;
 use App\Models\Estudiante;
+use App\Models\PeriodoAcademico;
 use App\Models\Postulacion;
+use App\Models\Usuario;
 use App\Models\Vacante;
 use App\Models\Vinculacion;
+use App\Notifications\EstudianteSeleccionado;
+use App\Notifications\PracticaAutorizada;
+use App\Notifications\SeleccionNoAutorizada;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 /**
- * Flujo de una postulación: el estudiante aplica, el docente revisa los
- * requisitos y, si la aprueba, la empresa acepta o descarta. Al aceptar se
- * crea la vinculación.
+ * Flujo de una postulación: el estudiante aplica y su hoja de vida llega
+ * directo a la empresa. Si la empresa lo selecciona, se avisa a los docentes;
+ * el docente autoriza la práctica, se crea la vinculación con él como tutor,
+ * se envía la carta de bienvenida y la hoja de vida deja de circular.
  */
 class PostulacionService
 {
@@ -42,37 +50,63 @@ class PostulacionService
             throw new ReglaNegocioException('Ya te postulaste a esta vacante.');
         }
 
-        return $vacante->postulaciones()->create(['estudiante_id' => $estudiante->id]);
+        $postulacion = $vacante->postulaciones()->create(['estudiante_id' => $estudiante->id]);
+        Auditoria::registrar('postulacion.enviada', $postulacion);
+
+        return $postulacion;
     }
 
-    public function revisarComoDocente(Postulacion $postulacion, bool $aprobar, ?string $observacion): Postulacion
+    /** La empresa selecciona al estudiante (pasa a autorización docente) o lo descarta. */
+    public function decidirComoEmpresa(Postulacion $postulacion, bool $seleccionar): Postulacion
     {
-        return DB::transaction(function () use ($postulacion, $aprobar, $observacion) {
+        $postulacion = DB::transaction(function () use ($postulacion, $seleccionar) {
             $postulacion = $this->bloquear($postulacion, EstadoPostulacion::Enviada);
 
-            if (! $aprobar && blank($observacion)) {
-                throw new ReglaNegocioException('Escribe el motivo del rechazo para que el estudiante lo conozca.');
+            if ($seleccionar && Vinculacion::query()->where('estudiante_id', $postulacion->estudiante_id)->where('estado', EstadoVinculacion::Activa)->exists()) {
+                throw new ReglaNegocioException('El estudiante ya tiene una vinculación activa con otra empresa.');
             }
 
             $postulacion->update([
-                'estado' => $aprobar ? EstadoPostulacion::Aprobada : EstadoPostulacion::Rechazada,
-                'observacion' => $observacion,
+                'estado' => $seleccionar ? EstadoPostulacion::Seleccionada : EstadoPostulacion::Descartada,
+                'decidida_en' => now(),
             ]);
+            Auditoria::registrar($seleccionar ? 'postulacion.seleccionada' : 'postulacion.descartada', $postulacion);
 
             return $postulacion;
         });
+
+        if ($seleccionar) {
+            $postulacion->load('vacante.empresa', 'estudiante');
+            Notification::send(
+                Usuario::query()->where('rol', Rol::Docente)->where('activo', true)->get(),
+                new EstudianteSeleccionado($postulacion),
+            );
+        }
+
+        return $postulacion;
     }
 
-    public function decidirComoEmpresa(Postulacion $postulacion, bool $aceptar, ?Carbon $fechaInicio = null): Postulacion
+    /**
+     * El docente autoriza la práctica de un estudiante seleccionado: se crea
+     * la vinculación (con él como tutor), se cierran las demás postulaciones
+     * abiertas del estudiante y se envía la carta de bienvenida. Si no la
+     * autoriza, debe explicar el motivo.
+     */
+    public function autorizarComoDocente(Postulacion $postulacion, Usuario $docente, bool $autorizar, ?string $observacion, ?Carbon $fechaInicio = null): Postulacion
     {
-        return DB::transaction(function () use ($postulacion, $aceptar, $fechaInicio) {
-            $postulacion = $this->bloquear($postulacion, EstadoPostulacion::Aprobada);
+        if (! $autorizar && blank($observacion)) {
+            throw new ReglaNegocioException('Escribe el motivo para que el estudiante y la empresa lo conozcan.');
+        }
+
+        [$postulacion, $vinculacion] = DB::transaction(function () use ($postulacion, $docente, $autorizar, $observacion, $fechaInicio) {
+            $postulacion = $this->bloquear($postulacion, EstadoPostulacion::Seleccionada);
             $postulacion->load('vacante', 'estudiante');
 
-            if (! $aceptar) {
-                $postulacion->update(['estado' => EstadoPostulacion::Descartada]);
+            if (! $autorizar) {
+                $postulacion->update(['estado' => EstadoPostulacion::Rechazada, 'observacion' => $observacion, 'revisada_en' => now()]);
+                Auditoria::registrar('postulacion.no_autorizada', $postulacion, ['observacion' => $observacion]);
 
-                return $postulacion;
+                return [$postulacion, null];
             }
 
             $estudiante = $postulacion->estudiante;
@@ -81,19 +115,48 @@ class PostulacionService
                 throw new ReglaNegocioException('El estudiante ya tiene una vinculación activa con otra empresa.');
             }
 
-            $postulacion->update(['estado' => EstadoPostulacion::Aceptada]);
+            $postulacion->update(['estado' => EstadoPostulacion::Aceptada, 'observacion' => $observacion, 'revisada_en' => now()]);
+            $inicio = $fechaInicio ?? today();
 
-            Vinculacion::create([
+            $vinculacion = Vinculacion::create([
                 'estudiante_id' => $estudiante->id,
                 'empresa_id' => $postulacion->vacante->empresa_id,
                 'vacante_id' => $postulacion->vacante_id,
+                'tutor_id' => $docente->id,
                 'tipo' => $postulacion->vacante->modalidad,
                 'semestre_al_vincular' => $estudiante->semestre_actual,
-                'fecha_inicio' => ($fechaInicio ?? today())->toDateString(),
+                'fecha_inicio' => $inicio->toDateString(),
+                'periodo_id' => PeriodoAcademico::abiertoEn($inicio)?->id,
             ]);
 
-            return $postulacion;
+            // Con la práctica autorizada, la hoja de vida deja de circular: se cierran las demás postulaciones.
+            $estudiante->postulaciones()
+                ->whereKeyNot($postulacion->id)
+                ->whereIn('estado', [EstadoPostulacion::Enviada, EstadoPostulacion::Seleccionada])
+                ->update([
+                    'estado' => EstadoPostulacion::Descartada,
+                    'observacion' => 'El estudiante inició su práctica en otra empresa.',
+                    'decidida_en' => now(),
+                ]);
+
+            Auditoria::registrar('postulacion.autorizada', $postulacion, ['vinculacion_id' => $vinculacion->id]);
+
+            return [$postulacion, $vinculacion];
         });
+
+        $postulacion->load('vacante.empresa.usuario', 'estudiante.usuario');
+
+        if ($vinculacion) {
+            $vinculacion->load('estudiante.programa', 'empresa', 'vacante', 'tutor');
+            $postulacion->estudiante->usuario->notify(new PracticaAutorizada($vinculacion, paraEstudiante: true));
+            $postulacion->vacante->empresa->usuario->notify(new PracticaAutorizada($vinculacion, paraEstudiante: false));
+        } else {
+            $aviso = new SeleccionNoAutorizada($postulacion);
+            $postulacion->estudiante->usuario->notify($aviso);
+            $postulacion->vacante->empresa->usuario->notify($aviso);
+        }
+
+        return $postulacion;
     }
 
     /**

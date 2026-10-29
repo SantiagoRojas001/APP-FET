@@ -9,14 +9,17 @@ use App\Http\Resources\DocumentoSeguimientoResource;
 use App\Http\Resources\VinculacionResource;
 use App\Models\DocumentoSeguimiento;
 use App\Models\Vinculacion;
+use App\Services\Auditoria;
+use App\Services\CartaBienvenida;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Controles de asistencia, diarios de campo e informes de una vinculación.
+ * ARL, bitácoras, controles de asistencia e informes de una vinculación.
  * Los archivos se guardan en el disco privado y solo se descargan por aquí.
  */
 class DocumentoController extends Controller
@@ -25,7 +28,18 @@ class DocumentoController extends Controller
     {
         Gate::authorize('view', $vinculacion);
 
-        return new VinculacionResource($vinculacion->load('estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos'));
+        return new VinculacionResource($vinculacion->cargarSeguimiento());
+    }
+
+    /** Carta de bienvenida de la práctica, en PDF. */
+    public function cartaBienvenida(Vinculacion $vinculacion, CartaBienvenida $carta): Response
+    {
+        Gate::authorize('view', $vinculacion);
+
+        return response($carta->pdf($vinculacion), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="carta-de-bienvenida.pdf"',
+        ]);
     }
 
     public function index(Vinculacion $vinculacion): AnonymousResourceCollection
@@ -55,6 +69,7 @@ class DocumentoController extends Controller
         Gate::authorize('revisarDocumentos', $documento->vinculacion);
 
         $documento->update($request->validated());
+        Auditoria::registrar('documento.revisado', $documento, ['estado' => $documento->estado_revision->value]);
 
         return new DocumentoSeguimientoResource($documento);
     }

@@ -53,6 +53,12 @@ export async function request(method, path, body) {
   return data;
 }
 
+async function fetchFile(path) {
+  const response = await fetch(path, { headers: { Authorization: `Bearer ${session.token}` } });
+  if (!response.ok) throw new ApiError(response.status, MENSAJES[response.status] || MENSAJES[500]);
+  return response.blob();
+}
+
 export const api = {
   get: (path, params) => {
     const query = params ? new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)) : '';
@@ -64,10 +70,21 @@ export const api = {
 
   /** Descarga un archivo protegido (con token) y lo abre en una pestaña nueva. */
   async open(path) {
-    const response = await fetch(path, { headers: { Authorization: `Bearer ${session.token}` } });
-    if (!response.ok) throw new ApiError(response.status, MENSAJES[response.status] || MENSAJES[500]);
-    const url = URL.createObjectURL(await response.blob());
+    const url = URL.createObjectURL(await fetchFile(path));
     window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  },
+
+  /** URL local (blob) de un archivo protegido, para mostrarlo en un <img>. */
+  async blobUrl(path) {
+    return URL.createObjectURL(await fetchFile(path));
+  },
+
+  /** Descarga un archivo protegido (con token) y lo guarda con el nombre dado. */
+  async download(path, filename) {
+    const url = URL.createObjectURL(await fetchFile(path));
+    const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+    a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
 };

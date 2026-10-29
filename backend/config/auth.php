@@ -99,6 +99,14 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Activación de cuentas creadas por la administración: el enlace dura 7 días.
+        'invitaciones' => [
+            'provider' => 'users',
+            'table' => 'invitacion_tokens',
+            'expire' => 60 * 24 * 7,
+            'throttle' => 0,
+        ],
     ],
 
     /*

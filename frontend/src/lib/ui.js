@@ -7,7 +7,7 @@ export const icon = (name, cls = '') =>
 /** Colores de estado por valor de enum de la API. */
 const TONES = {
   ENVIADA: 'warn',
-  APROBADA: 'info',
+  SELECCIONADA: 'info',
   RECHAZADA: 'bad',
   ACEPTADA: 'ok',
   DESCARTADA: 'neutral',
@@ -20,6 +20,9 @@ const TONES = {
   CANCELADA: 'neutral',
   ABIERTA: 'ok',
   CERRADA: 'neutral',
+  ABIERTO: 'warn',
+  EN_REVISION: 'info',
+  RESUELTO: 'ok',
 };
 
 export const badge = (tone, text) => html`<span class="badge b-${tone}">${text}</span>`;
@@ -54,8 +57,8 @@ export const skeleton = () =>
       <div class="sk" style="height:30px;width:min(420px,70%)"></div>
       <div class="sk" style="height:16px;width:min(560px,90%)"></div>
     </div>
-    <div class="sk" style="height:64px;border-radius:12px"></div>
-    <div class="sk" style="height:220px;border-radius:12px"></div>`;
+    <div class="sk" style="height:64px"></div>
+    <div class="sk" style="height:220px"></div>`;
 
 let toastTimer;
 export function toast(message) {
@@ -102,3 +105,14 @@ export async function withBusy(button, fn) {
 }
 
 export const formData = (form) => Object.fromEntries(new FormData(form));
+
+/** Barra de avance de horas aprobadas por la empresa (`v.horas` de la API). */
+export function hoursMeter(horas) {
+  if (!horas) return '';
+  const pct = Math.min(100, Math.round((horas.aprobadas / horas.requeridas) * 100));
+  const fmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
+  return html`<div class="hours">
+    <div class="hours-h"><b>${fmt.format(horas.aprobadas)} de ${horas.requeridas} horas aprobadas</b>${horas.cumplidas_en ? badge('ok', 'Horas cumplidas') : html`<span class="fine">${pct} %</span>`}</div>
+    <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="${horas.requeridas}" aria-valuenow="${horas.aprobadas}"><span style="width:${pct}%"></span></div>
+  </div>`;
+}

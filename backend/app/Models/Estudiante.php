@@ -39,6 +39,27 @@ class Estudiante extends Model
         return Attribute::get(fn () => "{$this->nombres} {$this->apellidos}");
     }
 
+    /**
+     * La hoja de vida circula mientras el estudiante busca práctica. Cuando el
+     * docente autoriza su vinculación, se deshabilita: no se edita ni aparece
+     * en la búsqueda de talento.
+     */
+    public function hojaVidaHabilitada(): bool
+    {
+        return $this->relationLoaded('vinculacionActiva')
+            ? $this->vinculacionActiva === null
+            : ! $this->vinculaciones()->where('estado', EstadoVinculacion::Activa)->exists();
+    }
+
+    /** Carga la hoja de vida completa con lo que muestran el perfil y el PDF. */
+    public function cargarHojaVida(): static
+    {
+        return $this->load([
+            'usuario', 'programa', 'competencias', 'proyectos', 'vinculacionActiva',
+            ...array_map(fn (string $r) => "hojaVida.{$r}", HojaVida::COMPLETA),
+        ]);
+    }
+
     /** @return BelongsTo<Usuario, $this> */
     public function usuario(): BelongsTo
     {

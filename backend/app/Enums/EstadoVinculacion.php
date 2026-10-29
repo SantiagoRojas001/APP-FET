@@ -18,7 +18,7 @@ enum EstadoVinculacion: string
         return match ($this) {
             self::Activa => 'Activa',
             self::Finalizada => 'Finalizada',
-            self::Cancelada => 'Cancelada',
+            self::Cancelada => 'Terminada anticipadamente',
         };
     }
 }

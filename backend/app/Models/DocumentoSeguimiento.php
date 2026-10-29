@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Control de asistencia, diario de campo o informe de una vinculación.
+ * ARL, bitácora, control de asistencia o informe de una vinculación.
  *
  * `archivo_url` guarda la ruta del archivo en el disco privado; se descarga
  * solo a través de la API, que verifica permisos.

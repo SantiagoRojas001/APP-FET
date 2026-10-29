@@ -10,6 +10,12 @@ const PUBLIC = {
   '/login': () => import('./views/login.js'),
   '/recuperar': () => import('./views/recuperar.js'),
   '/restablecer': () => import('./views/restablecer.js'),
+  '/activar': () => import('./views/activar.js'),
+};
+
+/** Rutas públicas sin # (las que se comparten como enlace directo). */
+const PUBLIC_PATHS = {
+  '/empresasRegistro': () => import('./views/registro-empresa.js'),
 };
 
 /** Ruta del hash sin parámetros: '#/restablecer?token=x' → '/restablecer'. */
@@ -66,6 +72,16 @@ export async function render() {
   const themeFloat = document.getElementById('themeFloat');
   themeFloat.hidden = Boolean(session.user);
   if (!session.user) mountThemeSwitch(themeFloat, deviceTheme);
+
+  // El registro de empresas se abre en /empresasRegistro, con o sin sesión.
+  const publicPath = PUBLIC_PATHS[location.pathname];
+  if (publicPath) {
+    themeFloat.hidden = false;
+    mountThemeSwitch(themeFloat, deviceTheme);
+    const { default: view } = await publicPath();
+    if (id === renderId) view({ root: app, navigate, query: currentQuery() });
+    return;
+  }
 
   if (!session.user) {
     const load = PUBLIC[path] ?? PUBLIC['/login'];

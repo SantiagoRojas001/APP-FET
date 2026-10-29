@@ -34,18 +34,18 @@ export default function loginView({ root, navigate }) {
         <div class="l-body">
           <div class="l-copy">
             <h1>Tu pasantía, de la postulación al informe final</h1>
-            <p>Hoja de vida, vacantes, aprobación docente y seguimiento en un solo lugar.</p>
+            <p>Hoja de vida, vacantes, autorización docente y seguimiento en un solo lugar.</p>
           </div>
           <div class="preview" aria-hidden="true">
             <div class="preview-row">
               <div class="logo">ND</div>
               <div><b style="font-weight:600">Pasante de desarrollo web</b><div class="fine">Nodo Digital S.A.S.</div></div>
-              ${badge('info', 'Aprobada')}
+              ${badge('info', 'Seleccionada')}
             </div>
             <div class="preview-row">
               <div class="logo">SG</div>
               <div><b style="font-weight:600">Pasante de análisis de datos</b><div class="fine">Clínica San Gabriel</div></div>
-              ${badge('warn', 'En revisión')}
+              ${badge('warn', 'Enviada')}
             </div>
             <div class="preview-cap">Así sigues el estado de cada postulación.</div>
           </div>
@@ -68,6 +68,7 @@ export default function loginView({ root, navigate }) {
           <p class="forgot"><button type="button" class="link" id="toRecuperar">¿Olvidaste tu contraseña?</button></p>
           <div id="loginError"></div>
           <button class="btn block" type="submit">Ingresar ${icon('arrow-right')}</button>
+          <p class="help">¿Representas a una empresa? <a class="link" href="/empresasRegistro">Registra tu empresa</a> para publicar vacantes.</p>
           ${DEMO.length
             ? html`<div class="demo-groups" aria-label="Cuentas de ejemplo">
                   ${DEMO.map(

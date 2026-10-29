@@ -18,8 +18,14 @@ export default async function resumenView({ root, navigate }) {
         <span></span>
         <p><b>${r.empresas_validadas} empresas validadas</b> y ${r.empresas_pendientes} pendientes de validación.</p>
         ${r.empresas_pendientes ? html`<button class="btn sm" id="toEmp">Revisar empresas</button>` : ''}
+      </section>
+      <section class="callout">
+        <span></span>
+        <p><b>${r.reportes_abiertos} reportes</b> de problemas sin resolver.</p>
+        ${r.reportes_abiertos ? html`<button class="btn sm" id="toRep">Atender reportes</button>` : ''}
       </section>`,
   );
 
   root.querySelector('#toEmp')?.addEventListener('click', () => navigate('/empresas'));
+  root.querySelector('#toRep')?.addEventListener('click', () => navigate('/reportes'));
 }

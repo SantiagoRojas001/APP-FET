@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Postulación de un estudiante a una vacante.
  */
 #[Table('postulacion', timestamps: false)]
-#[Fillable(['vacante_id', 'estudiante_id', 'estado', 'fecha', 'observacion'])]
+#[Fillable(['vacante_id', 'estudiante_id', 'estado', 'fecha', 'observacion', 'revisada_en', 'decidida_en'])]
 class Postulacion extends Model
 {
     use HasFactory;
@@ -27,6 +27,8 @@ class Postulacion extends Model
         return [
             'estado' => EstadoPostulacion::class,
             'fecha' => 'datetime',
+            'revisada_en' => 'datetime',
+            'decidida_en' => 'datetime',
         ];
     }
 

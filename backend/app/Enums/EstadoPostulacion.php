@@ -3,25 +3,26 @@
 namespace App\Enums;
 
 /**
- * Ciclo de una postulación: el docente la revisa y, si la aprueba, la empresa decide (postulacion.estado).
+ * Ciclo de una postulación: la empresa la recibe y selecciona o descarta;
+ * si selecciona, el docente autoriza la práctica (postulacion.estado).
  */
 enum EstadoPostulacion: string
 {
     use HasValues;
 
     case Enviada = 'ENVIADA';
-    case Aprobada = 'APROBADA';
-    case Rechazada = 'RECHAZADA';
+    case Seleccionada = 'SELECCIONADA';
     case Aceptada = 'ACEPTADA';
+    case Rechazada = 'RECHAZADA';
     case Descartada = 'DESCARTADA';
 
     public function label(): string
     {
         return match ($this) {
-            self::Enviada => 'En revisión docente',
-            self::Aprobada => 'Aprobada por el docente',
-            self::Rechazada => 'Rechazada por el docente',
-            self::Aceptada => 'Aceptada por la empresa',
+            self::Enviada => 'Enviada a la empresa',
+            self::Seleccionada => 'Seleccionada, en autorización docente',
+            self::Aceptada => 'Autorizada',
+            self::Rechazada => 'No autorizada por el docente',
             self::Descartada => 'No seleccionada',
         };
     }

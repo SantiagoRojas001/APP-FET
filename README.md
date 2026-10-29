@@ -80,11 +80,23 @@ Todas usan la contraseña `demo1234`. Solo existen fuera de producción.
 | --- | --- | --- |
 | Estudiante | mateo.suarez@fet.edu.co | 9.º semestre, habilitado para pasantía |
 | Estudiante | laura.mendez@fet.edu.co | 5.º semestre, aún no habilitada para postularse |
-| Estudiante | andres.rojas@fet.edu.co | Pasantía activa: entra al entorno de seguimiento |
+| Estudiante | andres.rojas@fet.edu.co | Pasantía activa con 472 de 480 horas y 3 reportes: al registrar una jornada más completa las horas |
+| Estudiante | valentina.torres@fet.edu.co | Pasantía con las horas cumplidas, esperando la aprobación de la empresa |
 | Docente | p.vargas@fet.edu.co | Revisa postulaciones y seguimiento |
-| Empresa | talento@nododigital.co | Empresa validada |
+| Empresa | talento@nododigital.co | Empresa validada (practicante: Andrés) |
+| Empresa | ti@clinicasangabriel.co | Puede evaluar y aprobar la pasantía de Valentina |
 | Empresa | rrhh@agrosur.co | Pendiente de validación (no puede ingresar) |
-| Administrador | admin@fet.edu.co | Empresas, reglas y usuarios |
+| Administrador | admin@fet.edu.co | Cuentas, empresas, reglas, periodos, informes, reportes y auditoría |
+
+### Cuentas y acceso
+
+Estudiantes y docentes no tienen registro público: la administración crea sus cuentas y las de
+administradores (con correo `@fet.edu.co`) e invita a las empresas. Las empresas también pueden
+registrarse solas en `/empresasRegistro` (por ejemplo, `http://localhost:5173/empresasRegistro`)
+y ingresan cuando la administración las valida. Cada cuenta nueva recibe un
+correo con el enlace para definir la contraseña y aceptar la política de datos; el enlace dura
+7 días y se puede reenviar desde Usuarios o Empresas. En un servidor nuevo, la primera cuenta de
+administración se crea con `php artisan fet:crear-admin correo@fet.edu.co`.
 
 ## Comandos frecuentes
 
@@ -99,6 +111,8 @@ Con `make` (incluido en macOS):
 | `make fresh` | Reconstruye la base de datos con datos de ejemplo |
 | `make artisan c="route:list"` | Cualquier comando de Artisan |
 
+Para producción (HTTPS, respaldos diarios) ver [docs/despliegue.md](docs/despliegue.md).
+
 ## Estructura
 
 ```
@@ -108,7 +122,8 @@ APPfet/
 │   ├── app/Http/           Controladores por rol, Form Requests y Resources
 │   ├── app/Models/         Un modelo por tabla del modelo de datos
 │   ├── app/Policies/       Permisos sobre vinculaciones y documentos
-│   ├── app/Services/       Reglas de negocio (elegibilidad, flujo de postulación, hoja de vida)
+│   ├── app/Services/       Reglas de negocio (elegibilidad, postulación, horas y cierre, evaluaciones, informes)
+│   ├── config/evaluaciones.php  Cuestionarios de cierre de la práctica
 │   ├── database/           Migraciones, factories y seeders
 │   ├── routes/api.php      Todas las rutas de la API
 │   └── tests/Feature/      Pruebas de la API
@@ -118,9 +133,10 @@ APPfet/
 │       ├── lib/            Plantillas seguras, componentes de interfaz, formato
 │       ├── views/          Pantallas por rol
 │       └── routes.js       Menú y rutas por rol
-├── docker/                 Imagen de PHP y script de la base de pruebas
+├── docker/                 Imagen de PHP, base de pruebas y archivos de producción
 ├── docs/                   Arquitectura y prototipo original
-└── docker-compose.yml
+├── docker-compose.yml      Entorno de desarrollo
+└── docker-compose.prod.yml Producción
 ```
 
 Más detalle en [docs/arquitectura.md](docs/arquitectura.md).

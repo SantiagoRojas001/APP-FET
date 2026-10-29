@@ -33,22 +33,8 @@ class EstudianteResource extends Recurso
             'disponibilidad' => $this->disponibilidad,
             'programa' => new ProgramaResource($this->whenLoaded('programa')),
             'habilitado_para_practica' => app(ElegibilidadService::class)->habilitadoParaPractica($this->resource),
-            'hoja_vida' => $this->whenLoaded('hojaVida', fn () => [
-                'perfil_profesional' => $this->hojaVida?->perfil_profesional,
-                'formacion' => $this->hojaVida?->formacion,
-                'actualizado_en' => $this->hojaVida?->actualizado_en?->toIso8601String(),
-                'porcentaje' => $hojaVida->porcentaje($this->resource),
-                'secciones' => $hojaVida->secciones($this->resource),
-                // Solo en el perfil completo; los listados no cargan las experiencias.
-                'experiencias' => $this->when($this->hojaVida?->relationLoaded('experiencias'), fn () => $this->hojaVida->experiencias->map(fn ($e) => [
-                    'id' => $e->id,
-                    'cargo' => $e->cargo,
-                    'organizacion' => $e->organizacion,
-                    'fecha_inicio' => $e->fecha_inicio->toDateString(),
-                    'fecha_fin' => $e->fecha_fin?->toDateString(),
-                    'descripcion' => $e->descripcion,
-                ])),
-            ]),
+            'hoja_vida_habilitada' => $this->whenLoaded('vinculacionActiva', fn () => $this->vinculacionActiva === null),
+            'hoja_vida' => $this->whenLoaded('hojaVida', fn () => $this->hojaVida($hojaVida)),
             'competencias' => $this->whenLoaded('competencias', fn () => $this->competencias->map(fn ($c) => [
                 'id' => $c->id,
                 'nombre' => $c->nombre,
@@ -61,6 +47,77 @@ class EstudianteResource extends Recurso
                 'url_repositorio' => $p->url_repositorio,
                 'semestre' => $p->semestre,
             ])),
+        ];
+    }
+
+    /**
+     * Hoja de vida en el formato PA-GTH-F-10. Las listas se incluyen solo en el
+     * perfil completo; los listados cargan la hoja sin sus relaciones.
+     *
+     * @return array<string, mixed>
+     */
+    private function hojaVida(HojaVidaService $servicio): array
+    {
+        $hoja = $this->hojaVida;
+        $lista = fn (string $relacion, callable $fila) => $this->when(
+            $hoja?->relationLoaded($relacion),
+            fn () => $hoja->{$relacion}->map($fila)->values(),
+        );
+
+        return [
+            'perfil_profesional' => $hoja?->perfil_profesional,
+            'actualizado_en' => $hoja?->actualizado_en?->toIso8601String(),
+            'porcentaje' => $servicio->porcentaje($this->resource),
+            'secciones' => $servicio->secciones($this->resource),
+            'url_foto' => $hoja?->foto_url ? "/api/estudiantes/{$this->id}/foto" : null,
+            'datos_personales' => [
+                'fecha_nacimiento' => $hoja?->fecha_nacimiento?->toDateString(),
+                'lugar_nacimiento' => $hoja?->lugar_nacimiento,
+                'estado_civil' => $hoja?->estado_civil,
+                'lugar_residencia' => $hoja?->lugar_residencia,
+                'direccion' => $hoja?->direccion,
+                'rh' => $hoja?->rh,
+                'contacto_emergencia_nombre' => $hoja?->contacto_emergencia_nombre,
+                'contacto_emergencia_telefono' => $hoja?->contacto_emergencia_telefono,
+            ],
+            'formaciones' => $lista('formaciones', fn ($f) => [
+                'nivel' => $this->enum($f->nivel),
+                'titulo' => $f->titulo,
+                'institucion' => $f->institucion,
+                'pais_ciudad' => $f->pais_ciudad,
+                'fecha_grado' => $f->fecha_grado?->toDateString(),
+                'modalidad' => $f->modalidad,
+            ]),
+            'cursos' => $lista('cursos', fn ($c) => [
+                'tema' => $c->tema,
+                'duracion_horas' => $c->duracion_horas,
+                'fecha' => $c->fecha->format('Y-m'),
+                'institucion' => $c->institucion,
+                'modalidad' => $c->modalidad,
+            ]),
+            'experiencias' => $lista('experiencias', fn ($e) => [
+                'cargo' => $e->cargo,
+                'organizacion' => $e->organizacion,
+                'direccion' => $e->direccion,
+                'telefono' => $e->telefono,
+                'jefe_inmediato' => $e->jefe_inmediato,
+                'dedicacion' => $e->dedicacion,
+                'fecha_inicio' => $e->fecha_inicio->toDateString(),
+                'fecha_fin' => $e->fecha_fin?->toDateString(),
+                'descripcion' => $e->descripcion,
+            ]),
+            'investigaciones' => $lista('investigaciones', fn ($i) => [
+                'tipo' => $this->enum($i->tipo),
+                'descripcion' => $i->descripcion,
+                'periodo' => $i->periodo,
+            ]),
+            'referencias' => $lista('referencias', fn ($r) => [
+                'tipo' => $this->enum($r->tipo),
+                'nombre' => $r->nombre,
+                'ocupacion' => $r->ocupacion,
+                'parentesco' => $r->parentesco,
+                'telefono' => $r->telefono,
+            ]),
         ];
     }
 

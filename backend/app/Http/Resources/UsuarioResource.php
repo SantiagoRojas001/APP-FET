@@ -18,6 +18,8 @@ class UsuarioResource extends Recurso
             'activo' => $this->activo,
             'tema' => $this->tema ?? 'system',
             'creado_en' => $this->creado_en?->toIso8601String(),
+            // Sin política aceptada, la persona aún no usa su invitación.
+            'pendiente_activacion' => $this->whenCounted('consentimientos', fn (int $n) => $n === 0),
             'nombre' => match ($this->rol) {
                 Rol::Estudiante => $this->estudiante?->nombre_completo,
                 Rol::Empresa => $this->empresa?->razon_social,

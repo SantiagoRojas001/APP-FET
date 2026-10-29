@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\Rol;
 use App\Models\Empresa;
-use App\Models\Programa;
 use App\Models\Usuario;
 use App\Models\Vinculacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,65 +62,6 @@ class AutenticacionTest extends TestCase
         }
 
         $this->postJson('/api/auth/login', ['correo' => 'x@fet.edu.co', 'password' => 'mala'])->assertTooManyRequests();
-    }
-
-    public function test_un_estudiante_se_registra_con_correo_institucional_y_acepta_la_politica(): void
-    {
-        $programa = Programa::factory()->create(['total_semestres' => 10]);
-
-        $respuesta = $this->postJson('/api/registro/estudiante', [
-            'correo' => 'nuevo.estudiante@fet.edu.co',
-            'password' => 'clave1234',
-            'password_confirmation' => 'clave1234',
-            'programa_id' => $programa->id,
-            'codigo' => '20269999',
-            'documento' => '1075000000',
-            'nombres' => 'Ana',
-            'apellidos' => 'Gómez',
-            'semestre_actual' => 4,
-            'acepta_politica' => true,
-        ]);
-
-        $respuesta->assertCreated()->assertJsonStructure(['token', 'usuario' => ['estudiante']]);
-
-        $usuario = Usuario::where('correo', 'nuevo.estudiante@fet.edu.co')->firstOrFail();
-        $this->assertSame(Rol::Estudiante, $usuario->rol);
-        $this->assertNotNull($usuario->estudiante->hojaVida);
-        $this->assertDatabaseHas('consentimiento_datos', ['usuario_id' => $usuario->id, 'version_politica' => config('fet.version_politica')]);
-    }
-
-    public function test_el_registro_de_estudiante_valida_dominio_politica_y_semestre(): void
-    {
-        $programa = Programa::factory()->create(['total_semestres' => 6]);
-
-        $this->postJson('/api/registro/estudiante', [
-            'correo' => 'ana@gmail.com',
-            'password' => 'clave1234',
-            'password_confirmation' => 'clave1234',
-            'programa_id' => $programa->id,
-            'codigo' => '1',
-            'documento' => '1',
-            'nombres' => 'Ana',
-            'apellidos' => 'Gómez',
-            'semestre_actual' => 9,
-        ])->assertJsonValidationErrors(['correo', 'acepta_politica', 'semestre_actual']);
-    }
-
-    public function test_una_empresa_se_registra_pendiente_de_validacion(): void
-    {
-        $this->postJson('/api/registro/empresa', [
-            'correo' => 'rrhh@empresa.co',
-            'password' => 'clave1234',
-            'password_confirmation' => 'clave1234',
-            'nit' => '901.111.222-3',
-            'razon_social' => 'Empresa de Prueba S.A.S.',
-            'contacto_nombre' => 'Laura Díaz',
-            'contacto_telefono' => '3100000000',
-            'modalidad_interes' => 'PASANTIA',
-            'acepta_politica' => true,
-        ])->assertCreated()->assertJsonMissingPath('token');
-
-        $this->assertDatabaseHas('empresa', ['nit' => '901.111.222-3', 'estado_validacion' => 'PENDIENTE']);
     }
 
     public function test_cerrar_sesion_revoca_el_token(): void

@@ -11,7 +11,7 @@ function row(p) {
     <div class="rowi-main">
       <div class="panel-h">
         <div><h3>${s.nombre_completo}</h3><div class="sub">${s.programa.nombre}, ${s.semestre_actual}.º semestre</div></div>
-        ${p.estado.valor === 'APROBADA' ? statusBadge({ valor: 'ENVIADA', etiqueta: 'Por decidir' }) : statusBadge(p.estado)}
+        ${p.estado.valor === 'ENVIADA' ? statusBadge({ valor: 'ENVIADA', etiqueta: 'Por decidir' }) : statusBadge(p.estado)}
       </div>
       <dl class="facts">
         <div><dt>Vacante</dt><dd>${p.vacante.titulo}</dd></div>
@@ -30,8 +30,8 @@ function row(p) {
         : ''}
       <div class="actions">
         <a class="btn sec sm" href="#/estudiantes/${s.id}">${icon('file-cv')}Hoja de vida completa</a>
-        ${p.estado.valor === 'APROBADA'
-          ? html`<button class="btn good sm" data-decide="ACEPTADA" data-id="${p.id}">${icon('user-check')}Aceptar</button>
+        ${p.estado.valor === 'ENVIADA'
+          ? html`<button class="btn good sm" data-decide="SELECCIONADA" data-id="${p.id}">${icon('user-check')}Seleccionar</button>
               <button class="btn danger sm" data-decide="DESCARTADA" data-id="${p.id}">Descartar</button>`
           : ''}
       </div>
@@ -44,21 +44,21 @@ export default async function postulantesView({ root, refresh }) {
 
   mount(
     root,
-    html`${pageHeader('Postulantes', `${session.user.nombre}. Solo ves postulaciones que un docente de la FET ya aprobó.`)}
+    html`${pageHeader('Postulantes', `${session.user.nombre}. Las hojas de vida llegan directo de los estudiantes. Cuando selecciones a uno, la FET autoriza la práctica y le envía la carta de bienvenida.`)}
       <section class="panel flush">
-        ${items.length ? items.map(row) : emptyState('inbox', 'Aún no hay postulantes aprobados', 'Aparecerán aquí cuando un docente apruebe una postulación a tus vacantes.')}
+        ${items.length ? items.map(row) : emptyState('inbox', 'Aún no hay postulantes', 'Aparecerán aquí cuando un estudiante se postule a tus vacantes.')}
       </section>`,
   );
 
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-decide]');
     if (!btn) return;
-    const accept = btn.dataset.decide === 'ACEPTADA';
+    const accept = btn.dataset.decide === 'SELECCIONADA';
     if (!accept && !confirm('¿Descartar esta postulación?')) return;
     withBusy(btn, async () => {
       try {
         await api.patch(`/empresa/postulaciones/${btn.dataset.id}`, { decision: btn.dataset.decide });
-        toast(accept ? 'Estudiante aceptado. La práctica quedó registrada.' : 'Postulación descartada.');
+        toast(accept ? 'Estudiante seleccionado. Avisamos a la FET para que autorice la práctica.' : 'Postulación descartada.');
         refresh();
       } catch (error) {
         toast(error.message);

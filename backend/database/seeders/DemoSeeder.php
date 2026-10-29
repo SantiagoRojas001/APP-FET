@@ -2,20 +2,31 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CategoriaReporte;
 use App\Enums\EstadoPostulacion;
+use App\Enums\EstadoReporte;
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoValidacion;
 use App\Enums\Modalidad;
 use App\Enums\NivelCompetencia;
+use App\Enums\NivelFormacion;
 use App\Enums\Rol;
 use App\Enums\TipoDocumento;
+use App\Enums\TipoInvestigacion;
+use App\Enums\TipoReferencia;
 use App\Models\Competencia;
 use App\Models\Empresa;
 use App\Models\Estudiante;
+use App\Models\EvidenciaSemanal;
+use App\Models\PeriodoAcademico;
 use App\Models\Programa;
+use App\Models\Reporte;
 use App\Models\Usuario;
 use App\Models\Vacante;
+use App\Models\Vinculacion;
+use App\Notifications\HorasCumplidas;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -50,8 +61,20 @@ class DemoSeeder extends Seeder
         $vacantes = $this->vacantes($empresas);
         $estudiantes = $this->estudiantes();
 
+        $periodo = $this->periodos();
         $this->postulaciones($estudiantes, $vacantes);
-        $this->vinculaciones($estudiantes, $empresas, $vacantes, $docente);
+        $this->vinculaciones($estudiantes, $empresas, $vacantes, $docente, $periodo);
+        $this->reportes($estudiantes, $empresas);
+    }
+
+    /** 2026-1 ya cerrado y 2026-2 en curso. */
+    private function periodos(): PeriodoAcademico
+    {
+        PeriodoAcademico::firstOrCreate(['nombre' => '2026-1'], [
+            'fecha_inicio' => '2026-01-19', 'fecha_fin' => '2026-06-30', 'cerrado_en' => '2026-07-01 08:00:00',
+        ]);
+
+        return PeriodoAcademico::firstOrCreate(['nombre' => '2026-2'], ['fecha_inicio' => '2026-07-13', 'fecha_fin' => '2026-12-18']);
     }
 
     private function usuario(string $correo, Rol $rol): Usuario
@@ -147,10 +170,7 @@ class DemoSeeder extends Seeder
             ]);
 
             if ($estudiante->wasRecentlyCreated) {
-                $estudiante->hojaVida()->create([
-                    'perfil_profesional' => $semestre > 2 ? "Estudiante de {$semestre}.º semestre interesado en el desarrollo de software y el trabajo en equipo." : null,
-                    'formacion' => "Bachiller académico. Cursando {$semestre}.º semestre en la FET.",
-                ]);
+                $this->hojaVida($estudiante, $semestre);
                 $estudiante->competencias()->attach([
                     $competencias['JavaScript'] => ['nivel' => NivelCompetencia::Intermedio->value],
                     $competencias['Git y GitHub'] => ['nivel' => NivelCompetencia::Basico->value],
@@ -172,24 +192,74 @@ class DemoSeeder extends Seeder
     }
 
     /**
+     * Hoja de vida en el formato PA-GTH-F-10. Los estudiantes de semestres
+     * avanzados la tienen completa (salvo la foto); los primeros, a medias.
+     */
+    private function hojaVida(Estudiante $estudiante, int $semestre): void
+    {
+        $avanzado = $semestre > 2;
+        $hoja = $estudiante->hojaVida()->create([
+            'perfil_profesional' => $avanzado ? "Estudiante de {$semestre}.º semestre interesado en el desarrollo de software y el trabajo en equipo." : null,
+            'fecha_nacimiento' => now()->subYears(18 + intdiv($semestre, 2))->subDays($semestre * 23)->toDateString(),
+            'lugar_nacimiento' => 'Neiva, Huila',
+            'estado_civil' => 'Soltero(a)',
+            'lugar_residencia' => 'Neiva',
+            'direccion' => $avanzado ? "Calle {$semestre} # 12-34" : null,
+            'rh' => $avanzado ? 'O+' : null,
+            'contacto_emergencia_nombre' => $avanzado ? "Familiar de {$estudiante->nombres}" : null,
+            'contacto_emergencia_telefono' => $avanzado ? '3201234567' : null,
+        ]);
+
+        if (! $avanzado) {
+            return;
+        }
+
+        $hoja->cursos()->create([
+            'tema' => 'Fundamentos de Scrum', 'duracion_horas' => 40, 'fecha' => now()->subMonths(8)->startOfMonth()->toDateString(),
+            'institucion' => 'SENA', 'modalidad' => 'Virtual',
+        ]);
+        $hoja->formaciones()->create([
+            'nivel' => NivelFormacion::Tecnico, 'titulo' => 'Técnico en Sistemas', 'institucion' => 'SENA',
+            'pais_ciudad' => 'Colombia, Neiva', 'fecha_grado' => now()->subYears(3)->toDateString(), 'modalidad' => 'Presencial',
+        ]);
+        $hoja->investigaciones()->create([
+            'tipo' => TipoInvestigacion::Grupo, 'descripcion' => 'Semillero de investigación en desarrollo de software de la FET', 'periodo' => '2025-1 a 2026-2',
+        ]);
+        $hoja->referencias()->createMany([
+            ['tipo' => TipoReferencia::Familiar, 'nombre' => "Madre de {$estudiante->nombres}", 'ocupacion' => 'Docente', 'parentesco' => 'Madre', 'telefono' => '3109876543'],
+            ['tipo' => TipoReferencia::Personal, 'nombre' => 'Jorge Medina', 'ocupacion' => 'Ingeniero de sistemas', 'telefono' => '3001112233'],
+        ]);
+    }
+
+    /**
+     * Una postulación en cada etapa: por decidir en la empresa, seleccionada
+     * (espera la autorización docente), descartada y autorizadas.
+     *
      * @param  array<string, Estudiante>  $estudiantes
      * @param  array<int, Vacante>  $vacantes
      */
     private function postulaciones(array $estudiantes, array $vacantes): void
     {
         $datos = [
-            ['julian', 1, EstadoPostulacion::Aprobada, 'Cumple el semestre mínimo de su programa.'],
+            ['julian', 1, EstadoPostulacion::Enviada, null],
             ['sofia', 5, EstadoPostulacion::Enviada, null],
-            ['mateo', 3, EstadoPostulacion::Enviada, null],
-            ['mateo', 1, EstadoPostulacion::Rechazada, 'Completa tu hoja de vida (perfil y proyectos) antes de postularte.'],
+            ['mateo', 3, EstadoPostulacion::Seleccionada, null],
+            ['mateo', 1, EstadoPostulacion::Descartada, null],
             ['andres', 1, EstadoPostulacion::Aceptada, 'Cumple requisitos.'],
             ['valentina', 4, EstadoPostulacion::Aceptada, 'Cumple requisitos.'],
         ];
 
         foreach ($datos as [$alias, $vacante, $estado, $observacion]) {
+            $fecha = now()->subDays(rand(10, 30));
             $vacantes[$vacante]->postulaciones()->firstOrCreate(
                 ['estudiante_id' => $estudiantes[$alias]->id],
-                ['estado' => $estado, 'observacion' => $observacion, 'fecha' => now()->subDays(rand(3, 20))],
+                [
+                    'estado' => $estado,
+                    'observacion' => $observacion,
+                    'fecha' => $fecha,
+                    'decidida_en' => $estado === EstadoPostulacion::Enviada ? null : $fecha->copy()->addDays(rand(1, 4)),
+                    'revisada_en' => in_array($estado, [EstadoPostulacion::Aceptada, EstadoPostulacion::Rechazada], true) ? $fecha->copy()->addDays(rand(5, 9)) : null,
+                ],
             );
         }
     }
@@ -199,14 +269,16 @@ class DemoSeeder extends Seeder
      * @param  array<string, Empresa>  $empresas
      * @param  array<int, Vacante>  $vacantes
      */
-    private function vinculaciones(array $estudiantes, array $empresas, array $vacantes, Usuario $docente): void
+    private function vinculaciones(array $estudiantes, array $empresas, array $vacantes, Usuario $docente, PeriodoAcademico $periodo): void
     {
+        // A Andrés solo le falta que la empresa apruebe su última semana para completar
+        // las horas; Valentina ya las completó y espera que la empresa la evalúe.
         $datos = [
-            ['andres', 'nodo', 1, '2026-08-04'],
-            ['valentina', 'csg', 4, '2026-07-28'],
+            ['andres', 'nodo', 1, '2026-07-21', 472],
+            ['valentina', 'csg', 4, '2026-07-14', 488],
         ];
 
-        foreach ($datos as [$alias, $empresa, $vacante, $inicio]) {
+        foreach ($datos as [$alias, $empresa, $vacante, $inicio, $horas]) {
             $estudiante = $estudiantes[$alias];
 
             $vinculacion = $estudiante->vinculaciones()->firstOrCreate(['vacante_id' => $vacantes[$vacante]->id], [
@@ -215,16 +287,20 @@ class DemoSeeder extends Seeder
                 'tipo' => Modalidad::Pasantia,
                 'semestre_al_vincular' => $estudiante->semestre_actual,
                 'fecha_inicio' => $inicio,
+                'periodo_id' => $periodo->id,
             ]);
 
             if (! $vinculacion->wasRecentlyCreated) {
                 continue;
             }
 
+            $this->evidencias($vinculacion, $horas, $alias === 'andres' ? 16 : 0);
+
             $documentos = [
+                [TipoDocumento::Arl, $inicio, '2026-12-18', EstadoRevision::Aprobado, null],
                 [TipoDocumento::InformeAvance, '2026-08-04', '2026-08-31', EstadoRevision::Aprobado, null],
                 [TipoDocumento::ControlAsistencia, '2026-09-01', '2026-09-15', EstadoRevision::Aprobado, null],
-                [TipoDocumento::DiarioCampo, '2026-09-14', '2026-09-20', EstadoRevision::Observado, 'Describe con más detalle las tareas del módulo.'],
+                [TipoDocumento::Bitacora, '2026-09-14', '2026-09-20', EstadoRevision::Observado, 'Describe con más detalle las tareas del módulo.'],
                 [TipoDocumento::ControlAsistencia, '2026-09-16', '2026-09-30', EstadoRevision::Pendiente, null],
             ];
 
@@ -243,6 +319,97 @@ class DemoSeeder extends Seeder
                     'observaciones' => $obs,
                 ]);
             }
+        }
+    }
+
+    /**
+     * Semanas de 40 horas ya aprobadas por la empresa, desde la semana pasada
+     * hacia atrás, hasta sumar las horas indicadas. Si se piden horas
+     * pendientes, la semana actual queda por aprobar.
+     */
+    private function evidencias(Vinculacion $vinculacion, int $horas, int $pendientes): void
+    {
+        $actividades = ['Desarrollo de funcionalidades asignadas', 'Reuniones de seguimiento con el equipo', 'Pruebas y corrección de errores', 'Documentación técnica'];
+        $semana = today()->startOfWeek()->subWeek();
+        $inicio = $vinculacion->fecha_inicio->copy()->startOfWeek();
+        $filas = [];
+
+        for ($total = 0; $total < $horas && $semana->gte($inicio); $semana->subWeek()) {
+            $semanales = min(40, $horas - $total);
+            $revisada = $semana->copy()->addDays(7)->setTime(9, 0);
+            $filas[] = [
+                'vinculacion_id' => $vinculacion->id,
+                'semana_inicio' => $semana->toDateString(),
+                'horas' => $semanales,
+                'actividades' => $actividades[count($filas) % 4],
+                'estado' => EstadoRevision::Aprobado->value,
+                'revisada_por' => $vinculacion->empresa->usuario_id,
+                'revisada_en' => $revisada,
+                'registrado_en' => $revisada->copy()->subDays(2),
+            ];
+            $total += $semanales;
+        }
+
+        if ($pendientes) {
+            $filas[] = [
+                'vinculacion_id' => $vinculacion->id,
+                'semana_inicio' => today()->startOfWeek()->toDateString(),
+                'horas' => $pendientes,
+                'actividades' => 'Cierre del módulo de reportes y entrega de la documentación.',
+                'estado' => EstadoRevision::Pendiente->value,
+                'revisada_por' => null,
+                'revisada_en' => null,
+                'registrado_en' => now(),
+            ];
+        }
+
+        EvidenciaSemanal::insert($filas);
+
+        $requeridas = $vinculacion->estudiante->programa->horas_requeridas;
+        if ($total >= $requeridas) {
+            $vinculacion->update(['horas_cumplidas_en' => Carbon::parse($filas[0]['revisada_en'])]);
+            $vinculacion->load('estudiante.usuario');
+            $vinculacion->estudiante->usuario->notify(new HorasCumplidas($vinculacion, $requeridas));
+        }
+    }
+
+    /**
+     * Un reporte de la plataforma y tres de la empresa sobre la pasantía de
+     * Andrés, con los que el docente ya puede finalizarla anticipadamente.
+     *
+     * @param  array<string, Estudiante>  $estudiantes
+     * @param  array<string, Empresa>  $empresas
+     */
+    private function reportes(array $estudiantes, array $empresas): void
+    {
+        if (Reporte::exists()) {
+            return;
+        }
+
+        $estudiantes['laura']->usuario->reportes()->create([
+            'categoria' => CategoriaReporte::FallaPlataforma,
+            'asunto' => 'No se guarda la foto del repositorio',
+            'descripcion' => 'Al agregar el enlace de GitHub en mi hoja de vida, la vista previa no aparece.',
+        ]);
+
+        $vinculacion = $estudiantes['andres']->vinculacionActiva()->firstOrFail();
+        $quejas = [
+            ['Llegadas tarde', 'El practicante llegó tarde tres días de esta semana sin avisar.'],
+            ['Inasistencia sin aviso', 'No se presentó el lunes y no respondió los mensajes.'],
+            ['Entregas incompletas', 'El módulo asignado se entregó sin las pruebas acordadas.'],
+        ];
+
+        foreach ($quejas as $i => [$asunto, $descripcion]) {
+            $empresas['nodo']->usuario->reportes()->create([
+                'vinculacion_id' => $vinculacion->id,
+                'categoria' => CategoriaReporte::Practica,
+                'asunto' => $asunto,
+                'descripcion' => $descripcion,
+                'estado' => $i === 0 ? EstadoReporte::Resuelto : EstadoReporte::Abierto,
+                'respuesta' => $i === 0 ? 'El docente tutor habló con el practicante.' : null,
+                'atendido_por' => $i === 0 ? $this->admin->id : null,
+                'atendido_en' => $i === 0 ? now()->subDays(5) : null,
+            ]);
         }
     }
 

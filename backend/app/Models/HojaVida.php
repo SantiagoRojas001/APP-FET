@@ -9,15 +9,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Hoja de vida del estudiante en el formato institucional de la FET.
+ * Hoja de vida del estudiante en el formato institucional de la FET
+ * (PA-GTH-F-10): datos personales, formación, experiencia laboral,
+ * experiencia investigativa y referencias.
  */
 #[Table('hoja_vida', timestamps: false)]
-#[Fillable(['estudiante_id', 'perfil_profesional', 'formacion', 'actualizado_en'])]
+#[Fillable([
+    'estudiante_id', 'perfil_profesional', 'actualizado_en', 'foto_url', 'fecha_nacimiento', 'lugar_nacimiento',
+    'estado_civil', 'lugar_residencia', 'direccion', 'rh', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
+])]
 class HojaVida extends Model
 {
+    /** Relaciones que componen la hoja de vida completa. */
+    public const COMPLETA = ['experiencias', 'formaciones', 'cursos', 'investigaciones', 'referencias'];
+
     protected function casts(): array
     {
-        return ['actualizado_en' => 'datetime'];
+        return [
+            'actualizado_en' => 'datetime',
+            'fecha_nacimiento' => 'date',
+        ];
     }
 
     /** @return BelongsTo<Estudiante, $this> */
@@ -30,5 +41,29 @@ class HojaVida extends Model
     public function experiencias(): HasMany
     {
         return $this->hasMany(Experiencia::class)->orderByDesc('fecha_inicio');
+    }
+
+    /** @return HasMany<FormacionAcademica, $this> */
+    public function formaciones(): HasMany
+    {
+        return $this->hasMany(FormacionAcademica::class)->orderByRaw('fecha_grado desc nulls first');
+    }
+
+    /** @return HasMany<Curso, $this> */
+    public function cursos(): HasMany
+    {
+        return $this->hasMany(Curso::class)->orderByDesc('fecha');
+    }
+
+    /** @return HasMany<ActividadInvestigativa, $this> */
+    public function investigaciones(): HasMany
+    {
+        return $this->hasMany(ActividadInvestigativa::class)->orderBy('id');
+    }
+
+    /** @return HasMany<Referencia, $this> */
+    public function referencias(): HasMany
+    {
+        return $this->hasMany(Referencia::class)->orderBy('id');
     }
 }

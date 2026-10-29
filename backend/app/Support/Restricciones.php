@@ -20,4 +20,15 @@ final class Restricciones
 
         DB::statement("ALTER TABLE {$tabla} ADD CONSTRAINT {$tabla}_{$columna}_check CHECK ({$columna} IN ({$lista}))");
     }
+
+    /**
+     * Cambia los valores permitidos de una columna que ya tiene su CHECK.
+     *
+     * @param  list<string>  $valores
+     */
+    public static function reemplazarValores(string $tabla, string $columna, array $valores): void
+    {
+        DB::statement("ALTER TABLE {$tabla} DROP CONSTRAINT IF EXISTS {$tabla}_{$columna}_check");
+        self::valoresPermitidos($tabla, $columna, $valores);
+    }
 }

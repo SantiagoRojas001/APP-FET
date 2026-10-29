@@ -28,4 +28,29 @@ return [
         'extensiones' => ['pdf'],
     ],
 
+    /*
+    | Soporte opcional de las evidencias semanales de horas (PDF o foto).
+    */
+    'evidencias' => [
+        'max_kb' => 10240,
+        'extensiones' => ['pdf', 'jpg', 'jpeg', 'png'],
+    ],
+
+    /*
+    | Opciones de los campos de la hoja de vida (formato PA-GTH-F-10).
+    */
+    'hoja_vida' => [
+        'estado_civil' => ['Soltero(a)', 'Casado(a)', 'Unión libre', 'Separado(a)', 'Viudo(a)'],
+        'rh' => ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'],
+        'dedicacion' => ['Tiempo completo', 'Medio tiempo', 'Por horas'],
+        'modalidad_estudio' => ['Presencial', 'Virtual', 'A distancia', 'Híbrida'],
+        'foto_max_kb' => 2048,
+    ],
+
+    /*
+    | Reportes de problemas ligados a una práctica a partir de los cuales el
+    | docente puede finalizarla anticipadamente.
+    */
+    'reportes_para_finalizar' => 3,
+
 ];

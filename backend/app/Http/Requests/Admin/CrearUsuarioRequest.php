@@ -5,10 +5,10 @@ namespace App\Http\Requests\Admin;
 use App\Enums\Rol;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 /**
- * Cuentas de docentes y administradores. Estudiantes y empresas se registran solos.
+ * Cuentas de docentes y administradores. La persona define su contraseña con
+ * el enlace de invitación.
  */
 class CrearUsuarioRequest extends FormRequest
 {
@@ -23,7 +23,6 @@ class CrearUsuarioRequest extends FormRequest
 
         return [
             'correo' => ['required', 'email', 'max:150', "regex:/@{$dominio}$/", 'unique:usuario,correo'],
-            'password' => ['required', Password::defaults()],
             'rol' => ['required', Rule::in([Rol::Docente->value, Rol::Admin->value])],
         ];
     }

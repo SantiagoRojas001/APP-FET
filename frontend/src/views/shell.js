@@ -35,7 +35,7 @@ export function renderShell(app, path, navigate) {
           ${items.filter((r) => !r.hidden).map(
             (r) =>
               html`<button data-path="${r.path}" aria-current="${path === r.path || path.startsWith(`${r.path}/`) ? 'page' : 'false'}">
-                ${icon(r.icon)}<span>${r.label}</span><span></span>
+                ${icon(r.icon)}<span>${r.label}</span>${r.badge ? html`<span class="count" data-badge hidden></span>` : html`<span></span>`}
               </button>`,
           )}
         </nav>
@@ -77,5 +77,20 @@ export function renderShell(app, path, navigate) {
     session.emit();
   });
 
+  refreshBadge();
+
   return app.querySelector('#view');
+}
+
+/** Actualiza el contador de notificaciones sin leer del menú. */
+export async function refreshBadge() {
+  const el = document.querySelector('[data-badge]');
+  if (!el) return;
+  try {
+    const { no_leidas: n } = await api.get('/notificaciones/no-leidas');
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.hidden = n === 0;
+  } catch {
+    el.hidden = true;
+  }
 }

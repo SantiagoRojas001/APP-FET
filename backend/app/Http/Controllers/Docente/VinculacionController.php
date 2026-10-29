@@ -5,15 +5,18 @@ namespace App\Http\Controllers\Docente;
 use App\Enums\EstadoVinculacion;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Docente\ActualizarVinculacionRequest;
+use App\Http\Requests\Docente\FinalizarVinculacionRequest;
 use App\Http\Resources\VinculacionResource;
 use App\Models\Vinculacion;
+use App\Services\Auditoria;
+use App\Services\PracticaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 /**
- * Seguimiento docente de las prácticas y contrataciones en curso.
+ * Seguimiento docente de las pasantías y prácticas.
  */
 class VinculacionController extends Controller
 {
@@ -21,12 +24,14 @@ class VinculacionController extends Controller
     {
         $filtros = $request->validate([
             'estado' => ['nullable', Rule::enum(EstadoVinculacion::class)],
+            'periodo_id' => ['nullable', 'integer'],
             'mias' => ['nullable', 'boolean'],
         ]);
 
         $vinculaciones = Vinculacion::query()
-            ->with('estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos')
+            ->conSeguimiento()
             ->when($filtros['estado'] ?? null, fn ($q, string $estado) => $q->where('estado', $estado))
+            ->when($filtros['periodo_id'] ?? null, fn ($q, int $periodo) => $q->where('periodo_id', $periodo))
             ->when($request->boolean('mias'), fn ($q) => $q->where('tutor_id', $request->user()->id))
             ->latest('fecha_inicio')
             ->get();
@@ -34,18 +39,24 @@ class VinculacionController extends Controller
         return VinculacionResource::collection($vinculaciones);
     }
 
+    /** El docente se asigna como tutor de la práctica. */
     public function update(ActualizarVinculacionRequest $request, Vinculacion $vinculacion): VinculacionResource
     {
         Gate::authorize('update', $vinculacion);
 
-        $datos = $request->safe()->except('asignarme_tutor');
+        $vinculacion->update(['tutor_id' => $request->user()->id]);
+        Auditoria::registrar('vinculacion.tutor_asignado', $vinculacion);
 
-        if ($request->boolean('asignarme_tutor')) {
-            $datos['tutor_id'] = $request->user()->id;
-        }
+        return new VinculacionResource($vinculacion->cargarSeguimiento());
+    }
 
-        $vinculacion->update($datos);
+    /** Finalización anticipada: exige varios reportes y, si faltan horas, justificación. */
+    public function finalizar(FinalizarVinculacionRequest $request, Vinculacion $vinculacion, PracticaService $practica): VinculacionResource
+    {
+        Gate::authorize('finalizar', $vinculacion);
 
-        return new VinculacionResource($vinculacion->load('estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos'));
+        $vinculacion = $practica->finalizarComoDocente($vinculacion, $request->user(), $request->validated('justificacion'));
+
+        return new VinculacionResource($vinculacion->cargarSeguimiento());
     }
 }

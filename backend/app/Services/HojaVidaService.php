@@ -2,25 +2,33 @@
 
 namespace App\Services;
 
+use App\Enums\TipoReferencia;
 use App\Models\Estudiante;
 
 /**
  * Mide qué tan completa está la hoja de vida en el formato institucional.
+ * Formación, cursos, experiencia e investigación son opcionales: en el
+ * formato aparecen como «No registra».
  */
 class HojaVidaService
 {
+    private const DATOS_PERSONALES = ['fecha_nacimiento', 'lugar_nacimiento', 'estado_civil', 'lugar_residencia', 'direccion', 'rh'];
+
     /**
      * @return list<array{seccion: string, completa: bool}>
      */
     public function secciones(Estudiante $estudiante): array
     {
-        $estudiante->loadMissing('hojaVida', 'competencias', 'proyectos');
+        $estudiante->loadMissing('hojaVida.referencias', 'competencias', 'proyectos');
         $hoja = $estudiante->hojaVida;
+        $referencias = $hoja?->referencias ?? collect();
 
         return [
-            ['seccion' => 'Datos de contacto', 'completa' => filled($estudiante->telefono) && filled($estudiante->disponibilidad)],
+            ['seccion' => 'Datos personales', 'completa' => filled($estudiante->telefono) && collect(self::DATOS_PERSONALES)->every(fn ($c) => filled($hoja?->{$c}))],
+            ['seccion' => 'Foto', 'completa' => filled($hoja?->foto_url)],
+            ['seccion' => 'Contacto de emergencia', 'completa' => filled($hoja?->contacto_emergencia_nombre) && filled($hoja?->contacto_emergencia_telefono)],
+            ['seccion' => 'Referencias', 'completa' => $referencias->contains('tipo', TipoReferencia::Familiar) && $referencias->contains('tipo', TipoReferencia::Personal)],
             ['seccion' => 'Perfil profesional', 'completa' => filled($hoja?->perfil_profesional)],
-            ['seccion' => 'Formación académica', 'completa' => filled($hoja?->formacion)],
             ['seccion' => 'Competencias', 'completa' => $estudiante->competencias->isNotEmpty()],
             ['seccion' => 'Repositorio de proyectos', 'completa' => $estudiante->proyectos->isNotEmpty()],
         ];

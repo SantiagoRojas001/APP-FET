@@ -7,6 +7,10 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
+/**
+ * Registro público de una empresa (/empresasRegistro). Queda pendiente hasta
+ * que la FET la valide.
+ */
 class RegistroEmpresaRequest extends FormRequest
 {
     protected function prepareForValidation(): void

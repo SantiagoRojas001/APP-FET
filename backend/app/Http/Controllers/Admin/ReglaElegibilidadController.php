@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\GuardarReglaRequest;
 use App\Http\Resources\ReglaElegibilidadResource;
 use App\Models\ReglaElegibilidad;
+use App\Services\Auditoria;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
@@ -41,6 +42,8 @@ class ReglaElegibilidadController extends Controller
 
             return ReglaElegibilidad::create([...$request->validated(), 'vigente_desde' => $desde->toDateString()]);
         });
+
+        Auditoria::registrar('regla.creada', $regla, ['semestre_minimo' => $regla->semestre_minimo]);
 
         return (new ReglaElegibilidadResource($regla->load('programa')))->response()->setStatusCode(201);
     }

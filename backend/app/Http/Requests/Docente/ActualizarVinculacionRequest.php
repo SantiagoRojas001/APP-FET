@@ -2,22 +2,16 @@
 
 namespace App\Http\Requests\Docente;
 
-use App\Enums\EstadoVinculacion;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
+/**
+ * El docente solo se asigna como tutor. El cierre de la práctica tiene su
+ * propio flujo (aprobación de la empresa o finalización del docente).
+ */
 class ActualizarVinculacionRequest extends FormRequest
 {
     public function rules(): array
     {
-        $cierra = Rule::requiredIf(fn () => $this->input('estado') !== null && $this->input('estado') !== EstadoVinculacion::Activa->value);
-
-        return [
-            'asignarme_tutor' => ['sometimes', 'boolean'],
-            'estado' => ['sometimes', Rule::enum(EstadoVinculacion::class)],
-            'fecha_fin' => ['nullable', 'date', $cierra],
-            'reconocida_como_practica' => ['nullable', 'boolean'],
-            'observacion_final' => ['nullable', 'string', 'max:2000'],
-        ];
+        return ['asignarme_tutor' => ['required', 'accepted']];
     }
 }

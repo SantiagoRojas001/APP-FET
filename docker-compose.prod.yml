@@ -1,0 +1,69 @@
+# Despliegue en producción (ver docs/despliegue.md).
+#   cp backend/.env.production.example backend/.env.production   # y completar
+#   DOMINIO=practicas.fet.edu.co docker compose -f docker-compose.prod.yml --env-file backend/.env.production up -d --build
+name: app-fet-prod
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      retries: 10
+    # Sin puertos publicados: solo la API llega a la base.
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/produccion/api.Dockerfile
+    restart: unless-stopped
+    env_file: backend/.env.production
+    volumes:
+      - almacenamiento:/var/www/backend/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/produccion/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?Define DOMINIO, por ejemplo practicas.fet.edu.co}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data # certificados HTTPS
+    depends_on:
+      - api
+
+  respaldo:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/respaldo.sh"]
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      PGPASSWORD: ${DB_PASSWORD}
+      RETENCION_DIAS: ${RETENCION_DIAS:-14}
+    volumes:
+      - ./docker/produccion/respaldo.sh:/respaldo.sh:ro
+      - almacenamiento:/almacenamiento:ro
+      - ./respaldos:/respaldos
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  almacenamiento:
+  caddy-data:

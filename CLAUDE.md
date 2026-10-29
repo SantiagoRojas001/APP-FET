@@ -13,6 +13,7 @@ PHP no está instalado en el equipo: todo comando de PHP o Composer se ejecuta e
 - Estilo PHP: `docker compose exec api ./vendor/bin/pint`
 - Frontend: `cd frontend && npm run lint && npm run build`
 - Reiniciar datos: `docker compose exec api php artisan migrate:fresh --seed`
+- Producción: `docker-compose.prod.yml` (Caddy con HTTPS, PHP-FPM, respaldos), ver `docs/despliegue.md`
 
 ## Convenciones
 
@@ -26,4 +27,5 @@ PHP no está instalado en el equipo: todo comando de PHP o Composer se ejecuta e
   usa `raw()` solo con contenido propio. Cada vista exporta `async function (ctx)` y se registra en `src/routes.js`.
 - Colores: solo con los tokens de `frontend/src/styles/main.css`. Fondos y superficies en grises neutros; el verde institucional (`--accent`, menta `--accent-soft`) solo en detalles (botones, enlaces, menú activo, etiquetas). Nunca hex sueltos en las vistas.
 - Diseño plano: no envolver secciones en tarjetas ni anidar recuadros. Usa `.panel` (sección con línea superior) y listas con divisores.
+- Sin esquinas redondeadas (solo los avatares son círculos). Los filtros (`.seg`) son pestañas con línea verde bajo la activa; el encabezado de página (`pageHeader`) va pegado arriba con el tono de la barra lateral.
 - Ver `docs/arquitectura.md` antes de cambiar el modelo de datos o el flujo de postulación.

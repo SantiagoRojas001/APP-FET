@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\EstadoReporte;
 use App\Enums\EstadoValidacion;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Rol;
@@ -11,8 +12,11 @@ use App\Http\Requests\Admin\CrearUsuarioRequest;
 use App\Http\Resources\UsuarioResource;
 use App\Models\Empresa;
 use App\Models\Estudiante;
+use App\Models\Reporte;
 use App\Models\Usuario;
 use App\Models\Vinculacion;
+use App\Services\Auditoria;
+use App\Services\CuentaService;
 use App\Services\ElegibilidadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +34,7 @@ class UsuarioController extends Controller
 
         $usuarios = Usuario::query()
             ->with('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa')
+            ->withCount('consentimientos')
             ->when($filtros['rol'] ?? null, fn ($q, string $rol) => $q->where('rol', $rol))
             ->when($filtros['q'] ?? null, fn ($q, string $t) => $q->whereLike('correo', "%{$t}%"))
             ->orderBy('rol')
@@ -40,15 +45,23 @@ class UsuarioController extends Controller
         return UsuarioResource::collection($usuarios);
     }
 
-    public function store(CrearUsuarioRequest $request): JsonResponse
+    /** Crea la cuenta de un docente o administrador y le envía la invitación. */
+    public function store(CrearUsuarioRequest $request, CuentaService $cuentas): JsonResponse
     {
-        $usuario = Usuario::create([
-            'correo' => $request->validated('correo'),
-            'password_hash' => $request->validated('password'),
-            'rol' => $request->validated('rol'),
-        ]);
+        $usuario = $cuentas->crear($request->validated('correo'), Rol::from($request->validated('rol')));
 
-        return (new UsuarioResource($usuario->refresh()))->response()->setStatusCode(201);
+        return (new UsuarioResource($usuario->refresh()->loadCount('consentimientos')))->response()->setStatusCode(201);
+    }
+
+    /** Envía de nuevo el enlace de activación (el anterior deja de servir). */
+    public function invitar(Usuario $usuario, CuentaService $cuentas): JsonResponse
+    {
+        abort_unless($cuentas->pendienteDeActivacion($usuario), 422, 'Esta cuenta ya está activa. Si olvidó su contraseña, puede recuperarla desde el ingreso.');
+
+        $cuentas->invitar($usuario);
+        Auditoria::registrar('usuario.invitacion_reenviada', $usuario);
+
+        return response()->json(['message' => 'Invitación enviada.']);
     }
 
     public function update(ActualizarUsuarioRequest $request, Usuario $usuario): UsuarioResource
@@ -56,12 +69,13 @@ class UsuarioController extends Controller
         abort_if($usuario->is($request->user()), 422, 'No puedes desactivar tu propia cuenta.');
 
         $usuario->update($request->validated());
+        Auditoria::registrar($usuario->activo ? 'usuario.activado_por_admin' : 'usuario.desactivado', $usuario);
 
         if (! $usuario->activo) {
             $usuario->tokens()->delete(); // cierra sus sesiones abiertas
         }
 
-        return new UsuarioResource($usuario->load('estudiante.programa', 'empresa'));
+        return new UsuarioResource($usuario->load('estudiante.programa', 'empresa')->loadCount('consentimientos'));
     }
 
     /**
@@ -78,6 +92,7 @@ class UsuarioController extends Controller
             'empresas_validadas' => Empresa::where('estado_validacion', EstadoValidacion::Validada)->count(),
             'empresas_pendientes' => Empresa::where('estado_validacion', EstadoValidacion::Pendiente)->count(),
             'vinculaciones_activas' => Vinculacion::where('estado', EstadoVinculacion::Activa)->count(),
+            'reportes_abiertos' => Reporte::where('estado', '!=', EstadoReporte::Resuelto)->count(),
         ]);
     }
 }

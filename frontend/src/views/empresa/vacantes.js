@@ -31,7 +31,7 @@ export default async function vacantesEmpresaView({ root, refresh }) {
                 (v) => html`<tr>
                   <td><b>${v.titulo}</b><small>Publicada el ${formatDate(v.publicada_en)}</small></td>
                   <td>${modalityTag(v.modalidad)}</td>
-                  <td class="num">${count(v, 'APROBADA', 'ACEPTADA', 'DESCARTADA')} aprobadas por docente<small>${count(v, 'ENVIADA')} en revisión docente</small></td>
+                  <td class="num">${count(v, 'ENVIADA')} por decidir<small>${count(v, 'SELECCIONADA', 'ACEPTADA')} seleccionadas</small></td>
                   <td>${statusBadge(v.estado)}</td>
                   <td><button class="btn sec sm" data-toggle="${v.id}" data-estado="${v.estado.valor === 'ABIERTA' ? 'CERRADA' : 'ABIERTA'}">${v.estado.valor === 'ABIERTA' ? 'Cerrar' : 'Reabrir'}</button></td>
                 </tr>`,
