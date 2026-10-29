@@ -1,4 +1,4 @@
-import { html, raw } from './html.js';
+import { html, mount, raw } from './html.js';
 import { ICONS } from './icons.js';
 
 export const icon = (name, cls = '') =>
@@ -35,13 +35,20 @@ const MODALITY_ICONS = { PASANTIA: 'school', PRACTICA: 'briefcase' };
 export const modalityTag = (m, on = false) =>
   html`<span class="tag${on ? ' on' : ''}">${icon(MODALITY_ICONS[m.valor] ?? 'briefcase')}${m.etiqueta}</span>`;
 
+/**
+ * Encabezado de página: título a la izquierda; a la derecha, la campana y el
+ * perfil (los monta el shell en `[data-perfil-slot]`) y debajo las acciones.
+ */
 export const pageHeader = (title, subtitle = '', actions = '') =>
   html`<header class="ph">
     <div>
       <h1>${title}</h1>
       ${subtitle ? html`<p>${subtitle}</p>` : ''}
     </div>
-    ${actions}
+    <div class="ph-right">
+      <div class="ph-top" data-perfil-slot></div>
+      ${actions}
+    </div>
   </header>`;
 
 export const emptyState = (iconName, title, text = '', action = '') =>
@@ -91,6 +98,38 @@ export function showFieldErrors(form, errors = {}) {
   }
   first?.focus();
   return first !== null;
+}
+
+/**
+ * Confirmación en la misma pantalla, en lugar de confirm(): el primer clic
+ * cambia el botón por el aviso, «Sí, {acción}» y «Cancelar». `onConfirm`
+ * recibe el botón «Sí» (para deshabilitarlo con withBusy).
+ */
+export function confirmInline(button, accion, onConfirm, aviso = 'Esta acción no se puede deshacer.') {
+  if (button.hidden) return;
+  const box = document.createElement('span');
+  box.className = 'confirm';
+  box.setAttribute('role', 'group');
+  mount(
+    box,
+    html`<span class="fine">${aviso}</span>
+      <button type="button" class="btn danger sm" data-si>Sí, ${accion}</button>
+      <button type="button" class="btn sec sm" data-no>Cancelar</button>`,
+  );
+  button.hidden = true;
+  button.after(box);
+
+  box.querySelector('[data-no]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    box.remove();
+    button.hidden = false;
+    button.focus();
+  });
+  box.querySelector('[data-si]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    onConfirm(e.currentTarget);
+  });
+  box.querySelector('[data-si]').focus();
 }
 
 /** Ejecuta una acción con el botón deshabilitado mientras dura. */

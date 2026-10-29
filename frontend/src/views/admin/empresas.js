@@ -2,6 +2,7 @@ import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
 import {
   badge,
+  confirmInline,
   emptyState,
   errorBox,
   icon,
@@ -67,7 +68,7 @@ export default async function empresasView({ root, navigate, refresh }) {
                           <td><b>${c.razon_social}</b><small>${c.sector ?? ''}</small></td>
                           <td class="num mono">${c.nit}</td>
                           <td>
-                            ${c.contacto_nombre ?? '—'}<small
+                            ${c.contacto_nombre ?? 'No registra'}<small
                               >${c.correo} · ${c.contacto_telefono ?? ''}</small
                             >
                           </td>
@@ -102,20 +103,21 @@ export default async function empresasView({ root, navigate, refresh }) {
     }
     const btn = e.target.closest('[data-estado]');
     if (!btn) return;
-    if (
-      btn.dataset.estado === 'RECHAZADA' &&
-      !confirm('¿Suspender la empresa? Se cerrarán sus sesiones y no podrá ingresar.')
-    )
-      return;
-    withBusy(btn, async () => {
-      await api.patch(`/admin/empresas/${btn.dataset.id}/validacion`, {
-        estado_validacion: btn.dataset.estado,
+    const validar = (boton) =>
+      withBusy(boton, async () => {
+        await api.patch(`/admin/empresas/${btn.dataset.id}/validacion`, {
+          estado_validacion: btn.dataset.estado,
+        });
+        toast(
+          btn.dataset.estado === 'VALIDADA' ? 'Empresa habilitada. Ya puede ingresar.' : 'Empresa suspendida.',
+        );
+        refresh();
       });
-      toast(
-        btn.dataset.estado === 'VALIDADA' ? 'Empresa habilitada. Ya puede ingresar.' : 'Empresa suspendida.',
-      );
-      refresh();
-    });
+    if (btn.dataset.estado === 'RECHAZADA') {
+      confirmInline(btn, 'suspender', validar, 'Se cerrarán sus sesiones y no podrá ingresar.');
+    } else {
+      validar(btn);
+    }
   });
 
   const form = root.querySelector('#empForm');

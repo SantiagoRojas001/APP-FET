@@ -13,7 +13,7 @@ export default async function elegibilidadView({ root }) {
       e.habilitado_para_practica,
     ],
     ['Hoja de vida', `Completa al ${e.hoja_vida_porcentaje} %. Las empresas la ven junto a tus proyectos.`, e.hoja_vida_porcentaje === 100],
-    ['Sin vinculación activa', 'Solo puedes postularte si no tienes una práctica o contrato en curso.', !e.vinculacion_activa_id],
+    ['Sin vinculación activa', 'Solo puedes postularte si no tienes una práctica en curso.', !e.vinculacion_activa_id],
     ['Aprobación docente', 'Tu docente verifica los requisitos de cada postulación.', null],
   ];
 

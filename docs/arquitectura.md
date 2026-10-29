@@ -136,7 +136,7 @@ Todas las respuestas son JSON. Los enums se envían como `{ "valor": "APROBADA",
 | `POST /api/auth/restablecer-contrasena` | Público | Define la contraseña nueva con el token del enlace |
 | `POST /api/auth/activar-cuenta` | Público | Activa una cuenta invitada (contraseña y política de datos) |
 | `POST /api/registro/empresa` | Público | Registro de una empresa (queda pendiente de validación) |
-| `GET /api/auth/yo` · `POST /api/auth/logout` | Autenticado | Usuario actual (incluye `tema` y `vinculacion_activa_id`) y cierre de sesión |
+| `GET /api/auth/yo` · `POST /api/auth/logout` | Autenticado | Usuario actual (incluye `tema`, `vinculacion_activa_id` y, para estudiantes, el `perfil` del encabezado: avance de la hoja de vida, habilitación y práctica en curso) y cierre de sesión |
 | `PATCH /api/auth/preferencias` | Autenticado | Guarda el tema de la cuenta (`light`, `dark`, `system`) |
 | `GET /api/notificaciones` · `PATCH …/leidas` · `PATCH …/{id}/leida` | Autenticado | Avisos dentro de la app |
 | `GET/POST /api/reportes` | Autenticado | Reportar un problema y ver los propios |

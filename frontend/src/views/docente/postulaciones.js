@@ -31,7 +31,7 @@ function row(p) {
         ${modalityTag(p.vacante.modalidad, true)}
         ${badge(s.habilitado_para_practica ? 'ok' : 'bad', `${s.semestre_actual}.º semestre ${s.habilitado_para_practica ? 'habilitado' : 'no habilitado'}`)}
         ${badge(hv === 100 ? 'ok' : 'warn', `Hoja de vida ${hv} %`)}
-        ${badge(s.proyectos?.length ? 'ok' : 'warn', `${s.proyectos?.length ?? 0} proyectos`)}
+        ${badge(s.proyectos?.length ? 'ok' : 'warn', `${s.proyectos?.length ?? 0} ${s.proyectos?.length === 1 ? 'proyecto' : 'proyectos'}`)}
         <a class="fine" href="#/estudiantes/${s.id}">Ver perfil completo</a>
       </div>
       ${p.estado.valor === 'SELECCIONADA'

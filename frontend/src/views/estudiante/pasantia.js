@@ -46,7 +46,7 @@ export default async function pasantiaView({ root, navigate }) {
           <div class="tags">${modalityTag(v.tipo, true)}</div>
           <dl class="kv">
             <div><dt>Empresa</dt><dd>${v.empresa.razon_social}</dd></div>
-            <div><dt>Contacto en la empresa</dt><dd>${v.empresa.contacto_nombre ?? '—'}</dd></div>
+            <div><dt>Contacto en la empresa</dt><dd>${v.empresa.contacto_nombre ?? 'No registra'}</dd></div>
             <div><dt>Docente tutor</dt><dd>${v.tutor?.correo ?? 'Sin asignar'}</dd></div>
             <div><dt>Semestre al iniciar</dt><dd>${v.semestre_al_vincular}.º</dd></div>
           </dl>

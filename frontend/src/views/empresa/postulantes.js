@@ -1,7 +1,7 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
 import { formatDate, initials } from '../../lib/format.js';
-import { emptyState, icon, modalityTag, pageHeader, statusBadge, toast, withBusy } from '../../lib/ui.js';
+import { confirmInline, emptyState, icon, modalityTag, pageHeader, statusBadge, toast, withBusy } from '../../lib/ui.js';
 import { session } from '../../session.js';
 
 function row(p) {
@@ -54,15 +54,17 @@ export default async function postulantesView({ root, refresh }) {
     const btn = e.target.closest('[data-decide]');
     if (!btn) return;
     const accept = btn.dataset.decide === 'SELECCIONADA';
-    if (!accept && !confirm('¿Descartar esta postulación?')) return;
-    withBusy(btn, async () => {
-      try {
-        await api.patch(`/empresa/postulaciones/${btn.dataset.id}`, { decision: btn.dataset.decide });
-        toast(accept ? 'Estudiante seleccionado. Avisamos a la FET para que autorice la práctica.' : 'Postulación descartada.');
-        refresh();
-      } catch (error) {
-        toast(error.message);
-      }
-    });
+    const decidir = (boton) =>
+      withBusy(boton, async () => {
+        try {
+          await api.patch(`/empresa/postulaciones/${btn.dataset.id}`, { decision: btn.dataset.decide });
+          toast(accept ? 'Estudiante seleccionado. Avisamos a la FET para que autorice la práctica.' : 'Postulación descartada.');
+          refresh();
+        } catch (error) {
+          toast(error.message);
+        }
+      });
+    if (accept) decidir(btn);
+    else confirmInline(btn, 'descartar', decidir);
   });
 }

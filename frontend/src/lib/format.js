@@ -4,8 +4,8 @@ const fechaCorta = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'sh
 /** Las fechas sin hora (AAAA-MM-DD) se leen como fecha local, no UTC. */
 const parse = (value) => (/^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value));
 
-export const formatDate = (value) => (value ? fecha.format(parse(value)) : '—');
-export const formatShortDate = (value) => (value ? fechaCorta.format(parse(value)) : '—');
+export const formatDate = (value) => (value ? fecha.format(parse(value)) : 'No registra');
+export const formatShortDate = (value) => (value ? fechaCorta.format(parse(value)) : 'No registra');
 
 export function relativeDays(value) {
   const days = Math.round((Date.now() - parse(value).getTime()) / 86_400_000);

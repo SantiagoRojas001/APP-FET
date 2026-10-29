@@ -46,7 +46,7 @@ const respondida = (e) =>
         (r) =>
           html`<div>
             <dt>${r.pregunta}</dt>
-            <dd>${r.respuesta ?? '—'}</dd>
+            <dd>${r.respuesta ?? 'No registra'}</dd>
           </div>`,
       )}
     </dl>

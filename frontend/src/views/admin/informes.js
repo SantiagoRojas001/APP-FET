@@ -3,8 +3,8 @@ import { html, mount } from '../../lib/html.js';
 import { emptyState, icon, pageHeader, toast, withBusy } from '../../lib/ui.js';
 
 const num = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
-const dias = (v) => (v === null ? '—' : `${num.format(v)} días`);
-const pct = (v) => (v === null ? '—' : `${num.format(v)} %`);
+const dias = (v) => (v === null ? 'Sin datos' : `${num.format(v)} días`);
+const pct = (v) => (v === null ? 'Sin datos' : `${num.format(v)} %`);
 
 /**
  * Cifras de las prácticas para acreditación y registro calificado, por

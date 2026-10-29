@@ -129,4 +129,21 @@ class HojaVidaTest extends TestCase
         $this->getJson('/api/estudiantes')->assertOk()->assertJsonCount(3, 'data');
         $this->getJson('/api/docente/postulaciones')->assertOk()->assertJsonCount(3);
     }
+
+    public function test_el_usuario_actual_trae_el_resumen_del_perfil_y_los_listados_no(): void
+    {
+        $estudiante = $this->estudiante(8);
+        $this->comoEstudiante($estudiante);
+
+        $this->getJson('/api/auth/yo')
+            ->assertOk()
+            ->assertJsonPath('perfil.habilitado_para_practica', true)
+            ->assertJsonPath('perfil.semestre_minimo', 7)
+            ->assertJsonPath('perfil.empresa_practica', null)
+            ->assertJsonPath('perfil.tiene_practicas_terminadas', false)
+            ->assertJsonPath('perfil.hoja_vida_porcentaje', fn ($p) => is_int($p));
+
+        $this->como(Rol::Admin);
+        $this->getJson('/api/admin/usuarios')->assertOk()->assertJsonMissingPath('data.0.perfil')->assertJsonMissingPath('0.perfil');
+    }
 }

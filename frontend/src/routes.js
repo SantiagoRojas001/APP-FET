@@ -1,6 +1,10 @@
-/** Al final del menú de todos los roles: avisos y reporte de problemas. */
-const NOTIFICACIONES = { path: '/notificaciones', label: 'Notificaciones', icon: 'bell', badge: true, load: () => import('./views/notificaciones.js') };
-const COMUNES = [NOTIFICACIONES, { path: '/reportar', label: 'Reportar problema', icon: 'flag', load: () => import('./views/reportar.js') }];
+/**
+ * Rutas comunes a todos los roles que no salen en el menú lateral: a
+ * Notificaciones se llega con la campana y a Reportar problema desde el menú
+ * del perfil, ambos en el encabezado de la página.
+ */
+const NOTIFICACIONES = { path: '/notificaciones', hidden: true, load: () => import('./views/notificaciones.js') };
+const COMUNES = [NOTIFICACIONES, { path: '/reportar', hidden: true, load: () => import('./views/reportar.js') }];
 
 const HOJA_VIDA = [
   { path: '/hoja-vida', label: 'Hoja de vida', icon: 'file-cv', load: () => import('./views/estudiante/hoja-vida.js') },
@@ -19,7 +23,8 @@ export const ROUTES = {
     { path: '/postulaciones', label: 'Mis postulaciones', icon: 'inbox', load: () => import('./views/estudiante/postulaciones.js') },
     ...HOJA_VIDA,
     { path: '/elegibilidad', label: 'Elegibilidad', icon: 'shield-check', load: () => import('./views/estudiante/elegibilidad.js') },
-    { path: '/mis-practicas', label: 'Mis prácticas', icon: 'certificate', load: () => import('./views/estudiante/mis-practicas.js') },
+    // Desde el menú del perfil, cuando el estudiante tiene prácticas terminadas.
+    { path: '/mis-practicas', hidden: true, load: () => import('./views/estudiante/mis-practicas.js') },
     ...COMUNES,
   ],
   // Estudiante con pasantía activa: seguimiento de su práctica.

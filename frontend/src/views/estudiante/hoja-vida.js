@@ -2,6 +2,7 @@ import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
 import { todayIso } from '../../lib/format.js';
 import { badge, emptyState, errorBox, icon, pageHeader, showFieldErrors, toast, withBusy } from '../../lib/ui.js';
+import { session } from '../../session.js';
 import { hydrateFoto } from '../hoja-vida-detalle.js';
 
 /**
@@ -234,6 +235,13 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
 
   const form = root.querySelector('#hvForm');
 
+  /** El anillo del perfil (encabezado) muestra el avance de la hoja de vida: se refresca al guardar. */
+  const actualizarPerfil = () =>
+    api
+      .get('/auth/yo')
+      .then((u) => session.setUser(u))
+      .catch(() => {});
+
   /** Copia lo escrito en los campos de las listas al borrador antes de redibujarlas. */
   function syncDraft() {
     for (const el of form.querySelectorAll('[name*="."]')) {
@@ -293,6 +301,7 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     withBusy(form.querySelector('[type=submit]'), async () => {
       try {
         await api.put('/estudiante/perfil', payload);
+        await actualizarPerfil();
         toast('Hoja de vida guardada.');
         navigate('/hoja-vida/vista');
       } catch (error) {
@@ -309,6 +318,7 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     data.append('foto', archivo);
     try {
       await api.post('/estudiante/foto', data);
+      await actualizarPerfil();
       toast('Foto actualizada.');
       refresh();
     } catch (error) {

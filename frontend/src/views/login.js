@@ -1,7 +1,8 @@
 import { api } from '../api/client.js';
 import { html, mount } from '../lib/html.js';
-import { badge, errorBox, icon, withBusy } from '../lib/ui.js';
+import { errorBox, icon, withBusy } from '../lib/ui.js';
 import { session } from '../session.js';
+import { publicFooter } from './auth-layout.js';
 
 // Cuentas creadas por DemoSeeder (solo en desarrollo). Contraseña: demo1234.
 const DEMO = import.meta.env.DEV
@@ -28,26 +29,13 @@ const DEMO = import.meta.env.DEV
 export default function loginView({ root, navigate }) {
   mount(
     root,
-    html`<div class="login">
+    html`<div class="login-wrap"><div class="login">
       <section class="l-art" aria-label="Presentación">
         <div class="l-logo"><img src="/logo-fet.png" alt="APP-FET, Agencia para Pasantes y Practicantes. Fundación Escuela Tecnológica de Neiva" /></div>
         <div class="l-body">
           <div class="l-copy">
             <h1>Tu pasantía, de la postulación al informe final</h1>
             <p>Hoja de vida, vacantes, autorización docente y seguimiento en un solo lugar.</p>
-          </div>
-          <div class="preview" aria-hidden="true">
-            <div class="preview-row">
-              <div class="logo">ND</div>
-              <div><b style="font-weight:600">Pasante de desarrollo web</b><div class="fine">Nodo Digital S.A.S.</div></div>
-              ${badge('info', 'Seleccionada')}
-            </div>
-            <div class="preview-row">
-              <div class="logo">SG</div>
-              <div><b style="font-weight:600">Pasante de análisis de datos</b><div class="fine">Clínica San Gabriel</div></div>
-              ${badge('warn', 'Enviada')}
-            </div>
-            <div class="preview-cap">Así sigues el estado de cada postulación.</div>
           </div>
         </div>
       </section>
@@ -87,7 +75,8 @@ export default function loginView({ root, navigate }) {
             : ''}
         </form>
       </section>
-    </div>`,
+    </div>
+    ${publicFooter()}</div>`,
   );
 
   const form = root.querySelector('#loginForm');

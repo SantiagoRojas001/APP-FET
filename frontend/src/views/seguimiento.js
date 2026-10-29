@@ -3,6 +3,7 @@ import { html, mount } from '../lib/html.js';
 import { formatDate, relativeDays, todayIso } from '../lib/format.js';
 import {
   badge,
+  confirmInline,
   emptyState,
   errorBox,
   hoursMeter,
@@ -309,19 +310,20 @@ export default async function seguimientoView({ root, params, navigate, refresh 
   const finForm = root.querySelector('#finForm');
   finForm?.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!confirm('¿Finalizar la práctica? Esta acción no se puede deshacer.')) return;
-    withBusy(finForm.querySelector('[type=submit]'), async () => {
-      try {
-        await api.post(`/docente/vinculaciones/${v.id}/finalizacion`, {
-          justificacion: finForm.justificacion.value.trim() || null,
-        });
-        toast('Práctica finalizada. Avisamos al estudiante y a la empresa.');
-        refresh();
-      } catch (error) {
-        mount(root.querySelector('#finError'), errorBox(error.message));
-        showFieldErrors(finForm, error.errors);
-      }
-    });
+    confirmInline(finForm.querySelector('[type=submit]'), 'finalizar', (si) =>
+      withBusy(si, async () => {
+        try {
+          await api.post(`/docente/vinculaciones/${v.id}/finalizacion`, {
+            justificacion: finForm.justificacion.value.trim() || null,
+          });
+          toast('Práctica finalizada. Avisamos al estudiante y a la empresa.');
+          refresh();
+        } catch (error) {
+          mount(root.querySelector('#finError'), errorBox(error.message));
+          showFieldErrors(finForm, error.errors);
+        }
+      }),
+    );
   });
 
   root.querySelector('#upForm')?.addEventListener('submit', (e) => {

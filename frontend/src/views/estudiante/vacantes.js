@@ -2,7 +2,6 @@ import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
 import { initials, relativeDays } from '../../lib/format.js';
 import { emptyState, icon, modalityTag, pageHeader, statusBadge, toast, withBusy } from '../../lib/ui.js';
-import { session } from '../../session.js';
 
 const FILTERS = [
   ['', 'Todas'],
@@ -15,7 +14,7 @@ function row(v) {
   if (v.mi_postulacion) {
     action = html`${statusBadge(v.mi_postulacion.estado)}<span class="fine">Ya te postulaste</span>`;
   } else if (v.puede_postularse) {
-    action = html`<button class="btn" data-apply="${v.id}">Aplicar</button><span class="fine">Tu docente revisará la postulación</span>`;
+    action = html`<button class="btn" data-apply="${v.id}">Aplicar</button><span class="fine">Tu hoja de vida llega a la empresa</span>`;
   } else {
     action = html`<button class="btn" disabled>No disponible</button><span class="fine">${v.motivo_no_disponible}</span>`;
   }
@@ -34,23 +33,10 @@ function row(v) {
 
 export default async function vacantesView({ root, refresh }) {
   const state = { modalidad: '', q: '' };
-  const elegibilidad = await api.get('/estudiante/elegibilidad');
-  const nombre = session.user.estudiante?.nombres ?? '';
 
   mount(
     root,
-    html`${pageHeader(`Hola, ${nombre}`, 'Vacantes de empresas validadas por la FET. Tu docente revisa cada postulación antes de enviarla a la empresa.')}
-      <section class="callout">
-        ${icon(elegibilidad.habilitado_para_practica ? 'school' : 'clock-hour-4')}
-        <p>
-          ${elegibilidad.habilitado_para_practica
-            ? html`<b>Estás habilitado para pasantía y práctica.</b> Tu programa las autoriza desde ${elegibilidad.semestre_minimo}.º semestre y estás en ${elegibilidad.semestre_actual}.º.`
-            : html`<b>Aún no puedes postularte.</b> ${elegibilidad.semestre_minimo
-                  ? `Tu programa habilita la práctica desde ${elegibilidad.semestre_minimo}.º semestre.`
-                  : 'Tu programa no tiene una regla de práctica vigente.'}`}
-        </p>
-        <div class="figs"><div class="fig"><b>${elegibilidad.hoja_vida_porcentaje} %</b><span>Hoja de vida</span></div></div>
-      </section>
+    html`${pageHeader('Vacantes', 'Vacantes de empresas validadas por la FET. Tu hoja de vida llega directo a la empresa; si te selecciona, tu docente autoriza la práctica.')}
       <div class="toolbar">
         <div class="seg" role="group" aria-label="Filtrar por modalidad">
           ${FILTERS.map(([v, l]) => html`<button data-f="${v}" aria-pressed="${state.modalidad === v}">${l}</button>`)}
@@ -93,7 +79,7 @@ export default async function vacantesView({ root, refresh }) {
       await withBusy(apply, async () => {
         try {
           await api.post(`/estudiante/vacantes/${apply.dataset.apply}/postulaciones`);
-          toast('Postulación enviada. Tu docente la revisará.');
+          toast('Postulación enviada. Tu hoja de vida llegó a la empresa.');
           refresh();
         } catch (error) {
           toast(error.message);

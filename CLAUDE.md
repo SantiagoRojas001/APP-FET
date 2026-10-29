@@ -25,7 +25,7 @@ PHP no está instalado en el equipo: todo comando de PHP o Composer se ejecuta e
 - `Model::shouldBeStrict()` está activo fuera de producción: carga las relaciones con `with()`.
 - Frontend: interpola siempre con la plantilla `html` de `src/lib/html.js` (escapa por defecto);
   usa `raw()` solo con contenido propio. Cada vista exporta `async function (ctx)` y se registra en `src/routes.js`.
-- Colores: solo con los tokens de `frontend/src/styles/main.css`. Fondos y superficies en grises neutros; el verde institucional (`--accent`, menta `--accent-soft`) solo en detalles (botones, enlaces, menú activo, etiquetas). Nunca hex sueltos en las vistas.
+- Colores: solo con los tokens de `frontend/src/styles/main.css`. Fondos y superficies en grises neutros; el verde institucional (`--accent`, verde suave `--accent-soft`) solo en detalles (botones, enlaces, menú activo, etiquetas). Nunca hex sueltos en las vistas.
 - Diseño plano: no envolver secciones en tarjetas ni anidar recuadros. Usa `.panel` (sección con línea superior) y listas con divisores.
 - Sin esquinas redondeadas (solo los avatares son círculos). Los filtros (`.seg`) son pestañas con línea verde bajo la activa; el encabezado de página (`pageHeader`) va pegado arriba con el tono de la barra lateral.
 - Ver `docs/arquitectura.md` antes de cambiar el modelo de datos o el flujo de postulación.

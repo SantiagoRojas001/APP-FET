@@ -3,6 +3,7 @@ import { html, mount } from '../../lib/html.js';
 import { formatDate } from '../../lib/format.js';
 import {
   badge,
+  confirmInline,
   emptyState,
   errorBox,
   icon,
@@ -84,17 +85,22 @@ export default async function periodosView({ root, refresh }) {
 
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-close]');
-    if (!btn || !confirm(`¿Cerrar el periodo ${btn.dataset.name}? Se cerrarán todas las vacantes abiertas.`))
-      return;
-    withBusy(btn, async () => {
-      try {
-        await api.post(`/admin/periodos/${btn.dataset.close}/cierre`);
-        toast('Periodo cerrado.');
-        refresh();
-      } catch (error) {
-        toast(error.message);
-      }
-    });
+    if (!btn) return;
+    confirmInline(
+      btn,
+      `cerrar ${btn.dataset.name}`,
+      (si) =>
+        withBusy(si, async () => {
+          try {
+            await api.post(`/admin/periodos/${btn.dataset.close}/cierre`);
+            toast('Periodo cerrado.');
+            refresh();
+          } catch (error) {
+            toast(error.message);
+          }
+        }),
+      'Se cerrarán todas sus vacantes abiertas. Esta acción no se puede deshacer.',
+    );
   });
 
   const form = root.querySelector('#perForm');
