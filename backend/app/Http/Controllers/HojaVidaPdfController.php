@@ -7,6 +7,7 @@ use App\Models\Estudiante;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -23,6 +24,8 @@ class HojaVidaPdfController extends Controller
 
     public function deEstudiante(Request $request, Estudiante $estudiante): Response
     {
+        Gate::authorize('view', $estudiante);
+
         return $this->pdf($request, $estudiante);
     }
 
@@ -34,7 +37,7 @@ class HojaVidaPdfController extends Controller
         $pdf = Pdf::loadView('pdf.hoja-vida', [
             'estudiante' => $estudiante,
             // Las empresas no ven el documento de identidad (igual que en la API).
-            'verDocumento' => $usuario->id === $estudiante->usuario_id || $usuario->tieneRol(Rol::Docente, Rol::Admin),
+            'verDocumento' => $usuario->id === $estudiante->usuario_id || $usuario->tieneRol(Rol::Docente, Rol::Admin, Rol::Director),
             'logo' => base64_encode(file_get_contents(resource_path('img/logo-fet.png'))),
             'foto' => $this->foto($estudiante),
         ])->setPaper('letter');

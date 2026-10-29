@@ -9,8 +9,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Datos de un estudiante que crea o corrige la administración. Al crearlo se
- * pide el correo institucional, al que llega la invitación.
+ * Datos académicos de un estudiante que corrige la administración.
  */
 class GuardarEstudianteRequest extends FormRequest
 {
@@ -25,13 +24,12 @@ class GuardarEstudianteRequest extends FormRequest
     {
         /** @var Estudiante|null $estudiante */
         $estudiante = $this->route('estudiante');
-        $dominio = preg_quote(config('fet.dominio_correo'), '/');
 
         return [
-            'correo' => $estudiante ? ['prohibited'] : ['required', 'email', 'max:150', "regex:/@{$dominio}$/", 'unique:usuario,correo'],
+            'correo' => ['prohibited'],
             'programa_id' => ['required', 'integer', 'exists:programa,id'],
-            'codigo' => ['required', 'string', 'max:20', Rule::unique('estudiante', 'codigo')->ignore($estudiante)],
-            'documento' => ['required', 'string', 'max:20', Rule::unique('estudiante', 'documento')->ignore($estudiante)],
+            'codigo' => ['nullable', 'string', 'max:20', Rule::unique('estudiante', 'codigo')->ignore($estudiante)],
+            'documento' => ['nullable', 'string', 'max:20', Rule::unique('estudiante', 'documento')->ignore($estudiante)],
             'nombres' => ['required', 'string', 'max:80'],
             'apellidos' => ['required', 'string', 'max:80'],
             'telefono' => ['nullable', 'string', 'max:20'],
@@ -50,10 +48,5 @@ class GuardarEstudianteRequest extends FormRequest
                 $validator->errors()->add('semestre_actual', "El programa tiene {$programa->total_semestres} semestres.");
             }
         }];
-    }
-
-    public function messages(): array
-    {
-        return ['correo.regex' => 'Los estudiantes usan su correo institucional @'.config('fet.dominio_correo').'.'];
     }
 }

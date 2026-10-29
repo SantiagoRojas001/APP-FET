@@ -10,16 +10,17 @@ const DEMO = import.meta.env.DEV
       [
         'Estudiantes',
         [
-          ['mateo.suarez@fet.edu.co', 'Mateo Suárez', '9.º semestre, habilitado'],
-          ['laura.mendez@fet.edu.co', 'Laura Méndez', '5.º semestre, aún no habilitada'],
+          ['mateo.suarez@fet.edu.co', 'Mateo Suárez', 'Hoja de vida publicada, con citas'],
+          ['julian.castro@fet.edu.co', 'Julián Castro', 'Primer ingreso'],
           ['andres.rojas@fet.edu.co', 'Andrés Rojas', 'En pasantía'],
         ],
       ],
       [
-        'Docente, empresa y admin',
+        'FET y empresa',
         [
-          ['p.vargas@fet.edu.co', 'Patricia Vargas', 'Docente de prácticas'],
-          ['talento@nododigital.co', 'Nodo Digital', 'Empresa validada'],
+          ['p.vargas@fet.edu.co', 'Patricia Vargas', 'Docente'],
+          ['direccion.software@fet.edu.co', 'Dirección de Ingeniería de Software', 'Director de programa'],
+          ['talento@nododigital.co', 'Nodo Digital', 'Empresa con acuerdo'],
           ['admin@fet.edu.co', 'Administración', 'Configuración general'],
         ],
       ],
@@ -34,8 +35,8 @@ export default function loginView({ root, navigate }) {
         <div class="l-logo"><img src="/logo-fet.png" alt="APP-FET, Agencia para Pasantes y Practicantes. Fundación Escuela Tecnológica de Neiva" /></div>
         <div class="l-body">
           <div class="l-copy">
-            <h1>Tu pasantía, de la postulación al informe final</h1>
-            <p>Hoja de vida, vacantes, autorización docente y seguimiento en un solo lugar.</p>
+            <h1>Tu pasantía, de la hoja de vida al informe final</h1>
+            <p>Hoja de vida, citas con empresas, aprobación de la FET y seguimiento en un solo lugar.</p>
           </div>
         </div>
       </section>

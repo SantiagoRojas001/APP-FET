@@ -22,12 +22,6 @@ class Programa extends Model
         return ['horas_requeridas' => 'integer'];
     }
 
-    /** @return HasMany<ReglaElegibilidad, $this> */
-    public function reglas(): HasMany
-    {
-        return $this->hasMany(ReglaElegibilidad::class);
-    }
-
     /** @return HasMany<Estudiante, $this> */
     public function estudiantes(): HasMany
     {

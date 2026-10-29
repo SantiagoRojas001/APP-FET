@@ -3,8 +3,13 @@
 namespace App\Models;
 
 use App\Enums\EstadoVinculacion;
+use App\Enums\Modalidad;
+use App\Policies\EstudiantePolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,9 +22,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * Datos personales y académicos del estudiante o egresado.
  */
 #[Table('estudiante', timestamps: false)]
+#[UsePolicy(EstudiantePolicy::class)]
 #[Fillable([
-    'usuario_id', 'programa_id', 'codigo', 'documento', 'nombres', 'apellidos',
-    'telefono', 'semestre_actual', 'es_egresado', 'disponibilidad',
+    'usuario_id', 'programa_id', 'codigo', 'documento', 'nombres', 'apellidos', 'telefono', 'semestre_actual',
+    'es_egresado', 'disponibilidad', 'modalidad_grado', 'promedio', 'habilitado', 'resultado_enviado_en', 'registrado_por',
 ])]
 class Estudiante extends Model
 {
@@ -30,6 +36,10 @@ class Estudiante extends Model
         return [
             'semestre_actual' => 'integer',
             'es_egresado' => 'boolean',
+            'modalidad_grado' => Modalidad::class,
+            'promedio' => 'float',
+            'habilitado' => 'boolean',
+            'resultado_enviado_en' => 'datetime',
         ];
     }
 
@@ -58,6 +68,21 @@ class Estudiante extends Model
             'usuario', 'programa', 'competencias', 'proyectos', 'vinculacionActiva',
             ...array_map(fn (string $r) => "hojaVida.{$r}", HojaVida::COMPLETA),
         ]);
+    }
+
+    /**
+     * Estudiantes que las empresas pueden encontrar: habilitados, con hoja de
+     * vida publicada y sin práctica en curso.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function disponibles(Builder $query): void
+    {
+        $query->where('habilitado', true)
+            ->where('es_egresado', false)
+            ->whereHas('hojaVida', fn (Builder $h) => $h->whereNotNull('publicada_en'))
+            ->whereDoesntHave('vinculaciones', fn (Builder $v) => $v->where('estado', EstadoVinculacion::Activa));
     }
 
     /** @return BelongsTo<Usuario, $this> */
@@ -90,10 +115,29 @@ class Estudiante extends Model
         return $this->hasMany(Proyecto::class);
     }
 
-    /** @return HasMany<Postulacion, $this> */
-    public function postulaciones(): HasMany
+    /**
+     * Ciclo académico según el semestre: técnico hasta 4.º, tecnólogo en 5.º y
+     * 6.º, profesional de 7.º a 10.º.
+     */
+    public function ciclo(): string
     {
-        return $this->hasMany(Postulacion::class);
+        return match (true) {
+            $this->semestre_actual <= 4 => 'Técnico',
+            $this->semestre_actual <= 6 => 'Tecnólogo',
+            default => 'Profesional',
+        };
+    }
+
+    /** @return HasMany<Cita, $this> */
+    public function citas(): HasMany
+    {
+        return $this->hasMany(Cita::class)->orderByDesc('fecha_hora');
+    }
+
+    /** @return HasMany<Recomendacion, $this> */
+    public function recomendaciones(): HasMany
+    {
+        return $this->hasMany(Recomendacion::class);
     }
 
     /** @return HasMany<Vinculacion, $this> */

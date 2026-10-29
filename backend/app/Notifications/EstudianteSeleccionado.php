@@ -2,28 +2,29 @@
 
 namespace App\Notifications;
 
-use App\Models\Postulacion;
+use App\Models\Cita;
 
 /**
- * A los docentes: una empresa seleccionó a un estudiante y falta autorizar su práctica.
+ * A los docentes: una empresa seleccionó a un estudiante después de la cita y
+ * falta volver a aprobarlo.
  */
 class EstudianteSeleccionado extends Aviso
 {
-    public function __construct(private readonly Postulacion $postulacion) {}
+    public function __construct(private readonly Cita $cita) {}
 
     protected function titulo(): string
     {
-        return 'Estudiante seleccionado por autorizar';
+        return 'Estudiante seleccionado por aprobar';
     }
 
     protected function mensaje(): string
     {
-        return "{$this->postulacion->vacante->empresa->razon_social} seleccionó a {$this->postulacion->estudiante->nombre_completo} "
-            ."para «{$this->postulacion->vacante->titulo}». Autoriza la práctica para enviarle la carta de bienvenida.";
+        return "{$this->cita->empresa->razon_social} seleccionó a {$this->cita->estudiante->nombre_completo} después de su cita. "
+            .'Revísalo y aprueba para que el director de programa envíe la carta de presentación.';
     }
 
     protected function enlace(): string
     {
-        return '/postulaciones';
+        return '/autorizaciones';
     }
 }

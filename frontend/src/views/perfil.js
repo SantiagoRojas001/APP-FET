@@ -9,15 +9,17 @@ import { session } from '../session.js';
 function subtitulo(user) {
   if (user.estudiante) return `${user.estudiante.semestre_actual}.º semestre, ${user.estudiante.programa?.nombre ?? ''}`;
   if (user.empresa) return `Empresa${user.empresa.sector ? `, ${user.empresa.sector}` : ''}`;
+  if (user.programa) return `Dirección de ${user.programa.nombre}`;
   return user.rol.etiqueta;
 }
 
-/** Tercera línea, solo para estudiantes: si puede hacer práctica o dónde la cursa. */
+/** Tercera línea, solo para estudiantes: dónde cursa la práctica, sus citas o si falta publicar la hoja de vida. */
 function estado(perfil) {
   if (!perfil) return '';
   if (perfil.empresa_practica) return html`<span class="ok">${icon('building')}En pasantía en ${perfil.empresa_practica}</span>`;
-  if (perfil.habilitado_para_practica) return html`<span class="ok">${icon('circle-check')}Habilitado para práctica</span>`;
-  return html`<span class="warn">${icon('clock-hour-4')}${perfil.semestre_minimo ? `Habilitado desde ${perfil.semestre_minimo}.º semestre` : 'Tu programa no tiene regla de práctica'}</span>`;
+  if (perfil.citas_programadas) return html`<span class="ok">${icon('calendar-event')}${perfil.citas_programadas === 1 ? '1 cita programada' : `${perfil.citas_programadas} citas programadas`}</span>`;
+  if (perfil.hoja_vida_publicada) return html`<span class="ok">${icon('circle-check')}Hoja de vida publicada</span>`;
+  return html`<span class="warn">${icon('clock-hour-4')}Publica tu hoja de vida</span>`;
 }
 
 function avatar(user) {

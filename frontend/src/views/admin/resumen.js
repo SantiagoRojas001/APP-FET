@@ -21,11 +21,17 @@ export default async function resumenView({ root, navigate }) {
       </section>
       <section class="callout">
         <span></span>
+        <p><b>${r.acuerdos_pendientes} acuerdos</b> de empresas por aprobar y ${r.estudiantes_sin_promedio} estudiantes registrados sin promedio.</p>
+        ${r.acuerdos_pendientes ? html`<button class="btn sm" id="toAcu">Revisar acuerdos</button>` : ''}
+      </section>
+      <section class="callout">
+        <span></span>
         <p><b>${r.reportes_abiertos} reportes</b> de problemas sin resolver.</p>
         ${r.reportes_abiertos ? html`<button class="btn sm" id="toRep">Atender reportes</button>` : ''}
       </section>`,
   );
 
   root.querySelector('#toEmp')?.addEventListener('click', () => navigate('/empresas'));
+  root.querySelector('#toAcu')?.addEventListener('click', () => navigate('/acuerdos'));
   root.querySelector('#toRep')?.addEventListener('click', () => navigate('/reportes'));
 }

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -19,12 +20,16 @@ use Laravel\Sanctum\HasApiTokens;
  * Cuenta de acceso de una persona o empresa.
  */
 #[Table('usuario', timestamps: false)]
-#[Fillable(['correo', 'password_hash', 'rol', 'activo', 'tema'])]
+#[Fillable(['correo', 'password_hash', 'rol', 'activo', 'tema', 'debe_cambiar_password', 'programa_id'])]
 #[Hidden(['password_hash'])]
 class Usuario extends Authenticatable
 {
     /** @use HasFactory<UsuarioFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    protected $attributes = [
+        'debe_cambiar_password' => false,
+    ];
 
     protected $authPasswordName = 'password_hash';
 
@@ -37,6 +42,7 @@ class Usuario extends Authenticatable
             'password_hash' => 'hashed',
             'rol' => Rol::class,
             'activo' => 'boolean',
+            'debe_cambiar_password' => 'boolean',
             'creado_en' => 'datetime',
         ];
     }
@@ -78,6 +84,12 @@ class Usuario extends Authenticatable
     public function reportes(): HasMany
     {
         return $this->hasMany(Reporte::class, 'autor_id');
+    }
+
+    /** Programa que dirige un director de programa. @return BelongsTo<Programa, $this> */
+    public function programa(): BelongsTo
+    {
+        return $this->belongsTo(Programa::class);
     }
 
     /** @return HasMany<ConsentimientoDatos, $this> */

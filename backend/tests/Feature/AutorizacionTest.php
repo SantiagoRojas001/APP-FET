@@ -17,15 +17,20 @@ class AutorizacionTest extends TestCase
     public function test_las_rutas_privadas_exigen_sesion(): void
     {
         $this->getJson('/api/auth/yo')->assertUnauthorized();
-        $this->getJson('/api/estudiante/vacantes')->assertUnauthorized();
+        $this->getJson('/api/estudiante/citas')->assertUnauthorized();
     }
 
     /** @return array<string, array{Rol, string}> */
     public static function rutasDeOtroRol(): array
     {
         return [
-            'docente en rutas de estudiante' => [Rol::Docente, '/api/estudiante/vacantes'],
-            'estudiante en rutas de docente' => [Rol::Estudiante, '/api/docente/postulaciones'],
+            'docente en rutas de estudiante' => [Rol::Docente, '/api/estudiante/citas'],
+            'estudiante en rutas de docente' => [Rol::Estudiante, '/api/docente/citas'],
+            'empresa en rutas de docente' => [Rol::Empresa, '/api/docente/vacantes'],
+            'empresa en rutas de director' => [Rol::Empresa, '/api/director/estudiantes'],
+            'docente en rutas de director' => [Rol::Docente, '/api/director/cartas'],
+            'director en rutas de admin' => [Rol::Director, '/api/admin/acuerdos'],
+            'empresa buscando estudiantes' => [Rol::Empresa, '/api/estudiantes'],
             'estudiante en rutas de empresa' => [Rol::Estudiante, '/api/empresa/vacantes'],
             'empresa en rutas de admin' => [Rol::Empresa, '/api/admin/usuarios'],
             'docente en rutas de admin' => [Rol::Docente, '/api/admin/empresas'],
@@ -75,19 +80,22 @@ class AutorizacionTest extends TestCase
         $this->assertSame(0, $estudiante->usuario->tokens()->count());
     }
 
-    public function test_una_regla_nueva_cierra_la_vigente_del_programa(): void
+    public function test_el_admin_configura_el_promedio_minimo_y_los_semestres_habilitados(): void
     {
-        $programa = $this->programaConRegla(7);
         $this->como(Rol::Admin);
 
-        $this->postJson('/api/admin/reglas', [
-            'programa_id' => $programa->id,
-            'semestre_minimo' => 6,
-            'vigente_desde' => now()->toDateString(),
-        ])->assertCreated();
+        $this->getJson('/api/admin/parametros')
+            ->assertOk()
+            ->assertJsonPath('promedio_minimo', 4.2)
+            ->assertJsonPath('semestres_habilitados', [3, 5, 9]);
 
-        $this->assertSame(1, $programa->reglas()->vigentes()->count());
-        $this->assertSame(6, $programa->reglas()->vigentes()->value('semestre_minimo'));
+        $this->putJson('/api/admin/parametros', ['promedio_minimo' => '4,0', 'semestres_habilitados' => [9, 4]])
+            ->assertOk()
+            ->assertJsonPath('promedio_minimo', 4)
+            ->assertJsonPath('semestres_habilitados', [4, 9]);
+
+        $this->putJson('/api/admin/parametros', ['promedio_minimo' => 6, 'semestres_habilitados' => []])
+            ->assertJsonValidationErrors(['promedio_minimo', 'semestres_habilitados']);
     }
 
     public function test_el_admin_lista_usuarios_con_estudiantes_en_pasantia(): void

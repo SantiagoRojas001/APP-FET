@@ -7,6 +7,10 @@ const parse = (value) => (/^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}
 export const formatDate = (value) => (value ? fecha.format(parse(value)) : 'No registra');
 export const formatShortDate = (value) => (value ? fechaCorta.format(parse(value)) : 'No registra');
 
+/** Fecha y hora de una cita, siempre en la hora de Colombia: «viernes, 30 de octubre de 2026, 3:00 p. m.». */
+const fechaHora = new Intl.DateTimeFormat('es-CO', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Bogota' });
+export const formatDateTime = (value) => (value ? fechaHora.format(new Date(value)) : 'No registra');
+
 export function relativeDays(value) {
   const days = Math.round((Date.now() - parse(value).getTime()) / 86_400_000);
   if (days <= 0) return 'Hoy';

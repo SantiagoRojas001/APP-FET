@@ -19,7 +19,7 @@ class VacanteController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $vacantes = $request->user()->empresa->vacantes()
-            ->with('postulaciones')
+            ->withCount('recomendaciones')
             ->latest('publicada_en')
             ->get();
 

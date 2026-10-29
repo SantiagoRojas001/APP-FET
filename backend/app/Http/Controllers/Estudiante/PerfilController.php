@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Estudiante\ActualizarPerfilRequest;
 use App\Http\Resources\EstudianteResource;
 use App\Models\Estudiante;
+use App\Services\HojaVidaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -59,6 +60,17 @@ class PerfilController extends Controller
             $estudiante->proyectos()->delete();
             $estudiante->proyectos()->createMany($request->validated('proyectos'));
         });
+
+        return new EstudianteResource($this->cargar($estudiante->fresh()));
+    }
+
+    /** Publica la hoja de vida para que la vean las empresas, o la oculta. */
+    public function publicacion(Request $request, HojaVidaService $hojaVida): EstudianteResource
+    {
+        $request->validate(['publicada' => ['required', 'boolean']]);
+        $estudiante = $request->user()->estudiante()->firstOrFail();
+
+        $hojaVida->publicar($estudiante, $request->boolean('publicada'));
 
         return new EstudianteResource($this->cargar($estudiante->fresh()));
     }

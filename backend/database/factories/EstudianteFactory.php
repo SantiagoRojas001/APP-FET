@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Modalidad;
 use App\Enums\Rol;
 use App\Models\Estudiante;
 use App\Models\Programa;
@@ -26,12 +27,28 @@ class EstudianteFactory extends Factory
             'semestre_actual' => 5,
             'es_egresado' => false,
             'disponibilidad' => 'Medio tiempo',
+            'modalidad_grado' => Modalidad::Pasantia,
+            'promedio' => 4.5,
+            'habilitado' => true,
+            'resultado_enviado_en' => now(),
         ];
     }
 
     public function enSemestre(int $semestre): static
     {
         return $this->state(['semestre_actual' => $semestre]);
+    }
+
+    /** Recién registrado por el docente: sin promedio ni resultado enviado. */
+    public function sinPromedio(): static
+    {
+        return $this->state(['promedio' => null, 'habilitado' => null, 'resultado_enviado_en' => null]);
+    }
+
+    /** Con la hoja de vida publicada: las empresas lo encuentran. */
+    public function publicado(): static
+    {
+        return $this->afterCreating(fn (Estudiante $estudiante) => $estudiante->hojaVida()->update(['publicada_en' => now()]));
     }
 
     public function configure(): static

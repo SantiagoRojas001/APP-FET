@@ -2,7 +2,7 @@
 
 Aplicativo web institucional que conecta a estudiantes, docentes y empresas durante el proceso de
 prácticas y pasantías de la Fundación Escuela Tecnológica de Neiva (FET): hoja de vida en formato
-institucional, vacantes, aprobación docente y seguimiento con documentos.
+institucional, citas con empresas, aprobación docente, carta de presentación y seguimiento con documentos.
 
 Proyecto de aula de José Santiago Rojas y Carlos Stiven López (Ingeniería de Software).
 
@@ -78,20 +78,25 @@ Todas usan la contraseña `demo1234`. Solo existen fuera de producción.
 
 | Rol | Correo | Situación |
 | --- | --- | --- |
-| Estudiante | mateo.suarez@fet.edu.co | 9.º semestre, habilitado para pasantía |
-| Estudiante | laura.mendez@fet.edu.co | 5.º semestre, aún no habilitada para postularse |
-| Estudiante | andres.rojas@fet.edu.co | Pasantía activa con 472 de 480 horas y 3 reportes: al registrar una jornada más completa las horas |
-| Estudiante | valentina.torres@fet.edu.co | Pasantía con las horas cumplidas, esperando la aprobación de la empresa |
-| Docente | p.vargas@fet.edu.co | Revisa postulaciones y seguimiento |
-| Empresa | talento@nododigital.co | Empresa validada (practicante: Andrés) |
-| Empresa | ti@clinicasangabriel.co | Puede evaluar y aprobar la pasantía de Valentina |
+| Estudiante | mateo.suarez@fet.edu.co | Hoja de vida publicada: una cita programada con Huila Tech y seleccionado por Nodo Digital |
+| Estudiante | julian.castro@fet.edu.co | Primer ingreso: debe cambiar la contraseña |
+| Estudiante | sofia.ramirez@fet.edu.co | Aprobada por el docente, espera la carta de presentación del director |
+| Estudiante | laura.mendez@fet.edu.co | Promedio insuficiente: cuenta inactiva |
+| Estudiante | andres.rojas@fet.edu.co | Pasantía activa: a 8 horas de completar, con una semana por aprobar y 3 reportes |
+| Estudiante | valentina.torres@fet.edu.co | Pasantía con las horas cumplidas, esperando la evaluación de la empresa |
+| Docente | p.vargas@fet.edu.co | Registra estudiantes y promedios, aprueba seleccionados, recomienda |
+| Director de programa | direccion.software@fet.edu.co | Ingeniería de Software: estudiantes, acuerdos y cartas de presentación |
+| Empresa | talento@nododigital.co | Acuerdo vigente y renovación pendiente; practicante: Andrés |
+| Empresa | ti@clinicasangabriel.co | Puede evaluar la pasantía de Valentina |
 | Empresa | rrhh@agrosur.co | Pendiente de validación (no puede ingresar) |
-| Administrador | admin@fet.edu.co | Cuentas, empresas, reglas, periodos, informes, reportes y auditoría |
+| Administrador | admin@fet.edu.co | Cuentas, empresas, acuerdos, parámetros, periodos, informes, reportes y auditoría |
 
 ### Cuentas y acceso
 
-Estudiantes y docentes no tienen registro público: la administración crea sus cuentas y las de
-administradores (con correo `@fet.edu.co`) e invita a las empresas. Las empresas también pueden
+Los estudiantes los registra un docente: cuando registra el promedio, quienes alcanzan el mínimo
+reciben por correo su usuario y una contraseña que deben cambiar al primer ingreso. La
+administración crea las cuentas de docentes, directores de programa y administradores (con correo
+`@fet.edu.co`) e invita a las empresas. Las empresas también pueden
 registrarse solas en `/empresasRegistro` (por ejemplo, `http://localhost:5173/empresasRegistro`)
 y ingresan cuando la administración las valida. Cada cuenta nueva recibe un
 correo con el enlace para definir la contraseña y aceptar la política de datos; el enlace dura
@@ -122,7 +127,7 @@ APPfet/
 │   ├── app/Http/           Controladores por rol, Form Requests y Resources
 │   ├── app/Models/         Un modelo por tabla del modelo de datos
 │   ├── app/Policies/       Permisos sobre vinculaciones y documentos
-│   ├── app/Services/       Reglas de negocio (elegibilidad, postulación, horas y cierre, evaluaciones, informes)
+│   ├── app/Services/       Reglas de negocio (registro y habilitación, citas, acuerdos, horas y cierre, evaluaciones, informes)
 │   ├── config/evaluaciones.php  Cuestionarios de cierre de la práctica
 │   ├── database/           Migraciones, factories y seeders
 │   ├── routes/api.php      Todas las rutas de la API

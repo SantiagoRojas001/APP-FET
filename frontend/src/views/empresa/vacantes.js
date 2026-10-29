@@ -3,14 +3,13 @@ import { html, mount } from '../../lib/html.js';
 import { formatDate } from '../../lib/format.js';
 import { emptyState, errorBox, icon, modalityTag, pageHeader, showFieldErrors, statusBadge, toast, withBusy } from '../../lib/ui.js';
 
-const count = (v, ...estados) => estados.reduce((n, e) => n + (v.postulaciones_por_estado?.[e] ?? 0), 0);
 
 export default async function vacantesEmpresaView({ root, refresh }) {
   const [items, cat] = await Promise.all([api.get('/empresa/vacantes'), api.get('/catalogos')]);
 
   mount(
     root,
-    html`${pageHeader('Mis vacantes', 'Publica ofertas de pasantía o práctica profesional.')}
+    html`${pageHeader('Mis vacantes', 'Publica tus ofertas de pasantía o práctica. Las ven los docentes de la FET, que te recomiendan estudiantes: los verás primero en Hojas de vida.')}
       <section class="panel">
         <h2>Publicar vacante</h2>
         <form id="vacForm" class="form-grid" novalidate>
@@ -26,12 +25,12 @@ export default async function vacantesEmpresaView({ root, refresh }) {
       <section class="panel flush">
         ${items.length
           ? html`<div class="tbl"><table>
-              <thead><tr><th>Vacante</th><th>Modalidad</th><th>Postulaciones</th><th>Estado</th><th><span class="fine">Acción</span></th></tr></thead>
+              <thead><tr><th>Vacante</th><th>Modalidad</th><th>Recomendados</th><th>Estado</th><th><span class="fine">Acción</span></th></tr></thead>
               <tbody>${items.map(
                 (v) => html`<tr>
                   <td><b>${v.titulo}</b><small>Publicada el ${formatDate(v.publicada_en)}</small></td>
                   <td>${modalityTag(v.modalidad)}</td>
-                  <td class="num">${count(v, 'ENVIADA')} por decidir<small>${count(v, 'SELECCIONADA', 'ACEPTADA')} seleccionadas</small></td>
+                  <td class="num">${v.recomendaciones_count ?? 0} recomendados por la FET</td>
                   <td>${statusBadge(v.estado)}</td>
                   <td><button class="btn sec sm" data-toggle="${v.id}" data-estado="${v.estado.valor === 'ABIERTA' ? 'CERRADA' : 'ABIERTA'}">${v.estado.valor === 'ABIERTA' ? 'Cerrar' : 'Reabrir'}</button></td>
                 </tr>`,

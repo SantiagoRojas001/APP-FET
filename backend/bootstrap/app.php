@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AsegurarPrimerIngreso;
 use App\Http\Middleware\AsegurarRol;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'rol' => AsegurarRol::class,
+            'primer-ingreso' => AsegurarPrimerIngreso::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

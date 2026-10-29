@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Rol;
 use App\Exceptions\ReglaNegocioException;
 use App\Models\Estudiante;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -44,8 +44,7 @@ class FotoEstudianteController extends Controller
 
     public function show(Request $request, Estudiante $estudiante): StreamedResponse
     {
-        $usuario = $request->user();
-        abort_unless($usuario->id === $estudiante->usuario_id || $usuario->tieneRol(Rol::Empresa, Rol::Docente, Rol::Admin), 403);
+        Gate::authorize('view', $estudiante);
 
         $ruta = $estudiante->hojaVida()->value('foto_url');
         abort_unless($ruta && Storage::disk('local')->exists($ruta), 404, 'El estudiante no ha subido su foto.');

@@ -90,6 +90,15 @@ export async function render() {
     return;
   }
 
+  // Primer ingreso: hasta cambiar la contraseña inicial solo se ve esta pantalla.
+  if (session.user.debe_cambiar_password) {
+    themeFloat.hidden = false;
+    mountThemeSwitch(themeFloat, deviceTheme);
+    const { default: view } = await import('./views/primer-ingreso.js');
+    if (id === renderId) view({ root: app, navigate, query: currentQuery() });
+    return;
+  }
+
   await refreshStudentEnvironment();
   if (id !== renderId) return;
 

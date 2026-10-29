@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\EstadoPostulacion;
 use App\Support\Restricciones;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -15,8 +14,8 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement('ALTER TABLE postulacion DROP CONSTRAINT IF EXISTS postulacion_estado_check');
-        DB::table('postulacion')->where('estado', 'APROBADA')->update(['estado' => EstadoPostulacion::Enviada->value, 'revisada_en' => null]);
-        Restricciones::valoresPermitidos('postulacion', 'estado', EstadoPostulacion::values());
+        DB::table('postulacion')->where('estado', 'APROBADA')->update(['estado' => 'ENVIADA', 'revisada_en' => null]);
+        Restricciones::valoresPermitidos('postulacion', 'estado', ['ENVIADA', 'SELECCIONADA', 'ACEPTADA', 'RECHAZADA', 'DESCARTADA']);
     }
 
     public function down(): void

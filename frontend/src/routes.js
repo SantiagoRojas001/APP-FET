@@ -17,12 +17,10 @@ const HOJA_VIDA = [
  * el estudiante, que tiene dos (ver `session.environment`).
  */
 export const ROUTES = {
-  // Estudiante que aún busca pasantía: vacantes y postulaciones.
+  // Estudiante que aún no cursa práctica: publica su hoja de vida y ve a las empresas interesadas.
   ESTUDIANTE: [
-    { path: '/vacantes', label: 'Vacantes', icon: 'briefcase', load: () => import('./views/estudiante/vacantes.js') },
-    { path: '/postulaciones', label: 'Mis postulaciones', icon: 'inbox', load: () => import('./views/estudiante/postulaciones.js') },
     ...HOJA_VIDA,
-    { path: '/elegibilidad', label: 'Elegibilidad', icon: 'shield-check', load: () => import('./views/estudiante/elegibilidad.js') },
+    { path: '/citas', label: 'Empresas interesadas', icon: 'calendar-event', load: () => import('./views/estudiante/citas.js') },
     // Desde el menú del perfil, cuando el estudiante tiene prácticas terminadas.
     { path: '/mis-practicas', hidden: true, load: () => import('./views/estudiante/mis-practicas.js') },
     ...COMUNES,
@@ -36,22 +34,31 @@ export const ROUTES = {
     ...COMUNES,
   ],
   DOCENTE: [
-    { path: '/postulaciones', label: 'Postulaciones', icon: 'inbox', load: () => import('./views/docente/postulaciones.js') },
+    { path: '/registro', label: 'Registro de estudiantes', icon: 'user-plus', load: () => import('./views/docente/registro.js') },
+    { path: '/autorizaciones', label: 'Aprobaciones', icon: 'clipboard-check', load: () => import('./views/docente/autorizaciones.js') },
+    { path: '/vacantes', label: 'Vacantes', icon: 'briefcase', load: () => import('./views/docente/vacantes.js') },
     { path: '/en-curso', label: 'Prácticas', icon: 'users', load: () => import('./views/docente/vinculaciones.js') },
-    { path: '/estudiantes', label: 'Estudiantes', icon: 'school', load: () => import('./views/estudiantes.js') },
     ...COMUNES,
   ],
   EMPRESA: [
-    { path: '/postulantes', label: 'Postulantes', icon: 'inbox', load: () => import('./views/empresa/postulantes.js') },
+    { path: '/hojas-vida', label: 'Hojas de vida', icon: 'file-cv', load: () => import('./views/empresa/hojas-vida.js') },
+    { path: '/citas', label: 'Citas', icon: 'calendar-event', load: () => import('./views/empresa/citas.js') },
     { path: '/practicantes', label: 'Mis practicantes', icon: 'users', load: () => import('./views/empresa/practicantes.js') },
     { path: '/vacantes', label: 'Mis vacantes', icon: 'briefcase', load: () => import('./views/empresa/vacantes.js') },
-    { path: '/estudiantes', label: 'Buscar talento', icon: 'search', load: () => import('./views/estudiantes.js') },
+    { path: '/acuerdo', label: 'Acuerdo con la FET', icon: 'file-text', load: () => import('./views/empresa/acuerdo.js') },
+    ...COMUNES,
+  ],
+  DIRECTOR: [
+    { path: '/programa', label: 'Estudiantes', icon: 'school', load: () => import('./views/director/estudiantes.js') },
+    { path: '/cartas', label: 'Cartas de presentación', icon: 'send', load: () => import('./views/director/cartas.js') },
+    { path: '/acuerdos', label: 'Acuerdos', icon: 'file-text', load: () => import('./views/acuerdos.js') },
     ...COMUNES,
   ],
   ADMIN: [
     { path: '/resumen', label: 'Resumen', icon: 'chart-bar', load: () => import('./views/admin/resumen.js') },
     { path: '/empresas', label: 'Empresas', icon: 'building', load: () => import('./views/admin/empresas.js') },
-    { path: '/reglas', label: 'Reglas de práctica', icon: 'settings', load: () => import('./views/admin/reglas.js') },
+    { path: '/acuerdos', label: 'Acuerdos', icon: 'file-text', load: () => import('./views/acuerdos.js') },
+    { path: '/reglas', label: 'Parámetros', icon: 'settings', load: () => import('./views/admin/reglas.js') },
     { path: '/usuarios', label: 'Usuarios', icon: 'users', load: () => import('./views/admin/usuarios.js') },
     { path: '/periodos', label: 'Periodos', icon: 'calendar-event', load: () => import('./views/admin/periodos.js') },
     { path: '/informes', label: 'Informes', icon: 'trending-up', load: () => import('./views/admin/informes.js') },
@@ -67,5 +74,5 @@ export const SHARED_ROUTES = [
   { pattern: /^\/vinculacion\/(\d+)\/evaluacion$/, load: () => import('./views/evaluacion.js') },
   { pattern: /^\/usuarios\/estudiante\/(\d+)$/, roles: ['ADMIN'], load: () => import('./views/admin/estudiante.js') },
   { pattern: /^\/empresas\/(\d+)$/, roles: ['ADMIN'], load: () => import('./views/admin/empresa.js') },
-  { pattern: /^\/estudiantes\/(\d+)$/, roles: ['EMPRESA', 'DOCENTE', 'ADMIN'], load: () => import('./views/perfil-estudiante.js') },
+  { pattern: /^\/estudiantes\/(\d+)$/, roles: ['EMPRESA', 'DOCENTE', 'ADMIN', 'DIRECTOR'], load: () => import('./views/perfil-estudiante.js') },
 ];

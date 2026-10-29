@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\TipoReferencia;
+use App\Exceptions\ReglaNegocioException;
 use App\Models\Estudiante;
 
 /**
@@ -32,6 +33,30 @@ class HojaVidaService
             ['seccion' => 'Competencias', 'completa' => $estudiante->competencias->isNotEmpty()],
             ['seccion' => 'Repositorio de proyectos', 'completa' => $estudiante->proyectos->isNotEmpty()],
         ];
+    }
+
+    /**
+     * Publica u oculta la hoja de vida. Solo se publica completa, si el
+     * estudiante está habilitado y no cursa una práctica.
+     */
+    public function publicar(Estudiante $estudiante, bool $publicar): void
+    {
+        $hoja = $estudiante->hojaVida()->firstOrCreate();
+
+        if ($publicar) {
+            if (! app(ElegibilidadService::class)->habilitadoParaPractica($estudiante)) {
+                throw new ReglaNegocioException('Aún no estás habilitado para pasantías o prácticas.');
+            }
+            if (! $estudiante->hojaVidaHabilitada()) {
+                throw new ReglaNegocioException('Tu hoja de vida está deshabilitada mientras cursas tu práctica.');
+            }
+            if ($this->porcentaje($estudiante) < 100) {
+                throw new ReglaNegocioException('Completa todas las secciones de tu hoja de vida antes de publicarla.');
+            }
+        }
+
+        $hoja->update(['publicada_en' => $publicar ? ($hoja->publicada_en ?? now()) : null]);
+        Auditoria::registrar($publicar ? 'hoja_vida.publicada' : 'hoja_vida.oculta', $estudiante);
     }
 
     public function porcentaje(Estudiante $estudiante): int

@@ -15,6 +15,11 @@ return [
     'url_frontend' => env('FRONTEND_URL', 'http://localhost:5173'),
 
     /*
+    | Zona horaria en la que se escriben y se muestran las citas.
+    */
+    'zona_horaria' => 'America/Bogota',
+
+    /*
     | Versión de la política de tratamiento de datos personales (Ley 1581 de
     | 2012) que el usuario acepta al registrarse.
     */

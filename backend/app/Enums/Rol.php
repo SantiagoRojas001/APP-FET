@@ -13,6 +13,7 @@ enum Rol: string
     case Docente = 'DOCENTE';
     case Estudiante = 'ESTUDIANTE';
     case Empresa = 'EMPRESA';
+    case Director = 'DIRECTOR';
 
     public function label(): string
     {
@@ -21,6 +22,7 @@ enum Rol: string
             self::Docente => 'Docente',
             self::Estudiante => 'Estudiante',
             self::Empresa => 'Empresa',
+            self::Director => 'Director de programa',
         };
     }
 }

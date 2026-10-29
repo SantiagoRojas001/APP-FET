@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'estudiante_id', 'perfil_profesional', 'actualizado_en', 'foto_url', 'fecha_nacimiento', 'lugar_nacimiento',
     'estado_civil', 'lugar_residencia', 'direccion', 'rh', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
+    'publicada_en',
 ])]
 class HojaVida extends Model
 {
@@ -28,6 +29,7 @@ class HojaVida extends Model
         return [
             'actualizado_en' => 'datetime',
             'fecha_nacimiento' => 'date',
+            'publicada_en' => 'datetime',
         ];
     }
 

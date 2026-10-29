@@ -2,16 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Enums\EstadoPostulacion;
+use App\Enums\EstadoCita;
 use App\Enums\EstadoVacante;
 use App\Enums\Rol;
+use App\Models\Cita;
 use App\Models\Empresa;
 use App\Models\PeriodoAcademico;
-use App\Models\Postulacion;
+use App\Models\Usuario;
 use App\Models\Vacante;
 use App\Models\Vinculacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -42,42 +44,40 @@ class AdministracionTest extends TestCase
         $this->postJson("/api/admin/periodos/{$id}/cierre")->assertStatus(422);
     }
 
-    public function test_la_practica_autorizada_queda_en_el_periodo_abierto(): void
+    public function test_la_practica_presentada_queda_en_el_periodo_abierto(): void
     {
         Notification::fake();
         $periodo = PeriodoAcademico::create(['nombre' => '2026-2', 'fecha_inicio' => now()->subMonth(), 'fecha_fin' => now()->addMonths(3)]);
-        $postulacion = Postulacion::factory()->create();
-
-        $this->comoEmpresa($postulacion->vacante->empresa)
-            ->patchJson("/api/empresa/postulaciones/{$postulacion->id}", ['decision' => 'SELECCIONADA'])
-            ->assertOk();
-        $this->assertNotNull($postulacion->fresh()->decidida_en);
+        $cita = Cita::factory()->create(['estado' => EstadoCita::Seleccionado]);
 
         $this->como(Rol::Docente);
-        $this->patchJson("/api/docente/postulaciones/{$postulacion->id}", ['decision' => 'ACEPTADA', 'fecha_inicio' => now()->addWeek()->toDateString()])
-            ->assertOk();
+        $this->patchJson("/api/docente/citas/{$cita->id}", ['autorizar' => true, 'fecha_inicio' => now()->addWeek()->toDateString()])->assertOk();
+
+        $director = Usuario::factory()->rol(Rol::Director)->create(['programa_id' => $cita->estudiante->programa_id]);
+        Sanctum::actingAs($director);
+        $this->postJson("/api/director/cartas/{$cita->id}")->assertOk();
 
         $vinculacion = Vinculacion::sole();
         $this->assertSame($periodo->id, $vinculacion->periodo_id);
         $this->assertSame(now()->addWeek()->toDateString(), $vinculacion->fecha_inicio->toDateString());
-        $this->assertNotNull($postulacion->fresh()->revisada_en);
     }
 
     public function test_el_informe_resume_las_practicas_y_se_exporta_a_excel(): void
     {
         $empresa = Empresa::factory()->create(['razon_social' => 'Acme']);
         Vinculacion::factory()->count(2)->for($empresa)->create();
-        Postulacion::factory()->create(['estado' => EstadoPostulacion::Aceptada, 'decidida_en' => now(), 'revisada_en' => now()]);
-        Postulacion::factory()->create(['estado' => EstadoPostulacion::Rechazada, 'decidida_en' => now(), 'revisada_en' => now()]);
-        Postulacion::factory()->create(['estado' => EstadoPostulacion::Descartada, 'decidida_en' => now()]);
+        Cita::factory()->create(['estado' => EstadoCita::Presentado, 'decidida_en' => now(), 'autorizada_en' => now(), 'presentada_en' => now()]);
+        Cita::factory()->create(['estado' => EstadoCita::NoAutorizado, 'decidida_en' => now(), 'autorizada_en' => now()]);
+        Cita::factory()->create(['estado' => EstadoCita::Descartado, 'decidida_en' => now()]);
         $this->como(Rol::Admin);
 
         $this->getJson('/api/admin/informes')
             ->assertOk()
             ->assertJsonPath('empresas_con_mas_practicantes.0.empresa', 'Acme')
             ->assertJsonPath('empresas_con_mas_practicantes.0.practicantes', 2)
-            ->assertJsonPath('postulaciones.tasa_autorizacion_docente', 50)
-            ->assertJsonPath('postulaciones.seleccionadas_por_empresa', 2);
+            ->assertJsonPath('citas.tasa_aprobacion_docente', 50)
+            ->assertJsonPath('citas.seleccionados_por_empresa', 2)
+            ->assertJsonPath('citas.cartas_enviadas', 1);
 
         $respuesta = $this->get('/api/admin/informes/exportar')->assertOk();
         $this->assertStringContainsString('spreadsheetml', $respuesta->headers->get('content-type'));
@@ -87,14 +87,14 @@ class AdministracionTest extends TestCase
     public function test_la_bitacora_registra_las_decisiones_con_su_autor(): void
     {
         Notification::fake();
-        $postulacion = Postulacion::factory()->estado(EstadoPostulacion::Seleccionada)->create();
+        $cita = Cita::factory()->create(['estado' => EstadoCita::Seleccionado]);
         $docente = $this->como(Rol::Docente);
 
-        $this->patchJson("/api/docente/postulaciones/{$postulacion->id}", ['decision' => 'RECHAZADA', 'observacion' => 'Falta el semestre'])->assertOk();
+        $this->patchJson("/api/docente/citas/{$cita->id}", ['autorizar' => false, 'observacion' => 'Falta el semestre'])->assertOk();
 
         $this->como(Rol::Admin);
-        $this->getJson('/api/admin/auditoria?entidad=postulacion')
-            ->assertJsonPath('data.0.accion', 'postulacion.no_autorizada')
+        $this->getJson('/api/admin/auditoria?entidad=cita')
+            ->assertJsonPath('data.0.accion', 'cita.no_autorizada')
             ->assertJsonPath('data.0.usuario.id', $docente->id)
             ->assertJsonPath('data.0.detalle.observacion', 'Falta el semestre');
     }
@@ -107,6 +107,8 @@ class AdministracionTest extends TestCase
         $this->get('/api/estudiante/hoja-vida.pdf')->assertOk()->assertHeader('content-type', 'application/pdf');
 
         $this->comoEmpresa(Empresa::factory()->create());
+        $this->get("/api/estudiantes/{$estudiante->id}/hoja-vida.pdf")->assertForbidden();
+        $estudiante->hojaVida()->update(['publicada_en' => now()]);
         $this->get("/api/estudiantes/{$estudiante->id}/hoja-vida.pdf")->assertOk();
 
         $this->comoEstudiante($this->estudiante(8));
@@ -115,7 +117,7 @@ class AdministracionTest extends TestCase
 
     public function test_el_admin_ajusta_las_horas_de_un_programa(): void
     {
-        $programa = $this->programaConRegla();
+        $programa = $this->programa();
         $this->como(Rol::Admin);
 
         $this->patchJson("/api/admin/programas/{$programa->id}", ['horas_requeridas' => 640])->assertOk()->assertJsonPath('horas_requeridas', 640);

@@ -8,47 +8,38 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Str;
 
 /**
- * El docente autorizó la práctica. Al estudiante le llega la carta de
- * bienvenida (adjunta en el correo); a la empresa, el aviso de inicio.
+ * Al estudiante, cuando el director envía la carta de presentación: empieza
+ * su práctica y recibe la carta de bienvenida (adjunta en el correo).
  */
 class PracticaAutorizada extends Aviso
 {
-    public function __construct(private readonly Vinculacion $vinculacion, private readonly bool $paraEstudiante) {}
+    public function __construct(private readonly Vinculacion $vinculacion) {}
 
     protected function titulo(): string
     {
-        return $this->paraEstudiante ? "Te damos la bienvenida a tu {$this->modalidad()}" : 'Práctica autorizada';
+        return "Te damos la bienvenida a tu {$this->modalidad()}";
     }
 
     protected function mensaje(): string
     {
         $inicio = $this->vinculacion->fecha_inicio->format('d/m/Y');
 
-        return $this->paraEstudiante
-            ? "La FET autorizó tu {$this->modalidad()} en {$this->vinculacion->empresa->razon_social} desde el {$inicio}. "
-                .'Te enviamos la carta de bienvenida. Sube tu ARL y reporta tus horas cada semana en APP FET.'
-            : "La FET autorizó la {$this->modalidad()} de {$this->vinculacion->estudiante->nombre_completo} desde el {$inicio}. "
-                .'Solo tendrás que aprobar sus horas semanales y evaluarlo al final.';
+        return "La FET autorizó tu {$this->modalidad()} en {$this->vinculacion->empresa->razon_social} desde el {$inicio}. "
+            .'Te enviamos la carta de bienvenida. Sube tu ARL y reporta tus horas cada semana en APP FET.';
     }
 
     protected function enlace(): string
     {
-        return $this->paraEstudiante ? '/pasantia' : "/vinculacion/{$this->vinculacion->id}";
+        return '/pasantia';
     }
 
     public function toMail(object $notifiable): MailMessage
     {
-        $correo = parent::toMail($notifiable);
-
-        if ($this->paraEstudiante) {
-            $correo->attachData(
-                app(CartaBienvenida::class)->pdf($this->vinculacion),
-                'carta-de-bienvenida-'.Str::slug($this->vinculacion->estudiante->nombre_completo).'.pdf',
-                ['mime' => 'application/pdf'],
-            );
-        }
-
-        return $correo;
+        return parent::toMail($notifiable)->attachData(
+            app(CartaBienvenida::class)->pdf($this->vinculacion),
+            'carta-de-bienvenida-'.Str::slug($this->vinculacion->estudiante->nombre_completo).'.pdf',
+            ['mime' => 'application/pdf'],
+        );
     }
 
     private function modalidad(): string

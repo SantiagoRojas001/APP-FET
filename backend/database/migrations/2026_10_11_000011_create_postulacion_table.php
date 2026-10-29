@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\EstadoPostulacion;
 use App\Support\Restricciones;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -21,7 +20,7 @@ return new class extends Migration
             $table->increments('id');
             $table->integer('vacante_id');
             $table->integer('estudiante_id');
-            $table->string('estado', 12)->default(EstadoPostulacion::Enviada->value);
+            $table->string('estado', 12)->default('ENVIADA');
             $table->timestampTz('fecha')->useCurrent();
             $table->text('observacion')->nullable();
 
@@ -30,7 +29,7 @@ return new class extends Migration
             $table->unique(['vacante_id', 'estudiante_id']);
             $table->index('estado');
         });
-        Restricciones::valoresPermitidos('postulacion', 'estado', EstadoPostulacion::values());
+        Restricciones::valoresPermitidos('postulacion', 'estado', ['ENVIADA', 'APROBADA', 'RECHAZADA', 'ACEPTADA', 'DESCARTADA']);
     }
 
     public function down(): void

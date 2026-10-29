@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\EstadoAcuerdo;
 use App\Enums\EstadoReporte;
 use App\Enums\EstadoValidacion;
 use App\Enums\EstadoVinculacion;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ActualizarUsuarioRequest;
 use App\Http\Requests\Admin\CrearUsuarioRequest;
 use App\Http\Resources\UsuarioResource;
+use App\Models\Acuerdo;
 use App\Models\Empresa;
 use App\Models\Estudiante;
 use App\Models\Reporte;
@@ -17,7 +19,6 @@ use App\Models\Usuario;
 use App\Models\Vinculacion;
 use App\Services\Auditoria;
 use App\Services\CuentaService;
-use App\Services\ElegibilidadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,7 +34,7 @@ class UsuarioController extends Controller
         ]);
 
         $usuarios = Usuario::query()
-            ->with('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa')
+            ->with('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa', 'programa')
             ->withCount('consentimientos')
             ->when($filtros['rol'] ?? null, fn ($q, string $rol) => $q->where('rol', $rol))
             ->when($filtros['q'] ?? null, fn ($q, string $t) => $q->whereLike('correo', "%{$t}%"))
@@ -45,10 +46,15 @@ class UsuarioController extends Controller
         return UsuarioResource::collection($usuarios);
     }
 
-    /** Crea la cuenta de un docente o administrador y le envía la invitación. */
+    /** Crea la cuenta de un docente, director de programa o administrador y le envía la invitación. */
     public function store(CrearUsuarioRequest $request, CuentaService $cuentas): JsonResponse
     {
-        $usuario = $cuentas->crear($request->validated('correo'), Rol::from($request->validated('rol')));
+        $rol = Rol::from($request->validated('rol'));
+        $usuario = $cuentas->crear($request->validated('correo'), $rol, function (Usuario $usuario) use ($rol, $request) {
+            if ($rol === Rol::Director) {
+                $usuario->update(['programa_id' => $request->validated('programa_id')]);
+            }
+        });
 
         return (new UsuarioResource($usuario->refresh()->loadCount('consentimientos')))->response()->setStatusCode(201);
     }
@@ -81,13 +87,13 @@ class UsuarioController extends Controller
     /**
      * Cifras para el panel de administración.
      */
-    public function resumen(ElegibilidadService $elegibilidad): JsonResponse
+    public function resumen(): JsonResponse
     {
-        $estudiantes = Estudiante::query()->get(['id', 'programa_id', 'semestre_actual', 'es_egresado']);
-
         return response()->json([
-            'estudiantes' => $estudiantes->count(),
-            'estudiantes_habilitados' => $estudiantes->filter(fn ($e) => $elegibilidad->habilitadoParaPractica($e))->count(),
+            'estudiantes' => Estudiante::count(),
+            'estudiantes_habilitados' => Estudiante::where('habilitado', true)->where('es_egresado', false)->count(),
+            'estudiantes_sin_promedio' => Estudiante::whereNotNull('modalidad_grado')->whereNull('promedio')->count(),
+            'acuerdos_pendientes' => Acuerdo::where('estado', EstadoAcuerdo::Pendiente)->count(),
             'docentes' => Usuario::where('rol', Rol::Docente)->count(),
             'empresas_validadas' => Empresa::where('estado_validacion', EstadoValidacion::Validada)->count(),
             'empresas_pendientes' => Empresa::where('estado_validacion', EstadoValidacion::Pendiente)->count(),

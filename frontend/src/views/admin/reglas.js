@@ -1,27 +1,40 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
-import { formatDate, todayIso } from '../../lib/format.js';
-import { badge, errorBox, pageHeader, showFieldErrors, toast, withBusy } from '../../lib/ui.js';
+import { errorBox, pageHeader, showFieldErrors, toast, withBusy } from '../../lib/ui.js';
 
+/**
+ * Parámetros del aplicativo: promedio mínimo para quedar habilitado,
+ * semestres en los que se registran los estudiantes y horas por programa.
+ */
 export default async function reglasView({ root, refresh }) {
-  const [reglas, cat] = await Promise.all([api.get('/admin/reglas'), api.get('/catalogos')]);
-  const today = todayIso();
-  const vigente = (r) => r.vigente_desde <= today && (!r.vigente_hasta || r.vigente_hasta >= today);
+  const [param, cat] = await Promise.all([api.get('/admin/parametros'), api.get('/catalogos')]);
+  const semestres = Array.from({ length: 10 }, (_, i) => i + 1);
 
   mount(
     root,
-    html`${pageHeader('Reglas de práctica', 'Horas que exige cada programa y semestre desde el cual autoriza la pasantía o práctica. Una regla nueva cierra la anterior, que queda en el historial.')}
+    html`${pageHeader('Parámetros', 'Requisitos para que un estudiante quede habilitado y horas que exige cada programa.')}
       <section class="panel">
-        <h2>Nueva regla</h2>
-        <form id="reglaForm" class="form-grid" novalidate>
-          <div class="field"><label for="programa_id">Programa</label><select class="input" id="programa_id" name="programa_id">
-            ${cat.programas.map((p) => html`<option value="${p.id}">${p.nombre} (${p.total_semestres} sem.)</option>`)}
-          </select></div>
-          <div class="field"><label for="semestre_minimo">Semestre mínimo</label><input class="input" type="number" min="1" id="semestre_minimo" name="semestre_minimo" /></div>
-          <div class="field"><label for="vigente_desde">Vigente desde</label><input class="input" type="date" id="vigente_desde" name="vigente_desde" value="${today}" /></div>
-          <div><button class="btn" type="submit">Guardar regla</button></div>
+        <h2>Habilitación para pasantía o práctica</h2>
+        <p class="muted">
+          El docente registra a los estudiantes de los semestres marcados que eligieron pasantía o práctica. Al
+          registrar el promedio, quienes alcanzan el mínimo reciben su usuario y contraseña.
+        </p>
+        <form id="paramForm" class="form-grid" novalidate>
+          <div class="field">
+            <label for="promedio_minimo">Promedio mínimo</label>
+            <input class="input" id="promedio_minimo" name="promedio_minimo" inputmode="decimal" value="${String(param.promedio_minimo).replace('.', ',')}" />
+          </div>
+          <fieldset class="field wide" style="border:0;padding:0;margin:0">
+            <legend class="sub-h">Semestres habilitados</legend>
+            <div class="tags" id="semestres_habilitados">
+              ${semestres.map(
+                (n) => html`<label class="check"><input type="checkbox" name="semestres" value="${n}" ${param.semestres_habilitados.includes(n) ? 'checked' : ''} />${n}.º</label>`,
+              )}
+            </div>
+          </fieldset>
+          <div><button class="btn" type="submit">Guardar parámetros</button></div>
         </form>
-        <div id="reglaError"></div>
+        <div id="paramError"></div>
       </section>
       <section class="panel">
         <h2>Horas de práctica por programa</h2>
@@ -35,17 +48,7 @@ export default async function reglasView({ root, refresh }) {
             </div>
           </form>`,
         )}</div>
-      </section>
-      <section class="panel flush"><div class="tbl"><table>
-        <thead><tr><th>Programa</th><th>Semestre mínimo</th><th>Vigencia</th><th>Estado</th></tr></thead>
-        <tbody>${reglas.map(
-          (r) => html`<tr>
-            <td><b>${r.programa.nombre}</b></td>
-            <td class="num">${r.semestre_minimo}.º</td>
-            <td class="num">${formatDate(r.vigente_desde)} a ${r.vigente_hasta ? formatDate(r.vigente_hasta) : 'hoy'}</td>
-            <td>${vigente(r) ? badge('ok', 'Vigente') : r.vigente_desde > today ? badge('info', 'Programada') : badge('neutral', 'Histórica')}</td>
-          </tr>`,
-        )}</tbody></table></div></section>`,
+      </section>`,
   );
 
   root.querySelectorAll('[data-horas]').forEach((f) =>
@@ -62,20 +65,19 @@ export default async function reglasView({ root, refresh }) {
     }),
   );
 
-  const form = root.querySelector('#reglaForm');
+  const form = root.querySelector('#paramForm');
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     withBusy(form.querySelector('[type=submit]'), async () => {
       try {
-        await api.post('/admin/reglas', {
-          programa_id: Number(form.programa_id.value),
-          semestre_minimo: Number(form.semestre_minimo.value) || null,
-          vigente_desde: form.vigente_desde.value,
+        await api.put('/admin/parametros', {
+          promedio_minimo: form.promedio_minimo.value.trim(),
+          semestres_habilitados: [...form.querySelectorAll('[name=semestres]:checked')].map((c) => Number(c.value)),
         });
-        toast('Regla guardada.');
+        toast('Parámetros guardados.');
         refresh();
       } catch (error) {
-        mount(root.querySelector('#reglaError'), errorBox(error.message));
+        mount(root.querySelector('#paramError'), errorBox(error.message));
         showFieldErrors(form, error.errors);
       }
     });

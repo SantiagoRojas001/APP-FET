@@ -18,11 +18,14 @@ class VacanteResource extends Recurso
             'estado' => $this->enum($this->estado),
             'publicada_en' => $this->publicada_en?->toIso8601String(),
             'empresa' => new EmpresaResource($this->whenLoaded('empresa')),
-            'postulaciones_por_estado' => $this->whenLoaded('postulaciones', fn () => $this->postulaciones->countBy(fn ($p) => $p->estado->value)),
-            // Calculados por el controlador para el estudiante que consulta.
-            'puede_postularse' => $this->whenHas('puede_postularse'),
-            'motivo_no_disponible' => $this->whenHas('motivo_no_disponible'),
-            'mi_postulacion' => $this->whenHas('mi_postulacion'),
+            'recomendaciones' => $this->whenLoaded('recomendaciones', fn () => $this->recomendaciones->map(fn ($r) => [
+                'id' => $r->id,
+                'comentario' => $r->comentario,
+                'creada_en' => $r->creada_en?->toIso8601String(),
+                'estudiante' => $r->relationLoaded('estudiante') ? new EstudianteResource($r->estudiante) : null,
+                'docente' => $r->relationLoaded('docente') ? $r->docente?->correo : null,
+            ])->values()),
+            'recomendaciones_count' => $this->whenCounted('recomendaciones'),
         ];
     }
 }

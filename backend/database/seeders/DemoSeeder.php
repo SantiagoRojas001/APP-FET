@@ -3,7 +3,8 @@
 namespace Database\Seeders;
 
 use App\Enums\CategoriaReporte;
-use App\Enums\EstadoPostulacion;
+use App\Enums\EstadoAcuerdo;
+use App\Enums\EstadoCita;
 use App\Enums\EstadoReporte;
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoValidacion;
@@ -14,6 +15,7 @@ use App\Enums\Rol;
 use App\Enums\TipoDocumento;
 use App\Enums\TipoInvestigacion;
 use App\Enums\TipoReferencia;
+use App\Models\Cita;
 use App\Models\Competencia;
 use App\Models\Empresa;
 use App\Models\Estudiante;
@@ -56,15 +58,52 @@ class DemoSeeder extends Seeder
     {
         $this->admin = $this->usuario('admin@fet.edu.co', Rol::Admin);
         $docente = $this->usuario('p.vargas@fet.edu.co', Rol::Docente);
+        $director = $this->usuario('direccion.software@fet.edu.co', Rol::Director);
+        $director->update(['programa_id' => Programa::where('nombre', 'Ingeniería de Software')->value('id')]);
 
         $empresas = $this->empresas();
+        $this->acuerdos($empresas);
         $vacantes = $this->vacantes($empresas);
-        $estudiantes = $this->estudiantes();
+        $estudiantes = $this->estudiantes($docente);
 
         $periodo = $this->periodos();
-        $this->postulaciones($estudiantes, $vacantes);
-        $this->vinculaciones($estudiantes, $empresas, $vacantes, $docente, $periodo);
+        $vinculaciones = $this->vinculaciones($estudiantes, $empresas, $vacantes, $docente, $periodo);
+        $this->citas($estudiantes, $empresas, $vacantes, $vinculaciones, $docente, $director);
+        $this->recomendaciones($estudiantes, $vacantes, $docente);
         $this->reportes($estudiantes, $empresas);
+    }
+
+    /**
+     * Acuerdos aprobados y vigentes de las empresas validadas; Nodo Digital
+     * además subió una renovación que espera aprobación.
+     *
+     * @param  array<string, Empresa>  $empresas
+     */
+    private function acuerdos(array $empresas): void
+    {
+        foreach (['nodo', 'agro', 'huila', 'csg'] as $clave) {
+            $empresa = $empresas[$clave];
+            if ($empresa->acuerdos()->exists()) {
+                continue;
+            }
+
+            $ruta = "acuerdos/empresa-{$empresa->id}/demo-acuerdo-2026.pdf";
+            Storage::disk('local')->put($ruta, $this->pdfDeEjemplo("Acuerdo de prácticas {$empresa->razon_social} 2026-2027"));
+            $empresa->acuerdos()->create([
+                'archivo_url' => $ruta,
+                'vigencia_inicio' => '2026-01-01',
+                'vigencia_fin' => '2027-12-31',
+                'estado' => EstadoAcuerdo::Aprobado,
+                'revisado_por' => $this->admin->id,
+                'revisado_en' => '2026-01-10 09:00:00',
+                'cargado_en' => '2026-01-05 15:00:00',
+            ]);
+        }
+
+        $nodo = $empresas['nodo'];
+        $ruta = "acuerdos/empresa-{$nodo->id}/demo-renovacion-2028.pdf";
+        Storage::disk('local')->put($ruta, $this->pdfDeEjemplo('Renovación del acuerdo de prácticas Nodo Digital 2028'));
+        $nodo->acuerdos()->create(['archivo_url' => $ruta, 'vigencia_inicio' => '2028-01-01', 'vigencia_fin' => '2029-12-31']);
     }
 
     /** 2026-1 ya cerrado y 2026-2 en curso. */
@@ -136,29 +175,38 @@ class DemoSeeder extends Seeder
     }
 
     /** @return array<string, Estudiante> */
-    private function estudiantes(): array
+    private function estudiantes(Usuario $docente): array
     {
         $is = Programa::where('nombre', 'Ingeniería de Software')->value('id');
         $tds = Programa::where('nombre', 'Tecnología en Desarrollo de Software')->value('id');
         $tps = Programa::where('nombre', 'Técnica Profesional en Programación de Software')->value('id');
 
+        // alias, programa, código, nombres, apellidos, semestre, promedio (null: sin registrar), modalidad, hoja publicada
         $datos = [
-            'laura' => ['laura.mendez', $is, '20231045', 'Laura', 'Méndez', 5],
-            'mateo' => ['mateo.suarez', $is, '20211130', 'Mateo', 'Suárez', 9],
-            'julian' => ['julian.castro', $tps, '20252018', 'Julián', 'Castro', 3],
-            'sofia' => ['sofia.ramirez', $is, '20211077', 'Sofía', 'Ramírez', 9],
-            'andres' => ['andres.rojas', $tds, '20231190', 'Andrés', 'Rojas', 6],
-            'valentina' => ['valentina.torres', $is, '20201055', 'Valentina', 'Torres', 10],
-            'camila' => ['camila.perez', $is, '20261004', 'Camila', 'Pérez', 2],
+            'laura' => ['laura.mendez', $is, '20231045', 'Laura', 'Méndez', 5, 3.9, Modalidad::Pasantia, false],
+            'mateo' => ['mateo.suarez', $is, '20211130', 'Mateo', 'Suárez', 9, 4.6, Modalidad::Pasantia, true],
+            'julian' => ['julian.castro', $tps, '20252018', 'Julián', 'Castro', 3, 4.3, Modalidad::Pasantia, false],
+            'sofia' => ['sofia.ramirez', $is, '20211077', 'Sofía', 'Ramírez', 9, 4.4, Modalidad::Practica, true],
+            'andres' => ['andres.rojas', $tds, '20231190', 'Andrés', 'Rojas', 6, 4.5, Modalidad::Pasantia, true],
+            'valentina' => ['valentina.torres', $is, '20201055', 'Valentina', 'Torres', 10, 4.8, Modalidad::Pasantia, true],
+            'camila' => ['camila.perez', $is, '20261004', 'Camila', 'Pérez', 3, null, Modalidad::Practica, false],
         ];
 
         $competencias = Competencia::pluck('id', 'nombre');
 
-        return collect($datos)->map(function (array $d, string $clave) use ($competencias) {
-            [$alias, $programa, $codigo, $nombres, $apellidos, $semestre] = $d;
+        return collect($datos)->map(function (array $d, string $clave) use ($competencias, $docente) {
+            [$alias, $programa, $codigo, $nombres, $apellidos, $semestre, $promedio, $modalidad, $publicada] = $d;
             $usuario = $this->usuario("{$alias}@fet.edu.co", Rol::Estudiante);
+            $habilitado = $promedio === null ? null : $promedio >= 4.2;
+            // Laura no alcanzó el promedio (cuenta inactiva); Julián aún debe cambiar su contraseña inicial.
+            $usuario->update(['activo' => $habilitado !== false, 'debe_cambiar_password' => $clave === 'julian']);
 
             $estudiante = Estudiante::firstOrCreate(['usuario_id' => $usuario->id], [
+                'modalidad_grado' => $modalidad,
+                'promedio' => $promedio,
+                'habilitado' => $habilitado,
+                'resultado_enviado_en' => $promedio === null ? null : now()->subMonths(3),
+                'registrado_por' => $docente->id,
                 'programa_id' => $programa,
                 'codigo' => $codigo,
                 'documento' => '10'.$codigo,
@@ -170,7 +218,7 @@ class DemoSeeder extends Seeder
             ]);
 
             if ($estudiante->wasRecentlyCreated) {
-                $this->hojaVida($estudiante, $semestre);
+                $this->hojaVida($estudiante, $semestre, $publicada);
                 $estudiante->competencias()->attach([
                     $competencias['JavaScript'] => ['nivel' => NivelCompetencia::Intermedio->value],
                     $competencias['Git y GitHub'] => ['nivel' => NivelCompetencia::Basico->value],
@@ -195,10 +243,11 @@ class DemoSeeder extends Seeder
      * Hoja de vida en el formato PA-GTH-F-10. Los estudiantes de semestres
      * avanzados la tienen completa (salvo la foto); los primeros, a medias.
      */
-    private function hojaVida(Estudiante $estudiante, int $semestre): void
+    private function hojaVida(Estudiante $estudiante, int $semestre, bool $publicada): void
     {
         $avanzado = $semestre > 2;
         $hoja = $estudiante->hojaVida()->create([
+            'publicada_en' => $publicada ? now()->subMonths(2) : null,
             'perfil_profesional' => $avanzado ? "Estudiante de {$semestre}.º semestre interesado en el desarrollo de software y el trabajo en equipo." : null,
             'fecha_nacimiento' => now()->subYears(18 + intdiv($semestre, 2))->subDays($semestre * 23)->toDateString(),
             'lugar_nacimiento' => 'Neiva, Huila',
@@ -232,45 +281,14 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * Una postulación en cada etapa: por decidir en la empresa, seleccionada
-     * (espera la autorización docente), descartada y autorizadas.
-     *
-     * @param  array<string, Estudiante>  $estudiantes
-     * @param  array<int, Vacante>  $vacantes
-     */
-    private function postulaciones(array $estudiantes, array $vacantes): void
-    {
-        $datos = [
-            ['julian', 1, EstadoPostulacion::Enviada, null],
-            ['sofia', 5, EstadoPostulacion::Enviada, null],
-            ['mateo', 3, EstadoPostulacion::Seleccionada, null],
-            ['mateo', 1, EstadoPostulacion::Descartada, null],
-            ['andres', 1, EstadoPostulacion::Aceptada, 'Cumple requisitos.'],
-            ['valentina', 4, EstadoPostulacion::Aceptada, 'Cumple requisitos.'],
-        ];
-
-        foreach ($datos as [$alias, $vacante, $estado, $observacion]) {
-            $fecha = now()->subDays(rand(10, 30));
-            $vacantes[$vacante]->postulaciones()->firstOrCreate(
-                ['estudiante_id' => $estudiantes[$alias]->id],
-                [
-                    'estado' => $estado,
-                    'observacion' => $observacion,
-                    'fecha' => $fecha,
-                    'decidida_en' => $estado === EstadoPostulacion::Enviada ? null : $fecha->copy()->addDays(rand(1, 4)),
-                    'revisada_en' => in_array($estado, [EstadoPostulacion::Aceptada, EstadoPostulacion::Rechazada], true) ? $fecha->copy()->addDays(rand(5, 9)) : null,
-                ],
-            );
-        }
-    }
-
-    /**
      * @param  array<string, Estudiante>  $estudiantes
      * @param  array<string, Empresa>  $empresas
      * @param  array<int, Vacante>  $vacantes
      */
-    private function vinculaciones(array $estudiantes, array $empresas, array $vacantes, Usuario $docente, PeriodoAcademico $periodo): void
+    /** @return array<string, Vinculacion> */
+    private function vinculaciones(array $estudiantes, array $empresas, array $vacantes, Usuario $docente, PeriodoAcademico $periodo): array
     {
+        $creadas = [];
         // A Andrés solo le falta que la empresa apruebe su última semana para completar
         // las horas; Valentina ya las completó y espera que la empresa la evalúe.
         $datos = [
@@ -289,6 +307,8 @@ class DemoSeeder extends Seeder
                 'fecha_inicio' => $inicio,
                 'periodo_id' => $periodo->id,
             ]);
+
+            $creadas[$alias] = $vinculacion;
 
             if (! $vinculacion->wasRecentlyCreated) {
                 continue;
@@ -320,6 +340,59 @@ class DemoSeeder extends Seeder
                 ]);
             }
         }
+
+        return $creadas;
+    }
+
+    /**
+     * Una cita en cada etapa: programada (Mateo con Huila Tech), seleccionada
+     * por la empresa y pendiente del docente (Mateo con Nodo Digital),
+     * aprobada por el docente y pendiente de la carta del director (Sofía con
+     * Agroandina) y las de Andrés y Valentina, que ya iniciaron su práctica.
+     *
+     * @param  array<string, Estudiante>  $estudiantes
+     * @param  array<string, Empresa>  $empresas
+     * @param  array<int, Vacante>  $vacantes
+     * @param  array<string, Vinculacion>  $vinculaciones
+     */
+    private function citas(array $estudiantes, array $empresas, array $vacantes, array $vinculaciones, Usuario $docente, Usuario $director): void
+    {
+        if (Cita::exists()) {
+            return;
+        }
+
+        $proximaCita = today()->addDays(2)->setTime(15, 0)->shiftTimezone(config('fet.zona_horaria'))->utc();
+        $comun = ['direccion' => 'Carrera 5 # 10-38, oficina 302, Neiva', 'indicaciones' => 'Trae tu documento de identidad y la hoja de vida impresa.'];
+
+        Cita::create([...$comun, 'empresa_id' => $empresas['huila']->id, 'estudiante_id' => $estudiantes['mateo']->id, 'vacante_id' => $vacantes[3]->id,
+            'fecha_hora' => $proximaCita]);
+        Cita::create([...$comun, 'empresa_id' => $empresas['nodo']->id, 'estudiante_id' => $estudiantes['mateo']->id, 'vacante_id' => $vacantes[5]->id,
+            'fecha_hora' => now()->subDays(3), 'estado' => EstadoCita::Seleccionado, 'decidida_en' => now()->subDays(2)]);
+        Cita::create([...$comun, 'empresa_id' => $empresas['agro']->id, 'estudiante_id' => $estudiantes['sofia']->id, 'vacante_id' => $vacantes[2]->id,
+            'fecha_hora' => now()->subDays(6), 'estado' => EstadoCita::Autorizado, 'decidida_en' => now()->subDays(5),
+            'autorizada_por' => $docente->id, 'autorizada_en' => now()->subDays(4), 'fecha_inicio_practica' => today()->addWeek()]);
+
+        foreach ($vinculaciones as $alias => $vinculacion) {
+            $inicio = Carbon::parse($vinculacion->fecha_inicio);
+            Cita::create([...$comun, 'empresa_id' => $vinculacion->empresa_id, 'estudiante_id' => $estudiantes[$alias]->id, 'vacante_id' => $vinculacion->vacante_id,
+                'fecha_hora' => $inicio->copy()->subDays(14), 'estado' => EstadoCita::Presentado, 'decidida_en' => $inicio->copy()->subDays(12),
+                'autorizada_por' => $docente->id, 'autorizada_en' => $inicio->copy()->subDays(10), 'fecha_inicio_practica' => $inicio,
+                'presentada_por' => $director->id, 'presentada_en' => $inicio->copy()->subDays(7), 'vinculacion_id' => $vinculacion->id]);
+        }
+    }
+
+    /**
+     * La docente recomienda a Sofía para la vacante móvil de Huila Tech.
+     *
+     * @param  array<string, Estudiante>  $estudiantes
+     * @param  array<int, Vacante>  $vacantes
+     */
+    private function recomendaciones(array $estudiantes, array $vacantes, Usuario $docente): void
+    {
+        $vacantes[6]->recomendaciones()->firstOrCreate(
+            ['estudiante_id' => $estudiantes['sofia']->id],
+            ['docente_id' => $docente->id, 'comentario' => 'Muy buen desempeño en el curso de desarrollo móvil.'],
+        );
     }
 
     /**

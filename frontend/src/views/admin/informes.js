@@ -18,7 +18,7 @@ export default async function informesView({ root }) {
     root,
     html`${pageHeader(
         'Informes',
-        'Prácticas por programa, empresas con más practicantes, tasas de selección y autorización y tiempo promedio de cada etapa.',
+        'Prácticas por programa, empresas con más practicantes, tasas de selección y aprobación y tiempo promedio de cada etapa.',
         html`<button class="btn" id="export">${icon('file-spreadsheet')}Exportar a Excel</button>`,
       )}
       <div class="toolbar">
@@ -37,15 +37,15 @@ export default async function informesView({ root }) {
 
   async function load() {
     const r = await api.get('/admin/informes', filters);
-    const p = r.postulaciones;
+    const p = r.citas;
     const t = r.tiempos_promedio_dias;
 
     mount(
       body,
       html`<section class="kpis">
-          <div class="kpi"><b>${p.total}</b><span>Postulaciones</span></div>
-          <div class="kpi"><b>${pct(p.tasa_seleccion_empresa)}</b><span>Seleccionadas por la empresa</span></div>
-          <div class="kpi"><b>${pct(p.tasa_autorizacion_docente)}</b><span>Autorizadas por el docente</span></div>
+          <div class="kpi"><b>${p.total}</b><span>Citas</span></div>
+          <div class="kpi"><b>${pct(p.tasa_seleccion_empresa)}</b><span>Seleccionados por la empresa</span></div>
+          <div class="kpi"><b>${pct(p.tasa_aprobacion_docente)}</b><span>Aprobados por el docente</span></div>
           <div class="kpi">
             <b>${r.practicantes_por_programa.reduce((s, f) => s + f.total, 0)}</b><span>Prácticas</span>
           </div>
@@ -56,16 +56,23 @@ export default async function informesView({ root }) {
             <div class="line">
               <div>
                 <b>Decisión de la empresa</b
-                ><span>Desde que el estudiante se postula hasta que la empresa selecciona o descarta</span>
+                ><span>Desde la cita hasta que la empresa selecciona o descarta</span>
               </div>
               <b>${dias(t.decision_empresa)}</b>
             </div>
             <div class="line">
               <div>
-                <b>Autorización del docente</b
-                ><span>Desde la selección de la empresa hasta que el docente autoriza</span>
+                <b>Aprobación del docente</b
+                ><span>Desde la selección de la empresa hasta que el docente aprueba</span>
               </div>
-              <b>${dias(t.autorizacion_docente)}</b>
+              <b>${dias(t.aprobacion_docente)}</b>
+            </div>
+            <div class="line">
+              <div>
+                <b>Carta de presentación</b
+                ><span>Desde la aprobación docente hasta que el director envía la carta</span>
+              </div>
+              <b>${dias(t.carta_director)}</b>
             </div>
             <div class="line">
               <div>
@@ -139,23 +146,27 @@ export default async function informesView({ root }) {
           }
         </section>
         <section class="panel">
-          <h2>Postulaciones</h2>
+          <h2>Citas</h2>
           <dl class="kv">
             <div>
-              <dt>Seleccionadas por la empresa</dt>
-              <dd>${p.seleccionadas_por_empresa}</dd>
+              <dt>Seleccionados por la empresa</dt>
+              <dd>${p.seleccionados_por_empresa}</dd>
             </div>
             <div>
-              <dt>Descartadas por la empresa</dt>
-              <dd>${p.descartadas_por_empresa}</dd>
+              <dt>Descartados por la empresa</dt>
+              <dd>${p.descartados_por_empresa}</dd>
             </div>
             <div>
-              <dt>Autorizadas por el docente</dt>
-              <dd>${p.autorizadas_por_docente}</dd>
+              <dt>Aprobados por el docente</dt>
+              <dd>${p.aprobados_por_docente}</dd>
             </div>
             <div>
-              <dt>No autorizadas por el docente</dt>
-              <dd>${p.no_autorizadas_por_docente}</dd>
+              <dt>No aprobados por el docente</dt>
+              <dd>${p.no_aprobados_por_docente}</dd>
+            </div>
+            <div>
+              <dt>Cartas de presentación enviadas</dt>
+              <dd>${p.cartas_enviadas}</dd>
             </div>
           </dl>
         </section>`,

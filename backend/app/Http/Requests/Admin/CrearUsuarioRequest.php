@@ -7,8 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Cuentas de docentes y administradores. La persona define su contraseña con
- * el enlace de invitación.
+ * Cuentas de docentes, directores de programa y administradores. La persona
+ * define su contraseña con el enlace de invitación. El director dirige un programa.
  */
 class CrearUsuarioRequest extends FormRequest
 {
@@ -23,12 +23,16 @@ class CrearUsuarioRequest extends FormRequest
 
         return [
             'correo' => ['required', 'email', 'max:150', "regex:/@{$dominio}$/", 'unique:usuario,correo'],
-            'rol' => ['required', Rule::in([Rol::Docente->value, Rol::Admin->value])],
+            'rol' => ['required', Rule::in([Rol::Docente->value, Rol::Director->value, Rol::Admin->value])],
+            'programa_id' => ['nullable', 'integer', 'exists:programa,id', 'required_if:rol,'.Rol::Director->value],
         ];
     }
 
     public function messages(): array
     {
-        return ['correo.regex' => 'Docentes y administradores usan correo @'.config('fet.dominio_correo').'.'];
+        return [
+            'correo.regex' => 'Docentes, directores y administradores usan correo @'.config('fet.dominio_correo').'.',
+            'programa_id.required_if' => 'Elige el programa que dirige.',
+        ];
     }
 }

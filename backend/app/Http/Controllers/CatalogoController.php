@@ -10,6 +10,7 @@ use App\Enums\TipoInvestigacion;
 use App\Enums\TipoReferencia;
 use App\Http\Resources\ProgramaResource;
 use App\Models\Competencia;
+use App\Models\Parametro;
 use App\Models\Programa;
 use BackedEnum;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +34,7 @@ class CatalogoController extends Controller
             'tipos_investigacion' => $opciones(TipoInvestigacion::cases()),
             'tipos_referencia' => $opciones(TipoReferencia::cases()),
             'hoja_vida' => collect(config('fet.hoja_vida'))->except('foto_max_kb'),
+            'parametros' => ['promedio_minimo' => Parametro::promedioMinimo(), 'semestres_habilitados' => Parametro::semestresHabilitados()],
             'dominio_correo' => config('fet.dominio_correo'),
             'version_politica' => config('fet.version_politica'),
         ]);

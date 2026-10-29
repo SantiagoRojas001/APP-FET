@@ -33,6 +33,29 @@ class EstudianteResource extends Recurso
             'disponibilidad' => $this->disponibilidad,
             'programa' => new ProgramaResource($this->whenLoaded('programa')),
             'habilitado_para_practica' => app(ElegibilidadService::class)->habilitadoParaPractica($this->resource),
+            'modalidad_grado' => $this->enum($this->modalidad_grado),
+            'ciclo' => $this->ciclo(),
+            // El promedio y su resultado solo los ve la FET y el propio estudiante.
+            'promedio' => $this->when($this->puedeVerDatosSensibles($request), $this->promedio),
+            'habilitado' => $this->when($this->puedeVerDatosSensibles($request), $this->habilitado),
+            'resultado_enviado_en' => $this->when($this->puedeVerDatosSensibles($request), fn () => $this->resultado_enviado_en?->toIso8601String()),
+            // Práctica en curso (si se cargó la vinculación activa): tipo y empresa.
+            'practica_actual' => $this->whenLoaded('vinculacionActiva', fn () => $this->vinculacionActiva ? [
+                'id' => $this->vinculacionActiva->id,
+                'tipo' => $this->enum($this->vinculacionActiva->tipo),
+                'empresa' => $this->vinculacionActiva->relationLoaded('empresa') ? $this->vinculacionActiva->empresa?->razon_social : null,
+            ] : null),
+            'recomendado' => $this->whenHas('recomendado', fn () => (bool) $this->recomendado),
+            'citas' => $this->whenLoaded('citas', fn () => $this->citas->map(fn ($c) => [
+                'id' => $c->id,
+                'estado' => $this->enum($c->estado),
+                'fecha_hora' => $c->fecha_hora->toIso8601String(),
+            ])->values()),
+            'recomendaciones' => $this->whenLoaded('recomendaciones', fn () => $this->recomendaciones->map(fn ($r) => [
+                'vacante' => $r->relationLoaded('vacante') ? $r->vacante?->titulo : null,
+                'comentario' => $r->comentario,
+                'docente' => $r->relationLoaded('docente') ? $r->docente?->correo : null,
+            ])->values()),
             'hoja_vida_habilitada' => $this->whenLoaded('vinculacionActiva', fn () => $this->vinculacionActiva === null),
             'hoja_vida' => $this->whenLoaded('hojaVida', fn () => $this->hojaVida($hojaVida)),
             'competencias' => $this->whenLoaded('competencias', fn () => $this->competencias->map(fn ($c) => [
@@ -66,6 +89,7 @@ class EstudianteResource extends Recurso
 
         return [
             'perfil_profesional' => $hoja?->perfil_profesional,
+            'publicada_en' => $hoja?->publicada_en?->toIso8601String(),
             'actualizado_en' => $hoja?->actualizado_en?->toIso8601String(),
             'porcentaje' => $servicio->porcentaje($this->resource),
             'secciones' => $servicio->secciones($this->resource),
@@ -121,11 +145,11 @@ class EstudianteResource extends Recurso
         ];
     }
 
-    /** El documento de identidad solo lo ven el propio estudiante, docentes y administradores. */
+    /** Documento, promedio y habilitación solo los ven el propio estudiante, docentes, directores y administradores. */
     private function puedeVerDatosSensibles(Request $request): bool
     {
         $usuario = $request->user();
 
-        return $usuario && ($usuario->id === $this->usuario_id || in_array($usuario->rol->value, ['DOCENTE', 'ADMIN'], true));
+        return $usuario && ($usuario->id === $this->usuario_id || in_array($usuario->rol->value, ['DOCENTE', 'ADMIN', 'DIRECTOR'], true));
     }
 }

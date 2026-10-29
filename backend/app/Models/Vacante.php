@@ -15,7 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Oferta de pasantía o práctica profesional.
+ * Oferta de pasantía o práctica de una empresa. La ven los docentes, que
+ * recomiendan estudiantes para ella; la empresa ve primero a los recomendados.
  */
 #[Table('vacante', timestamps: false)]
 #[Fillable(['empresa_id', 'titulo', 'descripcion', 'modalidad', 'estado', 'publicada_en'])]
@@ -42,14 +43,14 @@ class Vacante extends Model
         return $this->belongsTo(Empresa::class);
     }
 
-    /** @return HasMany<Postulacion, $this> */
-    public function postulaciones(): HasMany
+    /** @return HasMany<Recomendacion, $this> */
+    public function recomendaciones(): HasMany
     {
-        return $this->hasMany(Postulacion::class);
+        return $this->hasMany(Recomendacion::class)->orderByDesc('creada_en');
     }
 
     /**
-     * Vacantes abiertas de empresas validadas: las que ve un estudiante.
+     * Vacantes abiertas de empresas validadas: las que ven los docentes.
      *
      * @param  Builder<self>  $query
      */

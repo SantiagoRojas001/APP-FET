@@ -18,12 +18,14 @@ const ROLES = [
   ['ESTUDIANTE', 'Estudiantes'],
   ['EMPRESA', 'Empresas'],
   ['DOCENTE', 'Docentes'],
+  ['DIRECTOR', 'Directores'],
   ['ADMIN', 'Administradores'],
 ];
 
 /**
- * Cuentas de APP FET. Solo la administración las crea: cada persona recibe
- * una invitación por correo para activar la suya.
+ * Cuentas de APP FET. La administración crea las de docentes, directores de
+ * programa y administradores (con invitación por correo); los estudiantes los
+ * registran los docentes y las empresas se invitan desde Empresas.
  */
 export default async function usuariosView({ root, navigate }) {
   const filters = { rol: '', q: '', page: 1 };
@@ -32,49 +34,9 @@ export default async function usuariosView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Usuarios', `Estudiantes y docentes usan su correo ${dominio}. Cada cuenta nueva recibe una invitación para definir su contraseña. Las empresas se invitan desde Empresas.`)}
+    html`${pageHeader('Usuarios', `Docentes, directores y administradores usan su correo ${dominio} y reciben una invitación para definir su contraseña. Los estudiantes los registran los docentes; las empresas se invitan desde Empresas.`)}
       <section class="panel">
-        <h2>Crear estudiante</h2>
-        <form id="estForm" class="form-grid" novalidate>
-          <div class="field">
-            <label for="e-correo">Correo institucional</label
-            ><input class="input" type="email" id="e-correo" name="correo" placeholder="nombre${dominio}" />
-          </div>
-          <div class="field">
-            <label for="e-nombres">Nombres</label><input class="input" id="e-nombres" name="nombres" />
-          </div>
-          <div class="field">
-            <label for="e-apellidos">Apellidos</label
-            ><input class="input" id="e-apellidos" name="apellidos" />
-          </div>
-          <div class="field">
-            <label for="e-programa">Programa</label
-            ><select class="input" id="e-programa" name="programa_id">
-              ${cat.programas.map((p) => html`<option value="${p.id}">${p.nombre}</option>`)}
-            </select>
-          </div>
-          <div class="field">
-            <label for="e-semestre">Semestre actual</label
-            ><input class="input" type="number" min="1" id="e-semestre" name="semestre_actual" />
-          </div>
-          <div class="field">
-            <label for="e-codigo">Código estudiantil</label
-            ><input class="input" id="e-codigo" name="codigo" />
-          </div>
-          <div class="field">
-            <label for="e-documento">Documento de identidad</label
-            ><input class="input" id="e-documento" name="documento" />
-          </div>
-          <div class="field">
-            <label for="e-telefono">Teléfono (opcional)</label
-            ><input class="input" id="e-telefono" name="telefono" />
-          </div>
-          <div><button class="btn" type="submit">${icon('user-plus')}Crear e invitar</button></div>
-        </form>
-        <div id="estError"></div>
-      </section>
-      <section class="panel">
-        <h2>Crear docente o administrador</h2>
+        <h2>Crear docente, director o administrador</h2>
         <form id="userForm" class="form-grid" novalidate>
           <div class="field">
             <label for="correo">Correo institucional</label
@@ -84,7 +46,14 @@ export default async function usuariosView({ root, navigate }) {
             <label for="rol">Rol</label
             ><select class="input" id="rol" name="rol">
               <option value="DOCENTE">Docente</option>
+              <option value="DIRECTOR">Director de programa</option>
               <option value="ADMIN">Administrador</option>
+            </select>
+          </div>
+          <div class="field" id="programaField" hidden>
+            <label for="programa_id">Programa que dirige</label
+            ><select class="input" id="programa_id" name="programa_id">
+              ${cat.programas.map((p) => html`<option value="${p.id}">${p.nombre}</option>`)}
             </select>
           </div>
           <div><button class="btn" type="submit">${icon('user-plus')}Crear e invitar</button></div>
@@ -141,7 +110,7 @@ export default async function usuariosView({ root, navigate }) {
                     html`<tr>
                       <td>
                         <b>${u.nombre}</b
-                        >${u.estudiante ? html`<small>${u.estudiante.programa?.nombre}, ${u.estudiante.semestre_actual}.º</small>` : ''}
+                        >${u.estudiante ? html`<small>${u.estudiante.programa?.nombre}, ${u.estudiante.semestre_actual}.º</small>` : ''}${u.programa ? html`<small>Dirige ${u.programa.nombre}</small>` : ''}
                       </td>
                       <td class="mono">${u.correo}</td>
                       <td>${u.rol.etiqueta}</td>
@@ -233,35 +202,19 @@ export default async function usuariosView({ root, navigate }) {
       }
     });
 
-  const estForm = root.querySelector('#estForm');
-  estForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    submit(
-      estForm,
-      '#estError',
-      '/admin/estudiantes',
-      () => ({
-        correo: estForm.correo.value.trim(),
-        nombres: estForm.nombres.value.trim(),
-        apellidos: estForm.apellidos.value.trim(),
-        programa_id: Number(estForm.programa_id.value),
-        semestre_actual: Number(estForm.semestre_actual.value) || null,
-        codigo: estForm.codigo.value.trim(),
-        documento: estForm.documento.value.trim(),
-        telefono: estForm.telefono.value.trim() || null,
-      }),
-      'Estudiante creado. Le enviamos la invitación a su correo.',
-    );
-  });
-
   const userForm = root.querySelector('#userForm');
+  userForm.rol.addEventListener('change', () => (root.querySelector('#programaField').hidden = userForm.rol.value !== 'DIRECTOR'));
   userForm.addEventListener('submit', (e) => {
     e.preventDefault();
     submit(
       userForm,
       '#userError',
       '/admin/usuarios',
-      () => ({ correo: userForm.correo.value.trim(), rol: userForm.rol.value }),
+      () => ({
+        correo: userForm.correo.value.trim(),
+        rol: userForm.rol.value,
+        programa_id: userForm.rol.value === 'DIRECTOR' ? Number(userForm.programa_id.value) : null,
+      }),
       'Cuenta creada. Le enviamos la invitación a su correo.',
     );
   });

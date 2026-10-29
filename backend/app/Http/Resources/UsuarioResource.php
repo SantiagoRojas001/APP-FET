@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\EstadoCita;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Rol;
 use App\Models\Usuario;
@@ -20,6 +21,9 @@ class UsuarioResource extends Recurso
             'rol' => $this->enum($this->rol),
             'activo' => $this->activo,
             'tema' => $this->tema ?? 'system',
+            // Debe cambiar la contraseña inicial antes de usar la app.
+            'debe_cambiar_password' => (bool) $this->debe_cambiar_password,
+            'programa' => $this->when($this->rol === Rol::Director, fn () => $this->programa_id ? ['id' => $this->programa_id, 'nombre' => $this->programa()->value('nombre')] : null),
             'creado_en' => $this->creado_en?->toIso8601String(),
             // Sin política aceptada, la persona aún no usa su invitación.
             'pendiente_activacion' => $this->whenCounted('consentimientos', fn (int $n) => $n === 0),
@@ -49,13 +53,14 @@ class UsuarioResource extends Recurso
     private function perfilEstudiante(): array
     {
         $estudiante = $this->estudiante;
-        $elegibilidad = app(ElegibilidadService::class);
-        $foto = $estudiante->hojaVida()->value('foto_url');
+        $hoja = $estudiante->hojaVida()->first(['foto_url', 'publicada_en']);
+        $foto = $hoja?->foto_url;
 
         return [
             'hoja_vida_porcentaje' => app(HojaVidaService::class)->porcentaje($estudiante),
-            'habilitado_para_practica' => $elegibilidad->habilitadoParaPractica($estudiante),
-            'semestre_minimo' => $elegibilidad->reglaVigente($estudiante)?->semestre_minimo,
+            'hoja_vida_publicada' => $hoja?->publicada_en !== null,
+            'habilitado_para_practica' => app(ElegibilidadService::class)->habilitadoParaPractica($estudiante),
+            'citas_programadas' => $estudiante->citas()->where('estado', EstadoCita::Programada)->count(),
             'empresa_practica' => $estudiante->vinculacionActiva()->with('empresa')->first()?->empresa->razon_social,
             'tiene_practicas_terminadas' => $estudiante->vinculaciones()->where('estado', '!=', EstadoVinculacion::Activa)->exists(),
             'url_foto' => $foto ? "/api/estudiantes/{$estudiante->id}/foto" : null,

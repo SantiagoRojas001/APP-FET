@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Auth;
 use App\Enums\Rol;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\PrimerIngresoRequest;
 use App\Http\Resources\UsuarioResource;
 use App\Models\Usuario;
+use App\Services\Auditoria;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -49,6 +52,21 @@ class SesionController extends Controller
     public function show(Request $request): UsuarioResource
     {
         return new UsuarioResource($request->user()->load('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa'));
+    }
+
+    /** Primer ingreso: cambia la contraseña inicial y acepta la política de datos. */
+    public function primerIngreso(PrimerIngresoRequest $request): UsuarioResource
+    {
+        $usuario = $request->user();
+        abort_unless($usuario->debe_cambiar_password, 422, 'Tu cuenta ya tiene su propia contraseña.');
+
+        DB::transaction(function () use ($usuario, $request) {
+            $usuario->update(['password_hash' => $request->validated('password'), 'debe_cambiar_password' => false]);
+            $usuario->consentimientos()->firstOrCreate(['version_politica' => config('fet.version_politica')]);
+        });
+        Auditoria::registrar('usuario.primer_ingreso', $usuario);
+
+        return $this->show($request);
     }
 
     /** Guarda las preferencias de la cuenta (por ahora, el tema visual). */

@@ -14,9 +14,16 @@ Cliente y servidor separados:
 ## Roles y flujo principal
 
 ```
-Estudiante ──postula──▶ ENVIADA ──empresa selecciona──▶ SELECCIONADA ──docente autoriza──▶ ACEPTADA ──▶ vinculación ACTIVA
- (la hoja de vida         │                                 │                                (carta de bienvenida,
-  llega a la empresa)     └─empresa descarta─▶ DESCARTADA   └─docente no autoriza─▶ RECHAZADA  hoja de vida deshabilitada)
+Docente registra (pasantía o práctica, semestre habilitado) ──promedio ≥ mínimo──▶ correo con usuario y contraseña
+                                                           └─promedio < mínimo──▶ correo de ánimo (cuenta inactiva)
+Estudiante: primer ingreso (cambia contraseña) ──▶ hoja de vida completa ──▶ publicada
+
+Empresa con acuerdo vigente ──asigna cita──▶ PROGRAMADA ──empresa selecciona──▶ SELECCIONADO ──docente aprueba──▶ AUTORIZADO
+                                                │                                   │                                 │
+                                                ├─empresa cancela─▶ CANCELADA       └─no aprueba─▶ NO_AUTORIZADO      │
+                                                └─empresa descarta─▶ DESCARTADO                                       │
+                     director de programa envía la carta de presentación ──▶ PRESENTADO + vinculación ACTIVA ◀───────┘
+                     (carta de bienvenida al estudiante, hoja de vida deshabilitada, demás citas canceladas)
 
 Vinculación ACTIVA ──semanas aprobadas por la empresa suman las horas del programa (480)──▶ horas cumplidas (sigue ACTIVA)
        │                                                                                      │
@@ -24,26 +31,31 @@ Vinculación ACTIVA ──semanas aprobadas por la empresa suman las horas del p
        └─ docente con ≥ 3 reportes ─▶ FINALIZADA si cumplió horas, si no CANCELADA («Terminada anticipadamente»)
 ```
 
-1. **Estudiante**: tiene dos entornos. Mientras busca pasantía ve Vacantes, Mis postulaciones,
-   Hoja de vida y Elegibilidad. Cuando una empresa lo acepta (vinculación activa) pasa al entorno
-   de seguimiento: Mi pasantía, Horas semanales, Seguimiento (documentos) y Hoja de vida. Completa
-   su hoja de vida en el formato institucional PA-GTH-F-10 (al guardar ve la vista previa, tal como
-   la ven las empresas), consulta las vacantes de empresas validadas y se postula si su semestre lo
-   habilita. Cada semana reporta sus horas con la evidencia y sube ARL, bitácora, control de
-   asistencia e informes.
-2. **Docente**: recibe aviso cuando una empresa selecciona a un estudiante y autoriza la práctica
-   (o la rechaza con una observación); al autorizar queda como tutor. Hace el seguimiento de las
-   vinculaciones, revisa los documentos, evalúa al practicante y puede finalizar una práctica que
-   acumule reportes.
-3. **Empresa**: recibe directamente las hojas de vida de quienes se postulan a sus vacantes y
-   selecciona o descarta. Su trabajo durante la práctica se limita a aprobar las horas semanales
-   (una a una o todas las pendientes de una vez) y, al final, evaluar al practicante: con esa
-   evaluación la práctica culmina. Consulta los documentos, pero no los revisa. Puede registrarse
-   sola en `/empresasRegistro` y espera la validación de la FET.
-4. **Administrador**: crea y edita cuentas, estudiantes y empresas, y valida las empresas que se
-   registran solas. Define reglas
-   de elegibilidad, horas por programa y periodos; atiende los reportes y consulta informes y la
-   bitácora de auditoría.
+1. **Estudiante**: lo registra un docente. Al primer ingreso cambia la contraseña que recibió por
+   correo y acepta la política de datos. Mientras no cursa práctica ve Hoja de vida y Empresas
+   interesadas: completa su hoja de vida en el formato institucional PA-GTH-F-10, la publica y ve
+   las citas que le asignan las empresas (puede tener varias). Cuando empieza la práctica pasa al
+   entorno de seguimiento: Mi pasantía, Horas semanales, Seguimiento (documentos) y Hoja de vida.
+   Cada semana reporta sus horas con la evidencia y sube ARL, bitácora, control de asistencia e
+   informes.
+2. **Docente**: registra a los estudiantes que eligieron pasantía o práctica (por ahora uno a uno;
+   la carga del PDF de modalidades de grado está pendiente) y su promedio, que dispara el correo
+   con el resultado. Vuelve a aprobar a los estudiantes que una empresa seleccionó (queda como
+   tutor), ve las vacantes de las empresas y les recomienda estudiantes. Hace el seguimiento de
+   las vinculaciones, revisa los documentos, evalúa al practicante y puede finalizar una práctica
+   que acumule reportes.
+3. **Empresa**: sube su acuerdo con la FET. Con el acuerdo aprobado y vigente revisa las hojas de
+   vida publicadas (primero las que un docente le recomendó) y asigna citas. Después de cada cita
+   selecciona o descarta. Publica vacantes, que solo ven los docentes. Durante la práctica solo
+   aprueba las horas semanales y, al final, evalúa al practicante: con esa evaluación la práctica
+   culmina. Puede registrarse sola en `/empresasRegistro` y espera la validación de la FET.
+4. **Director de programa**: consulta los acuerdos de las empresas (existentes y pendientes, sin
+   aprobarlos), ve los estudiantes de su programa con su ciclo académico y si cursan pasantía,
+   práctica o aún no, y envía las cartas de presentación: con la carta empieza la práctica.
+5. **Administrador**: crea las cuentas de docentes, directores y administradores, corrige los
+   datos de los estudiantes, invita y valida empresas, aprueba o rechaza sus acuerdos y define los
+   parámetros (promedio mínimo y semestres habilitados), las horas por programa y los periodos;
+   atiende los reportes y consulta informes y la bitácora de auditoría.
 
 Todos los roles reciben notificaciones (dentro de la app y por correo) y pueden reportar problemas.
 
@@ -51,24 +63,35 @@ Todos los roles reciben notificaciones (dentro de la app y por correo) y pueden 
 
 Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
 
-- **Elegibilidad** (`ElegibilidadService`): un estudiante está habilitado para pasantía o práctica
-  si su `semestre_actual` alcanza el `semestre_minimo` de la regla vigente de su programa
-  (`regla_elegibilidad`). Si no lo está, o es egresado, no puede postularse. Solo existen dos
-  modalidades: pasantía y práctica profesional.
-- **Reglas con historial**: una regla no se edita. Al crear una nueva, la anterior se cierra el día
-  antes (`vigente_hasta`).
-- **Postulación** (`PostulacionService`): la vacante debe estar abierta y su empresa validada. El
-  estudiante no puede tener otra vinculación activa ni postularse dos veces a la misma vacante.
-  La empresa selecciona o descarta; al seleccionar se avisa a los docentes. El docente autoriza
-  (con fecha de inicio) o no autoriza con un motivo. Al autorizar se crea la vinculación con él
-  como tutor, las demás postulaciones abiertas del estudiante pasan a `DESCARTADA`, el estudiante
-  recibe la carta de bienvenida en PDF (`CartaBienvenida`, adjunta al correo) y su hoja de vida se
-  deshabilita: no se edita y no aparece en la búsqueda de las empresas mientras la práctica esté
-  activa. Las decisiones bloquean la fila (`SELECT … FOR UPDATE`) para evitar decisiones simultáneas.
+- **Registro y habilitación** (`RegistroEstudianteService`, `ElegibilidadService`): el docente
+  registra solo a quienes eligieron pasantía o práctica y cursan un semestre habilitado (3.º, 5.º
+  y 9.º por defecto). Registrar no envía correo. Al registrar el promedio (una sola vez) se guarda
+  el resultado: con el promedio mínimo (4,2 por defecto) el estudiante queda habilitado, se le
+  genera una contraseña y la recibe por correo (`CredencialesAcceso`); si no, su cuenta queda
+  inactiva y recibe un mensaje de ánimo (`NoHabilitado`). Los parámetros los define la
+  administración (tabla `parametro`).
+- **Primer ingreso**: la cuenta con contraseña inicial (`usuario.debe_cambiar_password`) solo puede
+  cambiarla (`POST /api/auth/primer-ingreso`, middleware `primer-ingreso`) y aceptar la política.
+- **Hoja de vida publicada**: el estudiante la publica cuando está completa (100 %), está
+  habilitado y no cursa práctica. Las empresas solo encuentran hojas publicadas.
+- **Acuerdos** (`AcuerdoService`): la empresa sube su acuerdo en PDF con vigencia; la
+  administración lo aprueba o lo rechaza con un motivo y el director lo consulta. Solo con un
+  acuerdo aprobado y vigente la empresa asigna citas.
+- **Citas** (`CitaService`): la empresa asigna una cita (fecha y hora de Colombia, dirección,
+  indicaciones y vacante opcional) a un estudiante disponible, sin repetir un proceso abierto con
+  él; el estudiante recibe la empresa, la dirección, la fecha y la hora (`CitaAsignada`). Después
+  de la cita la empresa selecciona o descarta; los seleccionados pasan a los docentes, que los
+  vuelven a aprobar (con fecha de inicio) o no, con un motivo. Aprobado, se avisa al director del
+  programa (o a la administración si no hay director). El director envía la carta de presentación
+  (`CartaPresentacion`, adjunta al correo de la empresa): se crea la vinculación con el docente
+  como tutor, el estudiante recibe la carta de bienvenida, su hoja de vida se deshabilita y sus
+  demás citas abiertas se cancelan. Las decisiones bloquean la fila (`SELECT … FOR UPDATE`).
+- **Recomendaciones** (`RecomendacionService`): un docente recomienda estudiantes disponibles
+  para una vacante; la empresa los ve primero en Hojas de vida.
 - **Empresas**: no pueden ingresar hasta que la FET las valide. Las que invita la administración
   quedan validadas; las que se registran en `/empresasRegistro` quedan `PENDIENTE`, se avisa a la
   administración y, al validarlas, a la empresa. Suspenderlas (`RECHAZADA`) cierra sus sesiones.
-- **Cuentas** (`CuentaService`): estudiantes y docentes no tienen registro público. La administración crea la cuenta con una
+- **Cuentas** (`CuentaService`): docentes, directores y administradores no tienen registro público. La administración crea la cuenta con una
   contraseña aleatoria y envía una invitación (broker `invitaciones`, tabla `invitacion_tokens`,
   7 días). Al activarla, la persona define su contraseña y acepta la política de datos; una cuenta
   sin consentimiento registrado figura como «invitación pendiente».
@@ -107,7 +130,8 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
 - Contraseñas con bcrypt. Tokens de Sanctum con vencimiento de 8 horas, revocados al cerrar sesión
   o al desactivar la cuenta.
 - Control de acceso en tres niveles: middleware `rol:` por grupo de rutas, consultas limitadas a
-  los registros propios (una empresa solo encuentra sus vacantes y postulaciones) y
+  los registros propios (una empresa solo encuentra sus vacantes y citas, un director solo su
+  programa), `EstudiantePolicy` para los perfiles y
   `VinculacionPolicy` para el seguimiento.
 - Límite de 5 intentos de inicio de sesión por minuto, y de 5 solicitudes por minuto en la
   recuperación de contraseña.
@@ -121,8 +145,8 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
 - En desarrollo, `Model::shouldBeStrict()` hace fallar las consultas N+1 y los atributos
   inexistentes.
 - **Bitácora de auditoría** (`App\Services\Auditoria`, tabla `auditoria`): decisiones sobre
-  postulaciones, revisiones de documentos, horas cumplidas, aprobación y finalización de prácticas,
-  evaluaciones, reportes, cuentas, empresas, reglas y periodos, con autor, IP y detalle.
+  registro y promedio de estudiantes, citas, acuerdos, revisiones de documentos, horas cumplidas, aprobación y finalización de prácticas,
+  evaluaciones, reportes, cuentas, empresas, parámetros y periodos, con autor, IP y detalle.
 
 ## API
 
@@ -153,19 +177,25 @@ Todas las respuestas son JSON. Los enums se envían como `{ "valor": "APROBADA",
 | `GET/PUT /api/estudiante/perfil` | Estudiante | Hoja de vida completa (formato PA-GTH-F-10) |
 | `POST /api/estudiante/foto` · `GET /api/estudiantes/{id}/foto` | Estudiante · quien consulta perfiles | Foto de la hoja de vida |
 | `GET /api/estudiante/elegibilidad` | Estudiante | Modalidades permitidas y requisitos |
-| `GET /api/estudiante/vacantes` | Estudiante | Vacantes marcadas como disponibles o no |
-| `POST /api/estudiante/vacantes/{id}/postulaciones` | Estudiante | Postularse |
-| `GET /api/estudiante/postulaciones` · `/vinculaciones` | Estudiante | Seguimiento propio |
-| `GET/PATCH /api/docente/postulaciones` | Docente | Autorizar (con fecha de inicio) o no autorizar a los seleccionados |
+| `POST /api/auth/primer-ingreso` | Estudiante con contraseña inicial | Cambia la contraseña y acepta la política |
+| `PATCH /api/estudiante/hoja-vida/publicacion` | Estudiante | Publica u oculta la hoja de vida |
+| `GET /api/estudiante/citas` · `/vinculaciones` | Estudiante | Empresas interesadas (citas) y prácticas propias |
+| `GET/POST /api/docente/estudiantes` · `PATCH …/{id}/promedio` | Docente | Registro de estudiantes y de su promedio (envía el resultado) |
+| `GET/PATCH /api/docente/citas` | Docente | Volver a aprobar (con fecha de inicio) o no a los seleccionados |
+| `GET /api/docente/vacantes` · `POST/DELETE …/{id}/recomendaciones` | Docente | Vacantes y recomendaciones |
+| `GET /api/empresa/hojas-vida` | Empresa | Hojas de vida publicadas, recomendadas primero |
+| `GET/POST /api/empresa/citas` · `POST …/{id}/cancelacion` · `…/{id}/decision` | Empresa | Asignar, cancelar y decidir citas |
+| `GET/POST /api/empresa/acuerdos` | Empresa | Acuerdo con la FET |
+| `GET /api/director/estudiantes` · `/acuerdos` · `GET/POST /cartas` | Director | Estudiantes del programa, acuerdos y cartas de presentación |
+| `GET /api/citas/{id}/carta-presentacion.pdf` · `/api/acuerdos/{id}/archivo` | Según permisos | Carta de presentación y PDF del acuerdo |
 | `GET/PATCH /api/docente/vinculaciones` | Docente | Listar (por estado y periodo) y asignarse como tutor |
 | `GET/POST/PATCH /api/empresa/vacantes` | Empresa | Vacantes propias |
-| `GET/PATCH /api/empresa/postulaciones` | Empresa | Seleccionar o descartar postulaciones |
 | `GET /api/empresa/vinculaciones` | Empresa | Practicantes |
-| `GET /api/estudiantes` · `/{id}` | Empresa, docente, admin | Búsqueda y perfil de estudiantes |
+| `GET /api/estudiantes` · `/{id}` | Docente, director, admin · también empresa (perfil) | Búsqueda y perfil de estudiantes |
 | `GET/POST /api/vinculaciones/{id}/documentos` | Según permisos | Ver o subir documentos de seguimiento |
 | `PATCH /api/documentos/{id}/revision` | Docente | Revisar un documento |
 | `GET /api/documentos/{id}/archivo` | Según permisos | Descargar el PDF |
-| `/api/admin/…` | Admin | Resumen, usuarios, estudiantes, empresas, reglas, horas por programa, periodos, reportes, informes (y exportación a Excel) y auditoría |
+| `/api/admin/…` | Admin | Resumen, usuarios, estudiantes, empresas, acuerdos, parámetros, horas por programa, periodos, reportes, informes (y exportación a Excel) y auditoría |
 
 La lista completa sale con `make artisan c="route:list --path=api"`.
 
@@ -174,9 +204,9 @@ La lista completa sale con `make artisan c="route:list --path=api"`.
 El esquema respeta el diccionario de datos, con nombres, tipos, longitudes, valores por defecto y
 llaves. Se agregaron:
 
-1. **`postulacion.observacion`** (`text`, opcional): motivo del docente al rechazar, que el
-   estudiante ve en su lista de postulaciones.
-2. **Único `(vacante_id, estudiante_id)` en `postulacion`**: evita postulaciones duplicadas.
+1. **Sin postulaciones ni reglas de semestre mínimo**: las tablas `postulacion` y
+   `regla_elegibilidad` se eliminaron; las reemplazan `cita` y `parametro`.
+2. **`usuario.debe_cambiar_password` y `usuario.programa_id`** (programa que dirige un director).
 3. **Sin contratación directa**: el modelo original contemplaba ofertas y vinculaciones por
    contratación directa. Se eliminó esa modalidad; solo hay pasantía y práctica profesional.
 4. **`usuario.tema`** (`varchar(10)`, por defecto `system`): tema visual de cada cuenta, para que
@@ -186,7 +216,8 @@ llaves. Se agregaron:
 6. **`programa.horas_requeridas`** (`smallint`, 480 por defecto).
 7. **`vinculacion.periodo_id`, `horas_cumplidas_en`, `finalizada_por`**; `observacion_final`
    guarda la justificación del docente al finalizar.
-8. **`postulacion.revisada_en` y `decidida_en`**, para medir el tiempo de cada etapa.
+8. **`estudiante.modalidad_grado`, `promedio`, `habilitado`, `resultado_enviado_en` y
+   `registrado_por`**; `codigo` y `documento` pasan a ser opcionales. `hoja_vida.publicada_en`.
 9. **Tablas nuevas**: `periodo_academico`, `evidencia_semanal` (única por vinculación y semana;
    reemplazó a `asistencia`, cuyos registros se agruparon por semana como aprobados),
    `reporte`, `evaluacion` (única por vinculación y tipo, respuestas en `jsonb`) y `auditoria`.
@@ -202,11 +233,12 @@ Además están las tablas propias de Laravel: `personal_access_tokens` (Sanctum)
 
 | Columna | Valores |
 | --- | --- |
-| `usuario.rol` | ADMIN, DOCENTE, ESTUDIANTE, EMPRESA |
-| `vacante.modalidad`, `vinculacion.tipo`, `empresa.modalidad_interes` | PASANTIA, PRACTICA |
+| `usuario.rol` | ADMIN, DOCENTE, ESTUDIANTE, EMPRESA, DIRECTOR |
+| `vacante.modalidad`, `vinculacion.tipo`, `empresa.modalidad_interes`, `estudiante.modalidad_grado` | PASANTIA, PRACTICA |
 | `empresa.estado_validacion` | PENDIENTE, VALIDADA, RECHAZADA |
 | `vacante.estado` | ABIERTA, CERRADA |
-| `postulacion.estado` | ENVIADA, SELECCIONADA, ACEPTADA, RECHAZADA, DESCARTADA |
+| `cita.estado` | PROGRAMADA, SELECCIONADO, DESCARTADO, AUTORIZADO, NO_AUTORIZADO, PRESENTADO, CANCELADA |
+| `acuerdo.estado` | PENDIENTE, APROBADO, RECHAZADO |
 | `vinculacion.estado` | ACTIVA, FINALIZADA, CANCELADA (se muestra como «Terminada anticipadamente») |
 | `reporte.categoria` | FALLA_PLATAFORMA, PRACTICA, DATOS, OTRO |
 | `reporte.estado` | ABIERTO, EN_REVISION, RESUELTO |

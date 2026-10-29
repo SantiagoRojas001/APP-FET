@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Enums\EstadoPostulacion;
+use App\Enums\EstadoCita;
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoVinculacion;
+use App\Models\Cita;
 use App\Models\PeriodoAcademico;
-use App\Models\Postulacion;
 use App\Models\Vinculacion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -28,15 +28,16 @@ class InformeService
     public function resumen(?PeriodoAcademico $periodo = null): array
     {
         $vinculaciones = $this->vinculaciones($periodo);
-        $postulaciones = $this->postulaciones($periodo);
+        $citas = $this->citas($periodo);
 
-        $porEstado = (clone $postulaciones)->selectRaw('estado, count(*) as total')->groupBy('estado')->pluck('total', 'estado');
-        $contar = fn (EstadoPostulacion ...$estados) => collect($estados)->sum(fn ($e) => (int) ($porEstado[$e->value] ?? 0));
+        $porEstado = (clone $citas)->selectRaw('estado, count(*) as total')->groupBy('estado')->pluck('total', 'estado');
+        $contar = fn (EstadoCita ...$estados) => collect($estados)->sum(fn ($e) => (int) ($porEstado[$e->value] ?? 0));
 
-        // La empresa decide primero; las que selecciona pasan a autorización docente.
-        $seleccionadas = $contar(EstadoPostulacion::Seleccionada, EstadoPostulacion::Aceptada, EstadoPostulacion::Rechazada);
-        $decididasEmpresa = $seleccionadas + $contar(EstadoPostulacion::Descartada);
-        $decididasDocente = $contar(EstadoPostulacion::Aceptada, EstadoPostulacion::Rechazada);
+        // Tras la cita la empresa decide; los seleccionados pasan al docente y luego a la carta del director.
+        $aprobadosDocente = $contar(EstadoCita::Autorizado, EstadoCita::Presentado);
+        $seleccionados = $contar(EstadoCita::Seleccionado, EstadoCita::NoAutorizado) + $aprobadosDocente;
+        $decididasEmpresa = $seleccionados + $contar(EstadoCita::Descartado);
+        $decididasDocente = $aprobadosDocente + $contar(EstadoCita::NoAutorizado);
 
         return [
             'periodo' => $periodo?->nombre,
@@ -49,18 +50,20 @@ class InformeService
                 ->limit(10)
                 ->get()
                 ->map(fn ($f) => ['empresa' => $f->empresa, 'practicantes' => (int) $f->practicantes]),
-            'postulaciones' => [
+            'citas' => [
                 'total' => $porEstado->sum(),
-                'seleccionadas_por_empresa' => $seleccionadas,
-                'descartadas_por_empresa' => $contar(EstadoPostulacion::Descartada),
-                'autorizadas_por_docente' => $contar(EstadoPostulacion::Aceptada),
-                'no_autorizadas_por_docente' => $contar(EstadoPostulacion::Rechazada),
-                'tasa_seleccion_empresa' => $decididasEmpresa ? round($seleccionadas / $decididasEmpresa * 100, 1) : null,
-                'tasa_autorizacion_docente' => $decididasDocente ? round($contar(EstadoPostulacion::Aceptada) / $decididasDocente * 100, 1) : null,
+                'seleccionados_por_empresa' => $seleccionados,
+                'descartados_por_empresa' => $contar(EstadoCita::Descartado),
+                'aprobados_por_docente' => $aprobadosDocente,
+                'no_aprobados_por_docente' => $contar(EstadoCita::NoAutorizado),
+                'cartas_enviadas' => $contar(EstadoCita::Presentado),
+                'tasa_seleccion_empresa' => $decididasEmpresa ? round($seleccionados / $decididasEmpresa * 100, 1) : null,
+                'tasa_aprobacion_docente' => $decididasDocente ? round($aprobadosDocente / $decididasDocente * 100, 1) : null,
             ],
             'tiempos_promedio_dias' => [
-                'decision_empresa' => $this->promedioDias((clone $postulaciones)->whereNotNull('decidida_en'), 'decidida_en - fecha'),
-                'autorizacion_docente' => $this->promedioDias((clone $postulaciones)->whereNotNull('decidida_en')->whereNotNull('revisada_en'), 'revisada_en - decidida_en'),
+                'decision_empresa' => $this->promedioDias((clone $citas)->whereNotNull('decidida_en'), 'decidida_en - fecha_hora'),
+                'aprobacion_docente' => $this->promedioDias((clone $citas)->whereNotNull('decidida_en')->whereNotNull('autorizada_en'), 'autorizada_en - decidida_en'),
+                'carta_director' => $this->promedioDias((clone $citas)->whereNotNull('autorizada_en')->whereNotNull('presentada_en'), 'presentada_en - autorizada_en'),
                 'cumplir_horas' => $this->promedioDias((clone $vinculaciones)->whereNotNull('horas_cumplidas_en'), 'horas_cumplidas_en - fecha_inicio::timestamptz'),
                 'duracion_practica' => $this->promedioDias(
                     (clone $vinculaciones)->where('estado', '!=', EstadoVinculacion::Activa)->whereNotNull('fecha_fin'),
@@ -81,24 +84,26 @@ class InformeService
         $writer->openToFile($ruta);
 
         $writer->getCurrentSheet()->setName('Resumen');
-        $p = $datos['postulaciones'];
+        $p = $datos['citas'];
         $t = $datos['tiempos_promedio_dias'];
         $writer->addRows([
             Row::fromValuesWithStyle(['Informe de prácticas APP FET', $periodo ? "Periodo {$periodo->nombre}" : 'Todos los periodos'], $titulo),
             Row::fromValues(['Generado', now()->format('d/m/Y H:i')]),
             Row::fromValues([]),
-            Row::fromValuesWithStyle(['Postulaciones', 'Valor'], $titulo),
+            Row::fromValuesWithStyle(['Citas', 'Valor'], $titulo),
             Row::fromValues(['Total', $p['total']]),
-            Row::fromValues(['Seleccionadas por la empresa', $p['seleccionadas_por_empresa']]),
-            Row::fromValues(['Descartadas por la empresa', $p['descartadas_por_empresa']]),
-            Row::fromValues(['Autorizadas por el docente', $p['autorizadas_por_docente']]),
-            Row::fromValues(['No autorizadas por el docente', $p['no_autorizadas_por_docente']]),
+            Row::fromValues(['Seleccionados por la empresa', $p['seleccionados_por_empresa']]),
+            Row::fromValues(['Descartados por la empresa', $p['descartados_por_empresa']]),
+            Row::fromValues(['Aprobados por el docente', $p['aprobados_por_docente']]),
+            Row::fromValues(['No aprobados por el docente', $p['no_aprobados_por_docente']]),
+            Row::fromValues(['Cartas de presentación enviadas', $p['cartas_enviadas']]),
             Row::fromValues(['Tasa de selección de empresas (%)', $p['tasa_seleccion_empresa']]),
-            Row::fromValues(['Tasa de autorización docente (%)', $p['tasa_autorizacion_docente']]),
+            Row::fromValues(['Tasa de aprobación docente (%)', $p['tasa_aprobacion_docente']]),
             Row::fromValues([]),
             Row::fromValuesWithStyle(['Tiempo promedio por etapa', 'Días'], $titulo),
-            Row::fromValues(['Envío a decisión de la empresa', $t['decision_empresa']]),
-            Row::fromValues(['Selección a autorización docente', $t['autorizacion_docente']]),
+            Row::fromValues(['Cita a decisión de la empresa', $t['decision_empresa']]),
+            Row::fromValues(['Selección a aprobación docente', $t['aprobacion_docente']]),
+            Row::fromValues(['Aprobación docente a carta de presentación', $t['carta_director']]),
             Row::fromValues(['Inicio a completar las horas', $t['cumplir_horas']]),
             Row::fromValues(['Duración de la práctica', $t['duracion_practica']]),
         ]);
@@ -154,12 +159,12 @@ class InformeService
         return Vinculacion::query()->when($periodo, fn ($q) => $q->where('vinculacion.periodo_id', $periodo->id));
     }
 
-    /** Postulaciones enviadas dentro de las fechas del periodo. */
-    private function postulaciones(?PeriodoAcademico $periodo): Builder
+    /** Citas programadas dentro de las fechas del periodo. */
+    private function citas(?PeriodoAcademico $periodo): Builder
     {
-        return Postulacion::query()->when($periodo, fn ($q) => $q
-            ->whereDate('fecha', '>=', $periodo->fecha_inicio)
-            ->whereDate('fecha', '<=', $periodo->fecha_fin));
+        return Cita::query()->when($periodo, fn ($q) => $q
+            ->whereDate('fecha_hora', '>=', $periodo->fecha_inicio)
+            ->whereDate('fecha_hora', '<=', $periodo->fecha_fin));
     }
 
     /**

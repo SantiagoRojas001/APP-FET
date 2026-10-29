@@ -101,33 +101,38 @@ class CuentasTest extends TestCase
         $this->postJson('/api/auth/login', ['correo' => 'talento@acme.co', 'password' => 'clave1234'])->assertOk();
     }
 
-    public function test_el_admin_crea_un_estudiante_que_activa_su_cuenta_con_la_invitacion(): void
+    public function test_el_admin_crea_un_director_de_programa_que_activa_su_cuenta_con_la_invitacion(): void
     {
         $programa = Programa::factory()->create(['total_semestres' => 10]);
         $this->como(Rol::Admin);
 
-        $this->postJson('/api/admin/estudiantes', $this->datosEstudiante($programa))->assertCreated();
+        $this->postJson('/api/admin/usuarios', ['correo' => 'direccion@fet.edu.co', 'rol' => 'DIRECTOR'])
+            ->assertJsonValidationErrors('programa_id');
+        $this->postJson('/api/admin/usuarios', ['correo' => 'direccion@fet.edu.co', 'rol' => 'DIRECTOR', 'programa_id' => $programa->id])
+            ->assertCreated()
+            ->assertJsonPath('programa.id', $programa->id);
 
-        $usuario = Usuario::where('correo', 'nuevo.estudiante@fet.edu.co')->firstOrFail();
-        $this->assertSame(Rol::Estudiante, $usuario->rol);
-        $this->assertNotNull($usuario->estudiante->hojaVida);
+        $usuario = Usuario::where('correo', 'direccion@fet.edu.co')->firstOrFail();
+        $this->assertSame(Rol::Director, $usuario->rol);
         $this->assertDatabaseMissing('consentimiento_datos', ['usuario_id' => $usuario->id]);
         $this->assertTrue(Auditoria::where('accion', 'usuario.creado')->where('entidad_id', $usuario->id)->exists());
 
         $this->activar($usuario, ['acepta_politica' => false])->assertJsonValidationErrors('acepta_politica');
         $this->activar($usuario)->assertOk();
-
-        $this->assertDatabaseHas('consentimiento_datos', ['usuario_id' => $usuario->id, 'version_politica' => config('fet.version_politica')]);
         $this->postJson('/api/auth/login', ['correo' => $usuario->correo, 'password' => 'clave1234'])->assertOk();
     }
 
-    public function test_los_estudiantes_y_docentes_usan_correo_institucional(): void
+    public function test_la_administracion_ya_no_crea_estudiantes(): void
     {
-        $programa = Programa::factory()->create(['total_semestres' => 6]);
         $this->como(Rol::Admin);
 
-        $this->postJson('/api/admin/estudiantes', $this->datosEstudiante($programa, ['correo' => 'ana@gmail.com', 'semestre_actual' => 9]))
-            ->assertJsonValidationErrors(['correo', 'semestre_actual']);
+        $this->postJson('/api/admin/estudiantes', $this->datosEstudiante(Programa::factory()->create()))->assertNotFound();
+    }
+
+    public function test_docentes_y_directores_usan_correo_institucional(): void
+    {
+        $this->como(Rol::Admin);
+
         $this->postJson('/api/admin/usuarios', ['correo' => 'profe@gmail.com', 'rol' => 'DOCENTE'])
             ->assertJsonValidationErrors('correo');
         $this->postJson('/api/admin/usuarios', ['correo' => 'profe@fet.edu.co', 'rol' => 'ESTUDIANTE'])
