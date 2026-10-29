@@ -10,7 +10,7 @@ const DEMO = import.meta.env.DEV
       [
         'Estudiantes',
         [
-          ['mateo.suarez@fet.edu.co', 'Mateo Suárez', 'Hoja de vida publicada, con citas'],
+          ['mateo.suarez@fet.edu.co', 'Mateo Suárez', 'Hoja de vida aprobada, con citas'],
           ['julian.castro@fet.edu.co', 'Julián Castro', 'Primer ingreso'],
           ['andres.rojas@fet.edu.co', 'Andrés Rojas', 'En pasantía'],
         ],

@@ -46,9 +46,9 @@ export default async function estudiantesDirectorView({ root }) {
       ? html`${badge('ok', `En ${s.practica_actual.tipo.etiqueta.toLowerCase()}`)}<small>${s.practica_actual.empresa ?? ''}</small>`
       : s.habilitado === false
         ? badge('neutral', 'No habilitado')
-        : s.hoja_vida?.publicada_en
-          ? badge('info', 'Hoja de vida publicada')
-          : badge('warn', s.habilitado ? 'Aún no publica' : 'Aún no');
+        : s.hoja_vida?.estado
+          ? html`${badge('neutral', 'Aún no')}<small>Hoja de vida: ${s.hoja_vida.estado.etiqueta.toLowerCase()}</small>`
+          : badge('neutral', 'Aún no');
 
   async function load() {
     const res = await api.get('/director/estudiantes', filters);

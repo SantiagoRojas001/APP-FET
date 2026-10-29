@@ -92,7 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('estudiante')->middleware('rol:ESTUDIANTE')->group(function () {
             Route::get('perfil', [Estudiante\PerfilController::class, 'show']);
             Route::put('perfil', [Estudiante\PerfilController::class, 'update']);
-            Route::patch('hoja-vida/publicacion', [Estudiante\PerfilController::class, 'publicacion']);
+            Route::post('hoja-vida/envio', [Estudiante\PerfilController::class, 'envio']);
             Route::get('hoja-vida.pdf', [HojaVidaPdfController::class, 'propia']);
             Route::post('foto', [FotoEstudianteController::class, 'store'])->middleware('throttle:10,1');
             Route::get('citas', [Estudiante\CitaController::class, 'index']);
@@ -103,8 +103,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('estudiantes', [Docente\EstudianteController::class, 'index']);
             Route::post('estudiantes', [Docente\EstudianteController::class, 'store']);
             Route::patch('estudiantes/{estudiante}/promedio', [Docente\EstudianteController::class, 'promedio']);
-            Route::get('citas', [Docente\CitaController::class, 'index']);
-            Route::patch('citas/{cita}', [Docente\CitaController::class, 'update']);
+            Route::get('hojas-vida', [Docente\HojaVidaController::class, 'index']);
+            Route::patch('hojas-vida/{estudiante}', [Docente\HojaVidaController::class, 'update']);
             Route::get('vacantes', [Docente\VacanteController::class, 'index']);
             Route::post('vacantes/{vacante}/recomendaciones', [Docente\VacanteController::class, 'recomendar']);
             Route::delete('vacantes/{vacante}/recomendaciones/{recomendacion}', [Docente\VacanteController::class, 'quitar']);

@@ -16,7 +16,7 @@ class CitaFactory extends Factory
     {
         return [
             'empresa_id' => Empresa::factory(),
-            'estudiante_id' => Estudiante::factory()->publicado(),
+            'estudiante_id' => Estudiante::factory()->hojaAprobada(),
             'fecha_hora' => now()->subDay(),
             'direccion' => 'Calle 10 # 5-20, Neiva',
         ];

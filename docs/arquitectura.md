@@ -16,14 +16,17 @@ Cliente y servidor separados:
 ```
 Docente registra (pasantía o práctica, semestre habilitado) ──promedio ≥ mínimo──▶ correo con usuario y contraseña
                                                            └─promedio < mínimo──▶ correo de ánimo (cuenta inactiva)
-Estudiante: primer ingreso (cambia contraseña) ──▶ hoja de vida completa ──▶ publicada
+Estudiante: primer ingreso (cambia contraseña) ──▶ hoja de vida completa ──▶ EN_REVISION ──docente aprueba──▶ APROBADA
+                                                                                  └─docente devuelve con recomendaciones─▶ CON_OBSERVACIONES
+                                                                                    (el estudiante corrige y la envía de nuevo)
 
-Empresa con acuerdo vigente ──asigna cita──▶ PROGRAMADA ──empresa selecciona──▶ SELECCIONADO ──docente aprueba──▶ AUTORIZADO
-                                                │                                   │                                 │
-                                                ├─empresa cancela─▶ CANCELADA       └─no aprueba─▶ NO_AUTORIZADO      │
-                                                └─empresa descarta─▶ DESCARTADO                                       │
-                     director de programa envía la carta de presentación ──▶ PRESENTADO + vinculación ACTIVA ◀───────┘
-                     (carta de bienvenida al estudiante, hoja de vida deshabilitada, demás citas canceladas)
+Empresa con acuerdo vigente ve las APROBADAS ──asigna cita──▶ PROGRAMADA ──según la cita, la empresa acepta──▶ ACEPTADO
+                                                                │                                                 │
+                                                                ├─empresa cancela─▶ CANCELADA                     │
+                                                                └─empresa rechaza─▶ RECHAZADO                     │
+                     director de programa envía la carta de presentación ──▶ PRESENTADO + vinculación ACTIVA ◀───┘
+                     (tutor: el docente que aprobó la hoja de vida; carta de bienvenida al estudiante,
+                      hoja de vida deshabilitada, demás citas canceladas)
 
 Vinculación ACTIVA ──semanas aprobadas por la empresa suman las horas del programa (480)──▶ horas cumplidas (sigue ACTIVA)
        │                                                                                      │
@@ -33,25 +36,28 @@ Vinculación ACTIVA ──semanas aprobadas por la empresa suman las horas del p
 
 1. **Estudiante**: lo registra un docente. Al primer ingreso cambia la contraseña que recibió por
    correo y acepta la política de datos. Mientras no cursa práctica ve Hoja de vida y Empresas
-   interesadas: completa su hoja de vida en el formato institucional PA-GTH-F-10, la publica y ve
-   las citas que le asignan las empresas (puede tener varias). Cuando empieza la práctica pasa al
+   interesadas: completa su hoja de vida en el formato institucional PA-GTH-F-10, la envía a
+   revisión docente (si vuelve con recomendaciones, la corrige y la envía de nuevo) y ve las citas
+   que le asignan las empresas (puede tener varias). Cuando empieza la práctica pasa al
    entorno de seguimiento: Mi pasantía, Horas semanales, Seguimiento (documentos) y Hoja de vida.
    Cada semana reporta sus horas con la evidencia y sube ARL, bitácora, control de asistencia e
    informes.
 2. **Docente**: registra a los estudiantes que eligieron pasantía o práctica (por ahora uno a uno;
    la carga del PDF de modalidades de grado está pendiente) y su promedio, que dispara el correo
-   con el resultado. Vuelve a aprobar a los estudiantes que una empresa seleccionó (queda como
-   tutor), ve las vacantes de las empresas y les recomienda estudiantes. Hace el seguimiento de
+   con el resultado. Revisa las hojas de vida: las aprueba (solo entonces las ven las empresas) o
+   las devuelve con recomendaciones; quien la aprueba queda como tutor si el estudiante empieza la
+   práctica. Ve las vacantes de las empresas y les recomienda estudiantes. Hace el seguimiento de
    las vinculaciones, revisa los documentos, evalúa al practicante y puede finalizar una práctica
    que acumule reportes.
 3. **Empresa**: sube su acuerdo con la FET. Con el acuerdo aprobado y vigente revisa las hojas de
-   vida publicadas (primero las que un docente le recomendó) y asigna citas. Después de cada cita
-   selecciona o descarta. Publica vacantes, que solo ven los docentes. Durante la práctica solo
+   vida aprobadas por los docentes (primero las que un docente le recomendó) y asigna citas. Según
+   cada cita acepta al estudiante (con la fecha de inicio) o lo rechaza. Publica vacantes, que solo ven los docentes. Durante la práctica solo
    aprueba las horas semanales y, al final, evalúa al practicante: con esa evaluación la práctica
    culmina. Puede registrarse sola en `/empresasRegistro` y espera la validación de la FET.
 4. **Director de programa**: consulta los acuerdos de las empresas (existentes y pendientes, sin
    aprobarlos), ve los estudiantes de su programa con su ciclo académico y si cursan pasantía,
-   práctica o aún no, y envía las cartas de presentación: con la carta empieza la práctica.
+   práctica o aún no, y envía la carta de presentación de los estudiantes que una empresa aceptó:
+   con la carta empieza la práctica.
 5. **Administrador**: crea las cuentas de docentes, directores y administradores, corrige los
    datos de los estudiantes, invita y valida empresas, aprueba o rechaza sus acuerdos y define los
    parámetros (promedio mínimo y semestres habilitados), las horas por programa y los periodos;
@@ -72,20 +78,23 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
   administración (tabla `parametro`).
 - **Primer ingreso**: la cuenta con contraseña inicial (`usuario.debe_cambiar_password`) solo puede
   cambiarla (`POST /api/auth/primer-ingreso`, middleware `primer-ingreso`) y aceptar la política.
-- **Hoja de vida publicada**: el estudiante la publica cuando está completa (100 %), está
-  habilitado y no cursa práctica. Las empresas solo encuentran hojas publicadas.
+- **Revisión de la hoja de vida** (`HojaVidaService`): el estudiante la envía a revisión cuando
+  está completa (100 %), está habilitado y no cursa práctica; se avisa a los docentes. El docente
+  la aprueba o la devuelve con recomendaciones (obligatorias). Mientras está en revisión no se
+  edita; si el estudiante edita una aprobada, vuelve a borrador y necesita otra aprobación. Las
+  empresas solo encuentran hojas aprobadas.
 - **Acuerdos** (`AcuerdoService`): la empresa sube su acuerdo en PDF con vigencia; la
   administración lo aprueba o lo rechaza con un motivo y el director lo consulta. Solo con un
   acuerdo aprobado y vigente la empresa asigna citas.
 - **Citas** (`CitaService`): la empresa asigna una cita (fecha y hora de Colombia, dirección,
   indicaciones y vacante opcional) a un estudiante disponible, sin repetir un proceso abierto con
   él; el estudiante recibe la empresa, la dirección, la fecha y la hora (`CitaAsignada`). Después
-  de la cita la empresa selecciona o descarta; los seleccionados pasan a los docentes, que los
-  vuelven a aprobar (con fecha de inicio) o no, con un motivo. Aprobado, se avisa al director del
-  programa (o a la administración si no hay director). El director envía la carta de presentación
+  de la cita la empresa acepta (con la fecha de inicio) o rechaza. Si acepta, se avisa al director
+  del programa (o a la administración si no hay director), que envía la carta de presentación
   (`CartaPresentacion`, adjunta al correo de la empresa): se crea la vinculación con el docente
-  como tutor, el estudiante recibe la carta de bienvenida, su hoja de vida se deshabilita y sus
-  demás citas abiertas se cancelan. Las decisiones bloquean la fila (`SELECT … FOR UPDATE`).
+  que aprobó la hoja de vida como tutor, el estudiante recibe la carta de bienvenida, su hoja de
+  vida se deshabilita y sus demás citas abiertas se cancelan. Las decisiones bloquean la fila
+  (`SELECT … FOR UPDATE`).
 - **Recomendaciones** (`RecomendacionService`): un docente recomienda estudiantes disponibles
   para una vacante; la empresa los ve primero en Hojas de vida.
 - **Empresas**: no pueden ingresar hasta que la FET las valide. Las que invita la administración
@@ -178,13 +187,13 @@ Todas las respuestas son JSON. Los enums se envían como `{ "valor": "APROBADA",
 | `POST /api/estudiante/foto` · `GET /api/estudiantes/{id}/foto` | Estudiante · quien consulta perfiles | Foto de la hoja de vida |
 | `GET /api/estudiante/elegibilidad` | Estudiante | Modalidades permitidas y requisitos |
 | `POST /api/auth/primer-ingreso` | Estudiante con contraseña inicial | Cambia la contraseña y acepta la política |
-| `PATCH /api/estudiante/hoja-vida/publicacion` | Estudiante | Publica u oculta la hoja de vida |
+| `POST /api/estudiante/hoja-vida/envio` | Estudiante | Envía la hoja de vida a revisión docente |
 | `GET /api/estudiante/citas` · `/vinculaciones` | Estudiante | Empresas interesadas (citas) y prácticas propias |
 | `GET/POST /api/docente/estudiantes` · `PATCH …/{id}/promedio` | Docente | Registro de estudiantes y de su promedio (envía el resultado) |
-| `GET/PATCH /api/docente/citas` | Docente | Volver a aprobar (con fecha de inicio) o no a los seleccionados |
+| `GET /api/docente/hojas-vida` · `PATCH …/{estudiante}` | Docente | Revisar hojas de vida: aprobar o devolver con recomendaciones |
 | `GET /api/docente/vacantes` · `POST/DELETE …/{id}/recomendaciones` | Docente | Vacantes y recomendaciones |
-| `GET /api/empresa/hojas-vida` | Empresa | Hojas de vida publicadas, recomendadas primero |
-| `GET/POST /api/empresa/citas` · `POST …/{id}/cancelacion` · `…/{id}/decision` | Empresa | Asignar, cancelar y decidir citas |
+| `GET /api/empresa/hojas-vida` | Empresa | Hojas de vida aprobadas, recomendadas primero |
+| `GET/POST /api/empresa/citas` · `POST …/{id}/cancelacion` · `…/{id}/decision` | Empresa | Asignar y cancelar citas; aceptar o rechazar al estudiante |
 | `GET/POST /api/empresa/acuerdos` | Empresa | Acuerdo con la FET |
 | `GET /api/director/estudiantes` · `/acuerdos` · `GET/POST /cartas` | Director | Estudiantes del programa, acuerdos y cartas de presentación |
 | `GET /api/citas/{id}/carta-presentacion.pdf` · `/api/acuerdos/{id}/archivo` | Según permisos | Carta de presentación y PDF del acuerdo |
@@ -217,7 +226,8 @@ llaves. Se agregaron:
 7. **`vinculacion.periodo_id`, `horas_cumplidas_en`, `finalizada_por`**; `observacion_final`
    guarda la justificación del docente al finalizar.
 8. **`estudiante.modalidad_grado`, `promedio`, `habilitado`, `resultado_enviado_en` y
-   `registrado_por`**; `codigo` y `documento` pasan a ser opcionales. `hoja_vida.publicada_en`.
+   `registrado_por`**; `codigo` y `documento` pasan a ser opcionales. `hoja_vida.estado`,
+   `observaciones`, `enviada_en`, `revisada_por` y `revisada_en` (revisión docente).
 9. **Tablas nuevas**: `periodo_academico`, `evidencia_semanal` (única por vinculación y semana;
    reemplazó a `asistencia`, cuyos registros se agruparon por semana como aprobados),
    `reporte`, `evaluacion` (única por vinculación y tipo, respuestas en `jsonb`) y `auditoria`.
@@ -237,7 +247,8 @@ Además están las tablas propias de Laravel: `personal_access_tokens` (Sanctum)
 | `vacante.modalidad`, `vinculacion.tipo`, `empresa.modalidad_interes`, `estudiante.modalidad_grado` | PASANTIA, PRACTICA |
 | `empresa.estado_validacion` | PENDIENTE, VALIDADA, RECHAZADA |
 | `vacante.estado` | ABIERTA, CERRADA |
-| `cita.estado` | PROGRAMADA, SELECCIONADO, DESCARTADO, AUTORIZADO, NO_AUTORIZADO, PRESENTADO, CANCELADA |
+| `hoja_vida.estado` | BORRADOR, EN_REVISION, APROBADA, CON_OBSERVACIONES |
+| `cita.estado` | PROGRAMADA, ACEPTADO, RECHAZADO, PRESENTADO, CANCELADA |
 | `acuerdo.estado` | PENDIENTE, APROBADO, RECHAZADO |
 | `vinculacion.estado` | ACTIVA, FINALIZADA, CANCELADA (se muestra como «Terminada anticipadamente») |
 | `reporte.categoria` | FALLA_PLATAFORMA, PRACTICA, DATOS, OTRO |

@@ -53,12 +53,12 @@ class UsuarioResource extends Recurso
     private function perfilEstudiante(): array
     {
         $estudiante = $this->estudiante;
-        $hoja = $estudiante->hojaVida()->first(['foto_url', 'publicada_en']);
+        $hoja = $estudiante->hojaVida()->first(['foto_url', 'estado']);
         $foto = $hoja?->foto_url;
 
         return [
             'hoja_vida_porcentaje' => app(HojaVidaService::class)->porcentaje($estudiante),
-            'hoja_vida_publicada' => $hoja?->publicada_en !== null,
+            'hoja_vida_estado' => $hoja ? ['valor' => $hoja->estado->value, 'etiqueta' => $hoja->estado->label()] : null,
             'habilitado_para_practica' => app(ElegibilidadService::class)->habilitadoParaPractica($estudiante),
             'citas_programadas' => $estudiante->citas()->where('estado', EstadoCita::Programada)->count(),
             'empresa_practica' => $estudiante->vinculacionActiva()->with('empresa')->first()?->empresa->razon_social,

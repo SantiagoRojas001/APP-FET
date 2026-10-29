@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EstadoHojaVida;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Modalidad;
 use App\Policies\EstudiantePolicy;
@@ -72,7 +73,7 @@ class Estudiante extends Model
 
     /**
      * Estudiantes que las empresas pueden encontrar: habilitados, con hoja de
-     * vida publicada y sin práctica en curso.
+     * vida aprobada por el docente y sin práctica en curso.
      *
      * @param  Builder<self>  $query
      */
@@ -81,7 +82,7 @@ class Estudiante extends Model
     {
         $query->where('habilitado', true)
             ->where('es_egresado', false)
-            ->whereHas('hojaVida', fn (Builder $h) => $h->whereNotNull('publicada_en'))
+            ->whereHas('hojaVida', fn (Builder $h) => $h->where('estado', EstadoHojaVida::Aprobada))
             ->whereDoesntHave('vinculaciones', fn (Builder $v) => $v->where('estado', EstadoVinculacion::Activa));
     }
 

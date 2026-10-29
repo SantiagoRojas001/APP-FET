@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
- * Carta de presentación en PDF de una cita autorizada. La ven la FET (docentes,
+ * Carta de presentación en PDF de un estudiante que la empresa aceptó. La ven la FET (docentes,
  * administración y el director del programa), la empresa y el estudiante.
  */
 class CartaPresentacionController extends Controller
@@ -26,9 +26,9 @@ class CartaPresentacionController extends Controller
             Rol::Empresa => $usuario->loadMissing('empresa')->empresa?->id === $cita->empresa_id,
             Rol::Estudiante => $usuario->id === $cita->estudiante->usuario_id,
         }, 403);
-        // La FET la ve desde que el docente aprueba; la empresa y el estudiante, cuando se envía.
+        // La FET la ve desde que la empresa acepta; la empresa y el estudiante, cuando se envía.
         $disponible = $usuario->tieneRol(Rol::Admin, Rol::Docente, Rol::Director)
-            ? in_array($cita->estado, [EstadoCita::Autorizado, EstadoCita::Presentado], true)
+            ? in_array($cita->estado, [EstadoCita::Aceptado, EstadoCita::Presentado], true)
             : $cita->estado === EstadoCita::Presentado;
         abort_unless($disponible, 404, 'La carta de presentación aún no está disponible.');
 

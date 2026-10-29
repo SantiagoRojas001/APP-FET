@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\EstadoAcuerdo;
 use App\Enums\EstadoCita;
+use App\Enums\EstadoHojaVida;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Rol;
 use App\Models\Acuerdo;
@@ -17,7 +18,7 @@ use App\Notifications\CartaPorEnviar;
 use App\Notifications\CartaPresentacionEnviada;
 use App\Notifications\CitaAsignada;
 use App\Notifications\EstudianteRecomendado;
-use App\Notifications\EstudianteSeleccionado;
+use App\Notifications\HojaVidaRevisada;
 use App\Notifications\PracticaAutorizada;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -26,8 +27,9 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * De la hoja de vida publicada a la práctica: la empresa con acuerdo asigna
- * citas, selecciona, el docente aprueba y el director envía la carta.
+ * De la hoja de vida a la práctica: el docente la aprueba (o la devuelve con
+ * recomendaciones), la empresa con acuerdo asigna una cita y según ella
+ * acepta o rechaza; si acepta, el director envía la carta de presentación.
  */
 class FlujoCitasTest extends TestCase
 {
@@ -60,15 +62,32 @@ class FlujoCitasTest extends TestCase
         ]);
     }
 
-    public function test_flujo_completo_de_la_cita_a_la_practica(): void
+    public function test_flujo_completo_de_la_hoja_de_vida_a_la_practica(): void
     {
         $empresa = $this->empresaConAcuerdo();
-        $estudiante = Estudiante::factory()->publicado()->create();
-        $otra = Cita::factory()->for($estudiante)->create(['fecha_hora' => now()->addDays(3)]);
+        $estudiante = Estudiante::factory()->create();
+        $estudiante->hojaVida()->update(['estado' => EstadoHojaVida::EnRevision, 'enviada_en' => now()]);
         $docente = Usuario::factory()->rol(Rol::Docente)->create();
         $director = Usuario::factory()->rol(Rol::Director)->create(['programa_id' => $estudiante->programa_id]);
 
-        // 1. La empresa ve la hoja de vida publicada y asigna una cita
+        // 1. El docente devuelve la hoja de vida con recomendaciones; mientras tanto la empresa no la ve
+        Sanctum::actingAs($docente);
+        $this->getJson('/api/docente/hojas-vida')->assertJsonCount(1);
+        $this->patchJson("/api/docente/hojas-vida/{$estudiante->id}", ['aprobar' => false])->assertJsonValidationErrors('observaciones');
+        $this->patchJson("/api/docente/hojas-vida/{$estudiante->id}", ['aprobar' => false, 'observaciones' => 'Agrega tus funciones.'])
+            ->assertOk()
+            ->assertJsonPath('hoja_vida.estado.valor', 'CON_OBSERVACIONES')
+            ->assertJsonPath('hoja_vida.observaciones', 'Agrega tus funciones.');
+        Notification::assertSentTo($estudiante->usuario, HojaVidaRevisada::class);
+        $this->comoEmpresa($empresa)->getJson('/api/empresa/hojas-vida')->assertJsonCount(0, 'data');
+
+        // 2. El estudiante la corrige, la envía de nuevo y el docente la aprueba
+        $estudiante->hojaVida()->update(['estado' => EstadoHojaVida::EnRevision]);
+        Sanctum::actingAs($docente);
+        $this->patchJson("/api/docente/hojas-vida/{$estudiante->id}", ['aprobar' => true])->assertJsonPath('hoja_vida.estado.valor', 'APROBADA');
+        $otra = Cita::factory()->for($estudiante)->create(['fecha_hora' => now()->addDays(3)]);
+
+        // 3. La empresa ve la hoja de vida aprobada y asigna una cita
         $this->comoEmpresa($empresa)->getJson('/api/empresa/hojas-vida')->assertJsonCount(1, 'data');
         $id = $this->citaPara($estudiante)->assertCreated()->assertJsonPath('estado.valor', 'PROGRAMADA')->json('id');
         Notification::assertSentTo($estudiante->usuario, CitaAsignada::class, function (CitaAsignada $aviso) use ($estudiante) {
@@ -81,22 +100,18 @@ class FlujoCitasTest extends TestCase
         Sanctum::actingAs($estudiante->usuario);
         $this->getJson('/api/estudiante/citas')->assertOk()->assertJsonCount(2);
 
-        // 2. Realizada la cita, la empresa selecciona
-        $this->comoEmpresa($empresa)->postJson("/api/empresa/citas/{$id}/decision", ['seleccionar' => true])
+        // 4. Según la cita, la empresa acepta al estudiante y se avisa al director
+        $this->comoEmpresa($empresa)->postJson("/api/empresa/citas/{$id}/decision", ['aceptar' => true])
             ->assertUnprocessable()
             ->assertJsonPath('message', fn ($m) => str_contains($m, 'después de la cita'));
         Cita::whereKey($id)->update(['fecha_hora' => now()->subHour()]);
-        $this->postJson("/api/empresa/citas/{$id}/decision", ['seleccionar' => true])->assertOk()->assertJsonPath('estado.valor', 'SELECCIONADO');
-        Notification::assertSentTo($docente, EstudianteSeleccionado::class);
-
-        // 3. El docente vuelve a aprobar
-        Sanctum::actingAs($docente);
-        $this->getJson('/api/docente/citas')->assertJsonCount(1);
-        $this->patchJson("/api/docente/citas/{$id}", ['autorizar' => true])->assertOk()->assertJsonPath('estado.valor', 'AUTORIZADO');
+        $this->postJson("/api/empresa/citas/{$id}/decision", ['aceptar' => true, 'fecha_inicio' => now()->addWeek()->toDateString()])
+            ->assertOk()
+            ->assertJsonPath('estado.valor', 'ACEPTADO');
         Notification::assertSentTo($director, CartaPorEnviar::class);
         $this->assertDatabaseCount('vinculacion', 0);
 
-        // 4. El director envía la carta de presentación: empieza la práctica
+        // 5. El director envía la carta de presentación: empieza la práctica
         Sanctum::actingAs($director);
         $this->getJson('/api/director/cartas')->assertJsonCount(1);
         $this->get("/api/citas/{$id}/carta-presentacion.pdf")->assertOk()->assertHeader('content-type', 'application/pdf');
@@ -105,6 +120,7 @@ class FlujoCitasTest extends TestCase
         $vinculacion = Vinculacion::sole();
         $this->assertSame($estudiante->id, $vinculacion->estudiante_id);
         $this->assertSame($docente->id, $vinculacion->tutor_id);
+        $this->assertSame(now()->addWeek()->toDateString(), $vinculacion->fecha_inicio->toDateString());
         $this->assertSame(EstadoVinculacion::Activa, $vinculacion->estado);
         $this->assertSame(EstadoCita::Cancelada, $otra->fresh()->estado);
         Notification::assertSentTo($empresa->usuario, CartaPresentacionEnviada::class, fn ($aviso) => count($aviso->toMail($empresa->usuario)->rawAttachments) === 1);
@@ -117,7 +133,7 @@ class FlujoCitasTest extends TestCase
     public function test_sin_acuerdo_aprobado_y_vigente_no_se_asignan_citas(): void
     {
         $empresa = Empresa::factory()->create();
-        $estudiante = Estudiante::factory()->publicado()->create();
+        $estudiante = Estudiante::factory()->hojaAprobada()->create();
         $this->comoEmpresa($empresa);
 
         $this->citaPara($estudiante)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'acuerdo'));
@@ -129,22 +145,35 @@ class FlujoCitasTest extends TestCase
         $this->citaPara($estudiante)->assertUnprocessable();
     }
 
-    public function test_no_se_asignan_citas_a_hojas_de_vida_sin_publicar_ni_en_el_pasado(): void
+    public function test_no_se_asignan_citas_a_hojas_de_vida_sin_aprobar_ni_en_el_pasado(): void
     {
         $this->comoEmpresa($this->empresaConAcuerdo());
 
         $this->citaPara($this->estudiante(9))->assertUnprocessable();
-        $this->citaPara(Estudiante::factory()->publicado()->create(), '-1 day')->assertJsonValidationErrors('fecha_hora');
+        $this->citaPara(Estudiante::factory()->hojaAprobada()->create(), '-1 day')->assertJsonValidationErrors('fecha_hora');
+    }
+
+    public function test_la_empresa_rechaza_al_estudiante_despues_de_la_cita(): void
+    {
+        $cita = Cita::factory()->create();
+
+        $this->comoEmpresa($cita->empresa)
+            ->postJson("/api/empresa/citas/{$cita->id}/decision", ['aceptar' => false, 'observacion' => 'Buscamos otro perfil.'])
+            ->assertOk()
+            ->assertJsonPath('estado.valor', 'RECHAZADO');
+
+        Notification::assertNothingSent();
+        $this->assertDatabaseCount('vinculacion', 0);
     }
 
     public function test_el_director_solo_presenta_estudiantes_de_su_programa(): void
     {
-        $cita = Cita::factory()->create(['estado' => EstadoCita::Autorizado]);
+        $cita = Cita::factory()->create(['estado' => EstadoCita::Aceptado]);
         Sanctum::actingAs(Usuario::factory()->rol(Rol::Director)->create(['programa_id' => $this->programa()->id]));
 
         $this->getJson('/api/director/cartas')->assertJsonCount(0);
         $this->postJson("/api/director/cartas/{$cita->id}")->assertNotFound();
-        $this->assertSame(EstadoCita::Autorizado, $cita->fresh()->estado);
+        $this->assertSame(EstadoCita::Aceptado, $cita->fresh()->estado);
     }
 
     public function test_una_empresa_no_decide_citas_de_otra(): void
@@ -152,7 +181,7 @@ class FlujoCitasTest extends TestCase
         $cita = Cita::factory()->create();
 
         $this->comoEmpresa(Empresa::factory()->create())
-            ->postJson("/api/empresa/citas/{$cita->id}/decision", ['seleccionar' => true])
+            ->postJson("/api/empresa/citas/{$cita->id}/decision", ['aceptar' => true])
             ->assertNotFound();
     }
 
@@ -160,8 +189,8 @@ class FlujoCitasTest extends TestCase
     {
         $empresa = $this->empresaConAcuerdo();
         $vacante = Vacante::factory()->for($empresa)->create();
-        $otro = Estudiante::factory()->publicado()->create(['apellidos' => 'Aaron']);
-        $recomendado = Estudiante::factory()->publicado()->create(['apellidos' => 'Zapata']);
+        $otro = Estudiante::factory()->hojaAprobada()->create(['apellidos' => 'Aaron']);
+        $recomendado = Estudiante::factory()->hojaAprobada()->create(['apellidos' => 'Zapata']);
 
         $this->como(Rol::Docente);
         $this->getJson('/api/docente/vacantes')->assertOk()->assertJsonCount(1);

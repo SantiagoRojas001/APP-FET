@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\CategoriaReporte;
 use App\Enums\EstadoAcuerdo;
 use App\Enums\EstadoCita;
+use App\Enums\EstadoHojaVida;
 use App\Enums\EstadoReporte;
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoValidacion;
@@ -48,6 +49,8 @@ class DemoSeeder extends Seeder
         'mateo' => ['API REST con Laravel', 'https://github.com/laravel/laravel'],
         'julian' => ['Interfaz web con Vite', 'https://github.com/vitejs/vite'],
         'sofia' => ['Componentes con Vue.js', 'https://github.com/vuejs/core'],
+        'daniel' => ['Panel de datos con Python', 'https://github.com/streamlit/streamlit'],
+        'paula' => ['Formularios accesibles en la web', 'https://github.com/w3c/aria-practices'],
         'andres' => ['Autenticación con Laravel Breeze', 'https://github.com/laravel/breeze'],
         'valentina' => ['Análisis de datos con pandas', 'https://github.com/pandas-dev/pandas'],
     ];
@@ -68,7 +71,7 @@ class DemoSeeder extends Seeder
 
         $periodo = $this->periodos();
         $vinculaciones = $this->vinculaciones($estudiantes, $empresas, $vacantes, $docente, $periodo);
-        $this->citas($estudiantes, $empresas, $vacantes, $vinculaciones, $docente, $director);
+        $this->citas($estudiantes, $empresas, $vacantes, $vinculaciones, $director);
         $this->recomendaciones($estudiantes, $vacantes, $docente);
         $this->reportes($estudiantes, $empresas);
     }
@@ -181,21 +184,23 @@ class DemoSeeder extends Seeder
         $tds = Programa::where('nombre', 'Tecnología en Desarrollo de Software')->value('id');
         $tps = Programa::where('nombre', 'Técnica Profesional en Programación de Software')->value('id');
 
-        // alias, programa, código, nombres, apellidos, semestre, promedio (null: sin registrar), modalidad, hoja publicada
+        // alias, programa, código, nombres, apellidos, semestre, promedio (null: sin registrar), modalidad, estado de la hoja de vida
         $datos = [
-            'laura' => ['laura.mendez', $is, '20231045', 'Laura', 'Méndez', 5, 3.9, Modalidad::Pasantia, false],
-            'mateo' => ['mateo.suarez', $is, '20211130', 'Mateo', 'Suárez', 9, 4.6, Modalidad::Pasantia, true],
-            'julian' => ['julian.castro', $tps, '20252018', 'Julián', 'Castro', 3, 4.3, Modalidad::Pasantia, false],
-            'sofia' => ['sofia.ramirez', $is, '20211077', 'Sofía', 'Ramírez', 9, 4.4, Modalidad::Practica, true],
-            'andres' => ['andres.rojas', $tds, '20231190', 'Andrés', 'Rojas', 6, 4.5, Modalidad::Pasantia, true],
-            'valentina' => ['valentina.torres', $is, '20201055', 'Valentina', 'Torres', 10, 4.8, Modalidad::Pasantia, true],
-            'camila' => ['camila.perez', $is, '20261004', 'Camila', 'Pérez', 3, null, Modalidad::Practica, false],
+            'laura' => ['laura.mendez', $is, '20231045', 'Laura', 'Méndez', 5, 3.9, Modalidad::Pasantia, EstadoHojaVida::Borrador],
+            'mateo' => ['mateo.suarez', $is, '20211130', 'Mateo', 'Suárez', 9, 4.6, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
+            'julian' => ['julian.castro', $tps, '20252018', 'Julián', 'Castro', 3, 4.3, Modalidad::Pasantia, EstadoHojaVida::Borrador],
+            'sofia' => ['sofia.ramirez', $is, '20211077', 'Sofía', 'Ramírez', 9, 4.4, Modalidad::Practica, EstadoHojaVida::Aprobada],
+            'daniel' => ['daniel.gomez', $is, '20211102', 'Daniel', 'Gómez', 9, 4.5, Modalidad::Practica, EstadoHojaVida::EnRevision],
+            'paula' => ['paula.ortiz', $tds, '20241033', 'Paula', 'Ortiz', 5, 4.3, Modalidad::Pasantia, EstadoHojaVida::ConObservaciones],
+            'andres' => ['andres.rojas', $tds, '20231190', 'Andrés', 'Rojas', 6, 4.5, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
+            'valentina' => ['valentina.torres', $is, '20201055', 'Valentina', 'Torres', 10, 4.8, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
+            'camila' => ['camila.perez', $is, '20261004', 'Camila', 'Pérez', 3, null, Modalidad::Practica, EstadoHojaVida::Borrador],
         ];
 
         $competencias = Competencia::pluck('id', 'nombre');
 
         return collect($datos)->map(function (array $d, string $clave) use ($competencias, $docente) {
-            [$alias, $programa, $codigo, $nombres, $apellidos, $semestre, $promedio, $modalidad, $publicada] = $d;
+            [$alias, $programa, $codigo, $nombres, $apellidos, $semestre, $promedio, $modalidad, $estadoHoja] = $d;
             $usuario = $this->usuario("{$alias}@fet.edu.co", Rol::Estudiante);
             $habilitado = $promedio === null ? null : $promedio >= 4.2;
             // Laura no alcanzó el promedio (cuenta inactiva); Julián aún debe cambiar su contraseña inicial.
@@ -218,7 +223,7 @@ class DemoSeeder extends Seeder
             ]);
 
             if ($estudiante->wasRecentlyCreated) {
-                $this->hojaVida($estudiante, $semestre, $publicada);
+                $this->hojaVida($estudiante, $semestre, $estadoHoja, $docente);
                 $estudiante->competencias()->attach([
                     $competencias['JavaScript'] => ['nivel' => NivelCompetencia::Intermedio->value],
                     $competencias['Git y GitHub'] => ['nivel' => NivelCompetencia::Basico->value],
@@ -243,11 +248,18 @@ class DemoSeeder extends Seeder
      * Hoja de vida en el formato PA-GTH-F-10. Los estudiantes de semestres
      * avanzados la tienen completa (salvo la foto); los primeros, a medias.
      */
-    private function hojaVida(Estudiante $estudiante, int $semestre, bool $publicada): void
+    private function hojaVida(Estudiante $estudiante, int $semestre, EstadoHojaVida $estado, Usuario $docente): void
     {
         $avanzado = $semestre > 2;
+        $revisada = in_array($estado, [EstadoHojaVida::Aprobada, EstadoHojaVida::ConObservaciones], true);
         $hoja = $estudiante->hojaVida()->create([
-            'publicada_en' => $publicada ? now()->subMonths(2) : null,
+            'estado' => $estado,
+            'enviada_en' => $estado === EstadoHojaVida::Borrador ? null : now()->subDays(5),
+            'revisada_por' => $revisada ? $docente->id : null,
+            'revisada_en' => $revisada ? now()->subDays(3) : null,
+            'observaciones' => $estado === EstadoHojaVida::ConObservaciones
+                ? 'Amplía las funciones de tu experiencia laboral y agrega una segunda referencia personal.'
+                : null,
             'perfil_profesional' => $avanzado ? "Estudiante de {$semestre}.º semestre interesado en el desarrollo de software y el trabajo en equipo." : null,
             'fecha_nacimiento' => now()->subYears(18 + intdiv($semestre, 2))->subDays($semestre * 23)->toDateString(),
             'lugar_nacimiento' => 'Neiva, Huila',
@@ -345,17 +357,17 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * Una cita en cada etapa: programada (Mateo con Huila Tech), seleccionada
-     * por la empresa y pendiente del docente (Mateo con Nodo Digital),
-     * aprobada por el docente y pendiente de la carta del director (Sofía con
-     * Agroandina) y las de Andrés y Valentina, que ya iniciaron su práctica.
+     * Una cita en cada etapa: programada (Mateo con Huila Tech), realizada y
+     * pendiente de la decisión de la empresa (Mateo con Nodo Digital),
+     * aceptada y pendiente de la carta del director (Sofía con Agroandina) y
+     * las de Andrés y Valentina, que ya iniciaron su práctica.
      *
      * @param  array<string, Estudiante>  $estudiantes
      * @param  array<string, Empresa>  $empresas
      * @param  array<int, Vacante>  $vacantes
      * @param  array<string, Vinculacion>  $vinculaciones
      */
-    private function citas(array $estudiantes, array $empresas, array $vacantes, array $vinculaciones, Usuario $docente, Usuario $director): void
+    private function citas(array $estudiantes, array $empresas, array $vacantes, array $vinculaciones, Usuario $director): void
     {
         if (Cita::exists()) {
             return;
@@ -367,16 +379,16 @@ class DemoSeeder extends Seeder
         Cita::create([...$comun, 'empresa_id' => $empresas['huila']->id, 'estudiante_id' => $estudiantes['mateo']->id, 'vacante_id' => $vacantes[3]->id,
             'fecha_hora' => $proximaCita]);
         Cita::create([...$comun, 'empresa_id' => $empresas['nodo']->id, 'estudiante_id' => $estudiantes['mateo']->id, 'vacante_id' => $vacantes[5]->id,
-            'fecha_hora' => now()->subDays(3), 'estado' => EstadoCita::Seleccionado, 'decidida_en' => now()->subDays(2)]);
+            'fecha_hora' => now()->subDays(2)]);
         Cita::create([...$comun, 'empresa_id' => $empresas['agro']->id, 'estudiante_id' => $estudiantes['sofia']->id, 'vacante_id' => $vacantes[2]->id,
-            'fecha_hora' => now()->subDays(6), 'estado' => EstadoCita::Autorizado, 'decidida_en' => now()->subDays(5),
-            'autorizada_por' => $docente->id, 'autorizada_en' => now()->subDays(4), 'fecha_inicio_practica' => today()->addWeek()]);
+            'fecha_hora' => now()->subDays(6), 'estado' => EstadoCita::Aceptado, 'decidida_en' => now()->subDays(4),
+            'fecha_inicio_practica' => today()->addWeek()]);
 
         foreach ($vinculaciones as $alias => $vinculacion) {
             $inicio = Carbon::parse($vinculacion->fecha_inicio);
             Cita::create([...$comun, 'empresa_id' => $vinculacion->empresa_id, 'estudiante_id' => $estudiantes[$alias]->id, 'vacante_id' => $vinculacion->vacante_id,
                 'fecha_hora' => $inicio->copy()->subDays(14), 'estado' => EstadoCita::Presentado, 'decidida_en' => $inicio->copy()->subDays(12),
-                'autorizada_por' => $docente->id, 'autorizada_en' => $inicio->copy()->subDays(10), 'fecha_inicio_practica' => $inicio,
+                'fecha_inicio_practica' => $inicio,
                 'presentada_por' => $director->id, 'presentada_en' => $inicio->copy()->subDays(7), 'vinculacion_id' => $vinculacion->id]);
         }
     }

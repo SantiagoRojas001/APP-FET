@@ -47,7 +47,7 @@
     @endif
     <tr><td class="k">Fecha de inicio</td><td>{{ $inicio->format('d/m/Y') }}</td></tr>
     <tr><td class="k">Horas requeridas</td><td>{{ $e->programa->horas_requeridas }}</td></tr>
-    <tr><td class="k">Docente tutor</td><td>{{ $cita->autorizador?->correo ?? 'Por asignar' }}</td></tr>
+    <tr><td class="k">Docente tutor</td><td>{{ $e->hojaVida?->revisor?->correo ?? 'Por asignar' }}</td></tr>
 </table>
 
 <p>

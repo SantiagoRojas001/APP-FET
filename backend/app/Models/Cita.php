@@ -10,14 +10,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Cita que una empresa asigna a un estudiante con hoja de vida publicada.
- * Registra también lo que sigue: la decisión de la empresa, la autorización
- * del docente y la carta de presentación del director de programa.
+ * Cita que una empresa asigna a un estudiante con hoja de vida aprobada por
+ * el docente. Registra también lo que sigue: la decisión de la empresa
+ * (con la fecha de inicio si lo acepta) y la carta de presentación del
+ * director de programa.
  */
 #[Table('cita', timestamps: false)]
 #[Fillable([
     'empresa_id', 'estudiante_id', 'vacante_id', 'fecha_hora', 'direccion', 'indicaciones', 'estado', 'observacion',
-    'fecha_inicio_practica', 'decidida_en', 'autorizada_por', 'autorizada_en', 'presentada_por', 'presentada_en', 'vinculacion_id',
+    'fecha_inicio_practica', 'decidida_en', 'presentada_por', 'presentada_en', 'vinculacion_id',
 ])]
 class Cita extends Model
 {
@@ -35,7 +36,6 @@ class Cita extends Model
             'fecha_inicio_practica' => 'date',
             'creada_en' => 'datetime',
             'decidida_en' => 'datetime',
-            'autorizada_en' => 'datetime',
             'presentada_en' => 'datetime',
         ];
     }
@@ -56,12 +56,6 @@ class Cita extends Model
     public function vacante(): BelongsTo
     {
         return $this->belongsTo(Vacante::class);
-    }
-
-    /** @return BelongsTo<Usuario, $this> */
-    public function autorizador(): BelongsTo
-    {
-        return $this->belongsTo(Usuario::class, 'autorizada_por');
     }
 
     /** @return BelongsTo<Usuario, $this> */

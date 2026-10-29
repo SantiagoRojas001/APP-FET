@@ -89,7 +89,10 @@ class EstudianteResource extends Recurso
 
         return [
             'perfil_profesional' => $hoja?->perfil_profesional,
-            'publicada_en' => $hoja?->publicada_en?->toIso8601String(),
+            'estado' => $this->enum($hoja?->estado),
+            'observaciones' => $hoja?->observaciones,
+            'enviada_en' => $hoja?->enviada_en?->toIso8601String(),
+            'revisada_en' => $hoja?->revisada_en?->toIso8601String(),
             'actualizado_en' => $hoja?->actualizado_en?->toIso8601String(),
             'porcentaje' => $servicio->porcentaje($this->resource),
             'secciones' => $servicio->secciones($this->resource),

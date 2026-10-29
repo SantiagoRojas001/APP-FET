@@ -1,6 +1,6 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
-import { formatDateTime, initials } from '../../lib/format.js';
+import { formatDateTime, initials, todayIso } from '../../lib/format.js';
 import { confirmInline, emptyState, icon, pageHeader, showFieldErrors, statusBadge, toast, withBusy } from '../../lib/ui.js';
 
 const TABS = [
@@ -8,12 +8,12 @@ const TABS = [
   ['PROCESO', 'En proceso'],
   ['', 'Todas'],
 ];
-const EN_PROCESO = ['SELECCIONADO', 'AUTORIZADO', 'PRESENTADO'];
+const EN_PROCESO = ['ACEPTADO', 'PRESENTADO'];
 
 /**
- * Citas de la empresa. Una vez realizada la cita, la empresa selecciona al
- * estudiante (la FET lo aprueba y le envía la carta de presentación) o lo
- * descarta.
+ * Citas de la empresa. Una vez realizada la cita, la empresa acepta al
+ * estudiante (con la fecha de inicio; el director de programa le envía la
+ * carta de presentación) o lo rechaza.
  */
 export default async function citasEmpresaView({ root, navigate }) {
   const citas = await api.get('/empresa/citas');
@@ -31,10 +31,13 @@ export default async function citasEmpresaView({ root, navigate }) {
         <button class="btn danger sm" type="submit">Cancelar cita</button>
       </form>`;
     }
-    return html`<form class="decide" data-decidir="${c.id}" novalidate>
+    return html`<form class="form-grid" data-decidir="${c.id}" novalidate>
+      <div class="field"><label for="ini${c.id}">Inicio de la práctica (si lo aceptas)</label><input class="input" type="date" id="ini${c.id}" name="fecha_inicio" value="${todayIso()}" min="${todayIso()}" /></div>
       <div class="field"><label for="obs${c.id}">Comentario (opcional)</label><input class="input" id="obs${c.id}" name="observacion" /></div>
-      <button class="btn good sm" type="submit" value="1">${icon('user-check')}Seleccionar</button>
-      <button class="btn danger sm" type="submit" value="0">Descartar</button>
+      <div class="actions">
+        <button class="btn good sm" type="submit" value="1">${icon('user-check')}Aceptar</button>
+        <button class="btn danger sm" type="submit" value="0">Rechazar</button>
+      </div>
     </form>`;
   };
 
@@ -60,7 +63,7 @@ export default async function citasEmpresaView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Citas', 'Después de cada cita, selecciona o descarta al estudiante. Si lo seleccionas, la FET lo aprueba y te envía la carta de presentación.')}
+    html`${pageHeader('Citas', 'Después de cada cita, acepta o rechaza al estudiante. Si lo aceptas, el director de su programa te envía la carta de presentación y empieza la práctica.')}
       <div class="toolbar"><div class="seg" role="group" aria-label="Filtrar citas">
         ${TABS.map(([v, l]) => html`<button data-f="${v}" aria-pressed="${filtro === v}">${l}</button>`)}
       </div></div>
@@ -93,17 +96,23 @@ export default async function citasEmpresaView({ root, navigate }) {
     e.preventDefault();
     const decidir = e.target.closest('[data-decidir]');
     if (decidir) {
-      const seleccionar = e.submitter?.value === '1';
+      const aceptar = e.submitter?.value === '1';
       const enviar = (boton) =>
         withBusy(boton, async () => {
           try {
-            actualizar(await api.post(`/empresa/citas/${decidir.dataset.decidir}/decision`, { seleccionar, observacion: decidir.observacion.value.trim() || null }));
-            toast(seleccionar ? 'Estudiante seleccionado. La FET lo revisará y te enviará la carta de presentación.' : 'Estudiante descartado.');
+            actualizar(
+              await api.post(`/empresa/citas/${decidir.dataset.decidir}/decision`, {
+                aceptar,
+                observacion: decidir.observacion.value.trim() || null,
+                fecha_inicio: aceptar ? decidir.fecha_inicio.value || null : null,
+              }),
+            );
+            toast(aceptar ? 'Estudiante aceptado. El director de su programa te enviará la carta de presentación.' : 'Estudiante rechazado.');
           } catch (error) {
             showFieldErrors(decidir, error.errors) || toast(error.message);
           }
         });
-      return seleccionar ? enviar(e.submitter) : confirmInline(e.submitter, 'descartar', enviar);
+      return aceptar ? enviar(e.submitter) : confirmInline(e.submitter, 'rechazar', enviar);
     }
     const cancelar = e.target.closest('[data-cancelar]');
     if (cancelar) {

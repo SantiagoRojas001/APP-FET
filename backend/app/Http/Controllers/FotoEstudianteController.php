@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\ReglaNegocioException;
 use App\Models\Estudiante;
+use App\Services\HojaVidaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -28,6 +29,7 @@ class FotoEstudianteController extends Controller
             throw new ReglaNegocioException('Tu hoja de vida está deshabilitada mientras cursas tu práctica.');
         }
 
+        app(HojaVidaService::class)->antesDeEditar($estudiante);
         $hojaVida = $estudiante->hojaVida()->firstOrCreate();
 
         if ($hojaVida->foto_url) {

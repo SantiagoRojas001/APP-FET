@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EstadoHojaVida;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'estudiante_id', 'perfil_profesional', 'actualizado_en', 'foto_url', 'fecha_nacimiento', 'lugar_nacimiento',
     'estado_civil', 'lugar_residencia', 'direccion', 'rh', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
-    'publicada_en',
+    'estado', 'observaciones', 'enviada_en', 'revisada_por', 'revisada_en',
 ])]
 class HojaVida extends Model
 {
@@ -29,8 +30,25 @@ class HojaVida extends Model
         return [
             'actualizado_en' => 'datetime',
             'fecha_nacimiento' => 'date',
-            'publicada_en' => 'datetime',
+            'estado' => EstadoHojaVida::class,
+            'enviada_en' => 'datetime',
+            'revisada_en' => 'datetime',
         ];
+    }
+
+    protected $attributes = [
+        'estado' => 'BORRADOR',
+    ];
+
+    public function aprobada(): bool
+    {
+        return $this->estado === EstadoHojaVida::Aprobada;
+    }
+
+    /** Docente que revisó la hoja de vida; si la aprobó, queda como tutor de la práctica. @return BelongsTo<Usuario, $this> */
+    public function revisor(): BelongsTo
+    {
+        return $this->belongsTo(Usuario::class, 'revisada_por');
     }
 
     /** @return BelongsTo<Estudiante, $this> */

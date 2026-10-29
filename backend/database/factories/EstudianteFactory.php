@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\EstadoHojaVida;
 use App\Enums\Modalidad;
 use App\Enums\Rol;
 use App\Models\Estudiante;
@@ -45,10 +46,14 @@ class EstudianteFactory extends Factory
         return $this->state(['promedio' => null, 'habilitado' => null, 'resultado_enviado_en' => null]);
     }
 
-    /** Con la hoja de vida publicada: las empresas lo encuentran. */
-    public function publicado(): static
+    /** Con la hoja de vida aprobada por un docente: las empresas lo encuentran. */
+    public function hojaAprobada(): static
     {
-        return $this->afterCreating(fn (Estudiante $estudiante) => $estudiante->hojaVida()->update(['publicada_en' => now()]));
+        return $this->afterCreating(fn (Estudiante $estudiante) => $estudiante->hojaVida()->update([
+            'estado' => EstadoHojaVida::Aprobada,
+            'enviada_en' => now()->subDays(2),
+            'revisada_en' => now()->subDay(),
+        ]));
     }
 
     public function configure(): static

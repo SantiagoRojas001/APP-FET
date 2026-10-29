@@ -2,7 +2,7 @@
 
 Aplicativo web institucional que conecta a estudiantes, docentes y empresas durante el proceso de
 prácticas y pasantías de la Fundación Escuela Tecnológica de Neiva (FET): hoja de vida en formato
-institucional, citas con empresas, aprobación docente, carta de presentación y seguimiento con documentos.
+institucional con revisión docente, citas con empresas, carta de presentación y seguimiento con documentos.
 
 Proyecto de aula de José Santiago Rojas y Carlos Stiven López (Ingeniería de Software).
 
@@ -78,13 +78,15 @@ Todas usan la contraseña `demo1234`. Solo existen fuera de producción.
 
 | Rol | Correo | Situación |
 | --- | --- | --- |
-| Estudiante | mateo.suarez@fet.edu.co | Hoja de vida publicada: una cita programada con Huila Tech y seleccionado por Nodo Digital |
+| Estudiante | mateo.suarez@fet.edu.co | Hoja de vida aprobada: cita programada con Huila Tech y cita realizada con Nodo Digital (por decidir) |
 | Estudiante | julian.castro@fet.edu.co | Primer ingreso: debe cambiar la contraseña |
-| Estudiante | sofia.ramirez@fet.edu.co | Aprobada por el docente, espera la carta de presentación del director |
+| Estudiante | daniel.gomez@fet.edu.co | Hoja de vida en revisión docente |
+| Estudiante | paula.ortiz@fet.edu.co | Hoja de vida devuelta con recomendaciones |
+| Estudiante | sofia.ramirez@fet.edu.co | Aceptada por Agroandina, espera la carta de presentación del director |
 | Estudiante | laura.mendez@fet.edu.co | Promedio insuficiente: cuenta inactiva |
 | Estudiante | andres.rojas@fet.edu.co | Pasantía activa: a 8 horas de completar, con una semana por aprobar y 3 reportes |
 | Estudiante | valentina.torres@fet.edu.co | Pasantía con las horas cumplidas, esperando la evaluación de la empresa |
-| Docente | p.vargas@fet.edu.co | Registra estudiantes y promedios, aprueba seleccionados, recomienda |
+| Docente | p.vargas@fet.edu.co | Registra estudiantes y promedios, revisa hojas de vida y recomienda |
 | Director de programa | direccion.software@fet.edu.co | Ingeniería de Software: estudiantes, acuerdos y cartas de presentación |
 | Empresa | talento@nododigital.co | Acuerdo vigente y renovación pendiente; practicante: Andrés |
 | Empresa | ti@clinicasangabriel.co | Puede evaluar la pasantía de Valentina |

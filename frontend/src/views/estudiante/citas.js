@@ -5,7 +5,7 @@ import { emptyState, icon, pageHeader, statusBadge } from '../../lib/ui.js';
 import { session } from '../../session.js';
 
 /**
- * Empresas interesadas: las que revisaron la hoja de vida publicada y le
+ * Empresas interesadas: las que revisaron la hoja de vida aprobada y le
  * asignaron una cita al estudiante (puede tener varias).
  */
 export default async function citasEstudianteView({ root, navigate }) {
@@ -32,10 +32,10 @@ export default async function citasEstudianteView({ root, navigate }) {
   mount(
     root,
     html`${pageHeader('Empresas interesadas', 'Las empresas que revisaron tu hoja de vida y te asignaron una cita. Te avisamos de cada una por correo y en la app.')}
-      ${perfil && !perfil.hoja_vida_publicada
+      ${perfil && perfil.hoja_vida_estado?.valor !== 'APROBADA'
         ? html`<section class="callout">
             ${icon('alert-circle')}
-            <p><b>Tu hoja de vida aún no está publicada.</b> Complétala y publícala para que las empresas te encuentren.</p>
+            <p><b>Las empresas aún no ven tu hoja de vida.</b> Estado: ${perfil.hoja_vida_estado?.etiqueta.toLowerCase() ?? 'sin enviar'}. Cuando tu docente la apruebe, las empresas podrán asignarte citas.</p>
             <button class="btn sm" id="toHv">Ir a mi hoja de vida</button>
           </section>`
         : ''}

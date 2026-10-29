@@ -2,6 +2,7 @@
 
 use App\Enums\EstadoAcuerdo;
 use App\Enums\EstadoCita;
+use App\Enums\EstadoHojaVida;
 use App\Enums\Modalidad;
 use App\Enums\Rol;
 use App\Support\Restricciones;
@@ -15,9 +16,10 @@ return new class extends Migration
     /**
      * Nuevo flujo: el docente registra a los estudiantes que eligieron
      * pasantía o práctica y su promedio decide si quedan habilitados. Ya no
-     * hay postulaciones: las empresas con acuerdo aprobado buscan hojas de
-     * vida publicadas y asignan citas; el docente autoriza a los
-     * seleccionados y el director de programa envía la carta de
+     * hay postulaciones: el docente revisa la hoja de vida (la aprueba o la
+     * devuelve con recomendaciones), las empresas con acuerdo aprobado ven
+     * las aprobadas y asignan citas, y según la cita aceptan o rechazan al
+     * estudiante. Si lo aceptan, el director de programa envía la carta de
      * presentación. Las vacantes las ven los docentes para recomendar
      * estudiantes. Los parámetros (promedio mínimo y semestres habilitados)
      * los define la administración y reemplazan la regla de semestre mínimo.
@@ -47,8 +49,14 @@ return new class extends Migration
         DB::table('estudiante')->update(['habilitado' => true]);
 
         Schema::table('hoja_vida', function (Blueprint $table) {
-            $table->timestampTz('publicada_en')->nullable();
+            $table->string('estado', 20)->default(EstadoHojaVida::Borrador->value);
+            $table->text('observaciones')->nullable();
+            $table->timestampTz('enviada_en')->nullable();
+            $table->integer('revisada_por')->nullable();
+            $table->timestampTz('revisada_en')->nullable();
+            $table->foreign('revisada_por')->references('id')->on('usuario')->nullOnDelete();
         });
+        Restricciones::valoresPermitidos('hoja_vida', 'estado', EstadoHojaVida::values());
 
         Schema::create('parametro', function (Blueprint $table) {
             $table->string('clave', 40)->primary();
@@ -103,8 +111,6 @@ return new class extends Migration
             $table->date('fecha_inicio_practica')->nullable();
             $table->timestampTz('creada_en')->useCurrent();
             $table->timestampTz('decidida_en')->nullable();
-            $table->integer('autorizada_por')->nullable();
-            $table->timestampTz('autorizada_en')->nullable();
             $table->integer('presentada_por')->nullable();
             $table->timestampTz('presentada_en')->nullable();
             $table->integer('vinculacion_id')->nullable();
@@ -112,7 +118,6 @@ return new class extends Migration
             $table->foreign('empresa_id')->references('id')->on('empresa')->cascadeOnDelete();
             $table->foreign('estudiante_id')->references('id')->on('estudiante')->cascadeOnDelete();
             $table->foreign('vacante_id')->references('id')->on('vacante')->nullOnDelete();
-            $table->foreign('autorizada_por')->references('id')->on('usuario')->nullOnDelete();
             $table->foreign('presentada_por')->references('id')->on('usuario')->nullOnDelete();
             $table->foreign('vinculacion_id')->references('id')->on('vinculacion')->nullOnDelete();
         });
@@ -151,7 +156,10 @@ return new class extends Migration
         Schema::dropIfExists('acuerdo');
         Schema::dropIfExists('parametro');
 
-        Schema::table('hoja_vida', fn (Blueprint $table) => $table->dropColumn('publicada_en'));
+        Schema::table('hoja_vida', function (Blueprint $table) {
+            $table->dropForeign(['revisada_por']);
+            $table->dropColumn(['estado', 'observaciones', 'enviada_en', 'revisada_por', 'revisada_en']);
+        });
         Schema::table('estudiante', function (Blueprint $table) {
             $table->dropForeign(['registrado_por']);
             $table->dropColumn(['modalidad_grado', 'promedio', 'habilitado', 'resultado_enviado_en', 'registrado_por']);

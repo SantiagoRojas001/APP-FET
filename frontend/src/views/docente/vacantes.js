@@ -45,11 +45,11 @@ export default async function vacantesDocenteView({ root, refresh }) {
 
   mount(
     root,
-    html`${pageHeader('Vacantes', 'Vacantes abiertas de las empresas. Recomienda estudiantes habilitados con hoja de vida publicada: la empresa los verá primero.')}
+    html`${pageHeader('Vacantes', 'Vacantes abiertas de las empresas. Recomienda estudiantes con hoja de vida aprobada: la empresa los verá primero.')}
       ${vacantes.length ? vacantes.map(vacante) : html`<section class="panel">${emptyState('briefcase', 'No hay vacantes abiertas')}</section>`}`,
   );
 
-  // Busca estudiantes disponibles (habilitados, con hoja de vida publicada y sin práctica).
+  // Busca estudiantes disponibles (habilitados, con hoja de vida aprobada y sin práctica).
   const timers = {};
   root.addEventListener('input', (e) => {
     const input = e.target.closest('[data-buscar]');

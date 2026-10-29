@@ -21,13 +21,15 @@ class PerfilController extends Controller
         return new EstudianteResource($this->cargar($request->user()->estudiante()->firstOrFail()));
     }
 
-    public function update(ActualizarPerfilRequest $request): EstudianteResource
+    public function update(ActualizarPerfilRequest $request, HojaVidaService $hojaVida): EstudianteResource
     {
         $estudiante = $request->user()->estudiante()->firstOrFail();
 
         if (! $estudiante->hojaVidaHabilitada()) {
             throw new ReglaNegocioException('Tu hoja de vida está deshabilitada mientras cursas tu práctica.');
         }
+
+        $hojaVida->antesDeEditar($estudiante);
 
         DB::transaction(function () use ($request, $estudiante) {
             $estudiante->update($request->safe()->only(['telefono', 'disponibilidad']));
@@ -64,13 +66,12 @@ class PerfilController extends Controller
         return new EstudianteResource($this->cargar($estudiante->fresh()));
     }
 
-    /** Publica la hoja de vida para que la vean las empresas, o la oculta. */
-    public function publicacion(Request $request, HojaVidaService $hojaVida): EstudianteResource
+    /** Envía la hoja de vida completa a revisión docente (o de nuevo, ya corregida). */
+    public function envio(Request $request, HojaVidaService $hojaVida): EstudianteResource
     {
-        $request->validate(['publicada' => ['required', 'boolean']]);
         $estudiante = $request->user()->estudiante()->firstOrFail();
 
-        $hojaVida->publicar($estudiante, $request->boolean('publicada'));
+        $hojaVida->enviar($estudiante);
 
         return new EstudianteResource($this->cargar($estudiante->fresh()));
     }

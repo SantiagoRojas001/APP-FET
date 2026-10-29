@@ -3,10 +3,10 @@ import { html, mount } from '../../lib/html.js';
 import { formatDateTime, initials, todayIso } from '../../lib/format.js';
 import { badge, emptyState, icon, modalityTag, pageHeader, showFieldErrors, statusBadge, toast, withBusy } from '../../lib/ui.js';
 
-const ABIERTAS = ['PROGRAMADA', 'SELECCIONADO', 'AUTORIZADO'];
+const ABIERTAS = ['PROGRAMADA', 'ACEPTADO'];
 
 /**
- * Hojas de vida publicadas por estudiantes habilitados. Primero aparecen los
+ * Hojas de vida de estudiantes habilitados que aprobó un docente. Primero aparecen los
  * que un docente recomendó para tus vacantes. Con acuerdo vigente, la empresa
  * asigna una cita y el estudiante recibe la empresa, la dirección, la fecha y
  * la hora.
@@ -18,7 +18,7 @@ export default async function hojasVidaView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Hojas de vida', 'Estudiantes habilitados que publicaron su hoja de vida. Asígnales una cita: les llega con la dirección, la fecha y la hora.')}
+    html`${pageHeader('Hojas de vida', 'Hojas de vida aprobadas por los docentes de la FET. Asigna una cita: al estudiante le llega con la dirección, la fecha y la hora.')}
       ${conAcuerdo
         ? ''
         : html`<section class="callout">
@@ -85,7 +85,7 @@ export default async function hojasVidaView({ root, navigate }) {
 
   async function load() {
     const res = await api.get('/empresa/hojas-vida', filters);
-    mount(list, res.data.length ? res.data.map(row) : emptyState('file-cv', 'No hay hojas de vida con esos filtros', 'Cuando más estudiantes publiquen su hoja de vida, aparecerán aquí.'));
+    mount(list, res.data.length ? res.data.map(row) : emptyState('file-cv', 'No hay hojas de vida con esos filtros', 'Cuando los docentes aprueben más hojas de vida, aparecerán aquí.'));
     const { current_page: page, last_page: last } = res.meta;
     mount(
       root.querySelector('#pager'),

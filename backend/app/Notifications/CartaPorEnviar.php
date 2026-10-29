@@ -6,7 +6,7 @@ use App\Models\Cita;
 
 /**
  * Al director del programa (o a la administración si el programa no tiene
- * director): el docente aprobó a un estudiante y falta la carta de presentación.
+ * director): una empresa aceptó a un estudiante y falta la carta de presentación.
  */
 class CartaPorEnviar extends Aviso
 {
@@ -19,8 +19,8 @@ class CartaPorEnviar extends Aviso
 
     protected function mensaje(): string
     {
-        return "El docente aprobó la práctica de {$this->cita->estudiante->nombre_completo} ({$this->cita->estudiante->programa->nombre}) "
-            ."en {$this->cita->empresa->razon_social}. Envía la carta de presentación para que inicie.";
+        return "{$this->cita->empresa->razon_social} aceptó a {$this->cita->estudiante->nombre_completo} ({$this->cita->estudiante->programa->nombre}) "
+            .'después de su cita. Envía la carta de presentación para que inicie la práctica.';
     }
 
     protected function enlace(): string

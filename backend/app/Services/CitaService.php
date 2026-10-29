@@ -17,9 +17,7 @@ use App\Notifications\CartaPorEnviar;
 use App\Notifications\CartaPresentacionEnviada;
 use App\Notifications\CitaAsignada;
 use App\Notifications\CitaCancelada;
-use App\Notifications\EstudianteSeleccionado;
 use App\Notifications\PracticaAutorizada;
-use App\Notifications\SeleccionNoAutorizada;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -29,13 +27,15 @@ use Illuminate\Support\Facades\Notification;
  * De la cita a la práctica:
  *
  * 1. Una empresa con acuerdo aprobado y vigente asigna una cita a un
- *    estudiante habilitado con hoja de vida publicada. El estudiante recibe
- *    la empresa, la dirección, la fecha y la hora; puede tener varias citas.
- * 2. Realizada la cita, la empresa selecciona o descarta.
- * 3. El docente vuelve a aprobar (autoriza) o no, con un motivo.
- * 4. El director del programa envía la carta de presentación: empieza la
- *    práctica, el estudiante recibe la carta de bienvenida, su hoja de vida
- *    se deshabilita y sus demás procesos se cierran.
+ *    estudiante habilitado cuya hoja de vida aprobó un docente. El
+ *    estudiante recibe la empresa, la dirección, la fecha y la hora; puede
+ *    tener varias citas.
+ * 2. Según la cita, la empresa acepta al estudiante (con la fecha de inicio)
+ *    o lo rechaza.
+ * 3. Si lo acepta, el director del programa envía la carta de presentación:
+ *    empieza la práctica con el docente que aprobó la hoja de vida como
+ *    tutor, el estudiante recibe la carta de bienvenida, su hoja de vida se
+ *    deshabilita y sus demás procesos se cierran.
  */
 class CitaService
 {
@@ -52,7 +52,7 @@ class CitaService
 
         $estudiante->loadMissing('hojaVida', 'vinculacionActiva');
 
-        if (! $this->elegibilidad->habilitadoParaPractica($estudiante) || ! $estudiante->hojaVida?->publicada_en || $estudiante->vinculacionActiva) {
+        if (! $this->elegibilidad->habilitadoParaPractica($estudiante) || ! $estudiante->hojaVida?->aprobada() || $estudiante->vinculacionActiva) {
             throw new ReglaNegocioException('La hoja de vida de este estudiante no está disponible.');
         }
 
@@ -89,71 +89,39 @@ class CitaService
         return $cita;
     }
 
-    /** Realizada la cita, la empresa selecciona al estudiante (pasa al docente) o lo descarta. */
-    public function decidir(Cita $cita, bool $seleccionar, ?string $observacion): Cita
+    /**
+     * Según la cita, la empresa acepta al estudiante (pasa al director para la
+     * carta de presentación) o lo rechaza.
+     */
+    public function decidir(Cita $cita, bool $aceptar, ?string $observacion, ?Carbon $fechaInicio = null): Cita
     {
-        $cita = DB::transaction(function () use ($cita, $seleccionar, $observacion) {
+        $cita = DB::transaction(function () use ($cita, $aceptar, $observacion, $fechaInicio) {
             $cita = $this->bloquear($cita, EstadoCita::Programada);
 
             if ($cita->fecha_hora->isFuture()) {
                 throw new ReglaNegocioException('Podrás decidir después de la cita ('.$this->fechaLocal($cita).').');
             }
 
-            if ($seleccionar && $this->tieneVinculacionActiva($cita->estudiante_id)) {
+            if ($aceptar && $this->tieneVinculacionActiva($cita->estudiante_id)) {
                 throw new ReglaNegocioException('El estudiante ya inició su práctica en otra empresa.');
             }
 
             $cita->update([
-                'estado' => $seleccionar ? EstadoCita::Seleccionado : EstadoCita::Descartado,
+                'estado' => $aceptar ? EstadoCita::Aceptado : EstadoCita::Rechazado,
                 'observacion' => $observacion,
                 'decidida_en' => now(),
+                'fecha_inicio_practica' => $aceptar ? ($fechaInicio ?? today())->toDateString() : null,
             ]);
 
             return $cita;
         });
 
-        Auditoria::registrar($seleccionar ? 'cita.seleccionado' : 'cita.descartado', $cita);
+        Auditoria::registrar($aceptar ? 'cita.aceptado' : 'cita.rechazado', $cita, array_filter(['observacion' => $observacion]));
 
-        if ($seleccionar) {
-            $cita->load('empresa', 'estudiante');
-            Notification::send($this->usuarios(Rol::Docente), new EstudianteSeleccionado($cita));
-        }
-
-        return $cita;
-    }
-
-    /** El docente vuelve a aprobar al estudiante que seleccionó la empresa, o no lo autoriza con un motivo. */
-    public function autorizar(Cita $cita, Usuario $docente, bool $autorizar, ?string $observacion, ?Carbon $fechaInicio): Cita
-    {
-        if (! $autorizar && blank($observacion)) {
-            throw new ReglaNegocioException('Escribe el motivo para que el estudiante y la empresa lo conozcan.');
-        }
-
-        $cita = DB::transaction(function () use ($cita, $docente, $autorizar, $observacion, $fechaInicio) {
-            $cita = $this->bloquear($cita, EstadoCita::Seleccionado);
-
-            $cita->update($autorizar
-                ? [
-                    'estado' => EstadoCita::Autorizado,
-                    'autorizada_por' => $docente->id,
-                    'autorizada_en' => now(),
-                    'fecha_inicio_practica' => ($fechaInicio ?? today())->toDateString(),
-                ]
-                : ['estado' => EstadoCita::NoAutorizado, 'observacion' => $observacion, 'autorizada_por' => $docente->id, 'autorizada_en' => now()]);
-
-            return $cita;
-        });
-
-        Auditoria::registrar($autorizar ? 'cita.autorizada' : 'cita.no_autorizada', $cita, array_filter(['observacion' => $observacion]));
-        $cita->load('empresa.usuario', 'estudiante.usuario', 'estudiante.programa');
-
-        if ($autorizar) {
+        if ($aceptar) {
+            $cita->load('empresa', 'estudiante.programa');
             $directores = $this->usuarios(Rol::Director, $cita->estudiante->programa_id);
             Notification::send($directores->isNotEmpty() ? $directores : $this->usuarios(Rol::Admin), new CartaPorEnviar($cita));
-        } else {
-            $aviso = new SeleccionNoAutorizada($cita);
-            $cita->estudiante->usuario->notify($aviso);
-            $cita->empresa->usuario->notify($aviso);
         }
 
         return $cita;
@@ -166,8 +134,8 @@ class CitaService
     public function presentar(Cita $cita, Usuario $director): Cita
     {
         $cita = DB::transaction(function () use ($cita, $director) {
-            $cita = $this->bloquear($cita, EstadoCita::Autorizado);
-            $cita->load('estudiante', 'vacante');
+            $cita = $this->bloquear($cita, EstadoCita::Aceptado);
+            $cita->load('estudiante.hojaVida', 'vacante');
             $estudiante = $cita->estudiante;
 
             if ($this->tieneVinculacionActiva($estudiante->id)) {
@@ -179,7 +147,8 @@ class CitaService
                 'estudiante_id' => $estudiante->id,
                 'empresa_id' => $cita->empresa_id,
                 'vacante_id' => $cita->vacante_id,
-                'tutor_id' => $cita->autorizada_por,
+                // Tutor: el docente que aprobó la hoja de vida.
+                'tutor_id' => $estudiante->hojaVida?->revisada_por,
                 'tipo' => $cita->vacante?->modalidad ?? $estudiante->modalidad_grado ?? Modalidad::Pasantia,
                 'semestre_al_vincular' => $estudiante->semestre_actual,
                 'fecha_inicio' => $inicio->toDateString(),

@@ -7,11 +7,11 @@ export const icon = (name, cls = '') =>
 /** Colores de estado por valor de enum de la API. */
 const TONES = {
   PROGRAMADA: 'info',
-  SELECCIONADO: 'warn',
-  DESCARTADO: 'neutral',
-  AUTORIZADO: 'info',
-  NO_AUTORIZADO: 'bad',
+  ACEPTADO: 'warn',
   PRESENTADO: 'ok',
+  BORRADOR: 'neutral',
+  APROBADA: 'ok',
+  CON_OBSERVACIONES: 'warn',
   RECHAZADA: 'bad',
   RECHAZADO: 'bad',
   PENDIENTE: 'warn',

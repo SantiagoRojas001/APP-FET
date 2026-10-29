@@ -2,13 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EstadoHojaVida;
 use App\Enums\Rol;
 use App\Models\Cita;
 use App\Models\Competencia;
 use App\Models\Empresa;
 use App\Models\Estudiante;
+use App\Models\Usuario;
+use App\Notifications\HojaVidaPorRevisar;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -92,7 +96,7 @@ class HojaVidaTest extends TestCase
         $this->comoEstudiante($estudiante)->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])->assertOk();
 
         $this->comoEmpresa(Empresa::factory()->create())->get("/api/estudiantes/{$estudiante->id}/foto")->assertForbidden();
-        $estudiante->hojaVida()->update(['publicada_en' => now()]);
+        $estudiante->hojaVida()->update(['estado' => EstadoHojaVida::Aprobada]);
         $this->get("/api/estudiantes/{$estudiante->id}/foto")->assertOk();
         $this->comoEstudiante($this->estudiante(5))->get("/api/estudiantes/{$estudiante->id}/foto")->assertForbidden();
     }
@@ -112,9 +116,9 @@ class HojaVidaTest extends TestCase
         ])->assertJsonValidationErrors('proyectos.0.url_repositorio');
     }
 
-    public function test_las_empresas_solo_ven_hojas_de_vida_publicadas_y_sin_el_documento(): void
+    public function test_las_empresas_solo_ven_hojas_de_vida_aprobadas_y_sin_el_documento(): void
     {
-        $publicado = Estudiante::factory()->publicado()->create();
+        $publicado = Estudiante::factory()->hojaAprobada()->create();
         $oculto = $this->estudiante(5);
         $this->comoEmpresa(Empresa::factory()->create());
 
@@ -126,37 +130,44 @@ class HojaVidaTest extends TestCase
         $this->getJson("/api/estudiantes/{$oculto->id}")->assertForbidden();
     }
 
-    public function test_el_estudiante_publica_su_hoja_de_vida_solo_cuando_esta_completa(): void
+    public function test_el_estudiante_envia_su_hoja_de_vida_completa_a_revision_y_no_la_edita_mientras_tanto(): void
     {
         Storage::fake('local');
+        Notification::fake();
+        $docente = Usuario::factory()->rol(Rol::Docente)->create();
         $estudiante = $this->estudiante(5);
         $this->comoEstudiante($estudiante);
 
-        $this->patchJson('/api/estudiante/hoja-vida/publicacion', ['publicada' => true])
+        $this->postJson('/api/estudiante/hoja-vida/envio')
             ->assertUnprocessable()
             ->assertJsonPath('message', fn (string $m) => str_contains($m, 'Completa'));
 
-        $this->putJson('/api/estudiante/perfil', $this->hojaCompleta(Competencia::factory()->create()))->assertOk();
+        $datos = $this->hojaCompleta(Competencia::factory()->create());
+        $this->putJson('/api/estudiante/perfil', $datos)->assertOk();
         $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])->assertOk();
 
-        $this->patchJson('/api/estudiante/hoja-vida/publicacion', ['publicada' => true])
+        $this->postJson('/api/estudiante/hoja-vida/envio')
             ->assertOk()
-            ->assertJsonPath('hoja_vida.publicada_en', fn ($v) => $v !== null);
+            ->assertJsonPath('hoja_vida.estado.valor', 'EN_REVISION');
+        Notification::assertSentTo($docente, HojaVidaPorRevisar::class);
+        $this->putJson('/api/estudiante/perfil', $datos)->assertUnprocessable();
 
-        $this->comoEmpresa(Empresa::factory()->create())
-            ->getJson('/api/empresa/hojas-vida')
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $estudiante->id);
+        // Aprobada, la ven las empresas; si el estudiante la edita, vuelve a borrador y necesita otra aprobación.
+        $estudiante->hojaVida()->update(['estado' => EstadoHojaVida::Aprobada]);
+        $this->comoEmpresa(Empresa::factory()->create())->getJson('/api/empresa/hojas-vida')->assertJsonPath('data.0.id', $estudiante->id);
+        $this->comoEstudiante($estudiante)->putJson('/api/estudiante/perfil', $datos)->assertJsonPath('hoja_vida.estado.valor', 'BORRADOR');
+        $this->comoEmpresa(Empresa::factory()->create())->getJson('/api/empresa/hojas-vida')->assertJsonCount(0, 'data');
     }
 
     public function test_los_listados_de_estudiantes_y_citas_cargan_sin_consultas_n_mas_1(): void
     {
-        Cita::factory()->count(3)->create(['estado' => 'SELECCIONADO']);
+        Cita::factory()->count(3)->create(['estado' => 'ACEPTADO']);
+        Estudiante::query()->each(fn ($e) => $e->hojaVida()->update(['estado' => EstadoHojaVida::EnRevision]));
         $this->como(Rol::Docente);
 
         // Con Model::shouldBeStrict activo, una carga perezosa haría fallar la petición.
         $this->getJson('/api/estudiantes')->assertOk()->assertJsonCount(3, 'data');
-        $this->getJson('/api/docente/citas')->assertOk()->assertJsonCount(3);
+        $this->getJson('/api/docente/hojas-vida')->assertOk()->assertJsonCount(3);
         $this->getJson('/api/docente/estudiantes')->assertOk()->assertJsonCount(3, 'data');
     }
 
@@ -168,7 +179,7 @@ class HojaVidaTest extends TestCase
         $this->getJson('/api/auth/yo')
             ->assertOk()
             ->assertJsonPath('perfil.habilitado_para_practica', true)
-            ->assertJsonPath('perfil.hoja_vida_publicada', false)
+            ->assertJsonPath('perfil.hoja_vida_estado.valor', 'BORRADOR')
             ->assertJsonPath('perfil.citas_programadas', 0)
             ->assertJsonPath('perfil.empresa_practica', null)
             ->assertJsonPath('perfil.tiene_practicas_terminadas', false)

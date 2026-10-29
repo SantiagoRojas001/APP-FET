@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 class Auditoria
 {
     /**
-     * @param  string  $accion  Verbo en pasado, por ejemplo 'cita.autorizada'.
+     * @param  string  $accion  Verbo en pasado, por ejemplo 'hoja_vida.aprobada'.
      * @param  array<string, mixed>  $detalle  Datos útiles para entender la acción.
      * @param  Usuario|null  $autor  Quién la hizo, si no es el usuario autenticado.
      */

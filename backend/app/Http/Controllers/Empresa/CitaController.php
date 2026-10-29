@@ -14,7 +14,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Citas de la empresa con los estudiantes: asignarlas, cancelarlas y, una vez
- * realizadas, seleccionar o descartar.
+ * realizadas, aceptar (con la fecha de inicio) o rechazar al estudiante.
  */
 class CitaController extends Controller
 {
@@ -46,15 +46,21 @@ class CitaController extends Controller
         return new CitaResource($citas->cancelar($this->propia($request, $cita), $motivo));
     }
 
-    /** Después de la cita: selecciona al estudiante (pasa al docente) o lo descarta. */
+    /** Después de la cita: acepta al estudiante (pasa al director para la carta) o lo rechaza. */
     public function decidir(Request $request, int $cita, CitaService $citas): CitaResource
     {
         $datos = $request->validate([
-            'seleccionar' => ['required', 'boolean'],
+            'aceptar' => ['required', 'boolean'],
             'observacion' => ['nullable', 'string', 'max:1000'],
+            'fecha_inicio' => ['nullable', 'date', 'after_or_equal:today'],
         ]);
 
-        return new CitaResource($citas->decidir($this->propia($request, $cita), $request->boolean('seleccionar'), $datos['observacion'] ?? null));
+        return new CitaResource($citas->decidir(
+            $this->propia($request, $cita),
+            $request->boolean('aceptar'),
+            $datos['observacion'] ?? null,
+            $request->date('fecha_inicio'),
+        ));
     }
 
     private function propia(Request $request, int $id): Cita

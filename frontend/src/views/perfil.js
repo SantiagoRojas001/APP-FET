@@ -13,13 +13,16 @@ function subtitulo(user) {
   return user.rol.etiqueta;
 }
 
-/** Tercera línea, solo para estudiantes: dónde cursa la práctica, sus citas o si falta publicar la hoja de vida. */
+/** Tercera línea, solo para estudiantes: dónde cursa la práctica, sus citas o en qué va su hoja de vida. */
 function estado(perfil) {
   if (!perfil) return '';
   if (perfil.empresa_practica) return html`<span class="ok">${icon('building')}En pasantía en ${perfil.empresa_practica}</span>`;
   if (perfil.citas_programadas) return html`<span class="ok">${icon('calendar-event')}${perfil.citas_programadas === 1 ? '1 cita programada' : `${perfil.citas_programadas} citas programadas`}</span>`;
-  if (perfil.hoja_vida_publicada) return html`<span class="ok">${icon('circle-check')}Hoja de vida publicada</span>`;
-  return html`<span class="warn">${icon('clock-hour-4')}Publica tu hoja de vida</span>`;
+  const estado = perfil.hoja_vida_estado?.valor;
+  if (estado === 'APROBADA') return html`<span class="ok">${icon('circle-check')}Hoja de vida aprobada</span>`;
+  if (estado === 'EN_REVISION') return html`<span class="warn">${icon('clock-hour-4')}Hoja de vida en revisión</span>`;
+  if (estado === 'CON_OBSERVACIONES') return html`<span class="warn">${icon('alert-circle')}Corrige tu hoja de vida</span>`;
+  return html`<span class="warn">${icon('clock-hour-4')}Envía tu hoja de vida a revisión</span>`;
 }
 
 function avatar(user) {

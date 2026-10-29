@@ -22,14 +22,17 @@ class CitaResource extends Recurso
             'fecha_inicio_practica' => $this->fecha_inicio_practica?->toDateString(),
             'creada_en' => $this->creada_en?->toIso8601String(),
             'decidida_en' => $this->decidida_en?->toIso8601String(),
-            'autorizada_en' => $this->autorizada_en?->toIso8601String(),
             'presentada_en' => $this->presentada_en?->toIso8601String(),
             'vinculacion_id' => $this->vinculacion_id,
-            'url_carta' => in_array($this->estado, [EstadoCita::Autorizado, EstadoCita::Presentado], true) ? "/api/citas/{$this->id}/carta-presentacion.pdf" : null,
+            'url_carta' => in_array($this->estado, [EstadoCita::Aceptado, EstadoCita::Presentado], true) ? "/api/citas/{$this->id}/carta-presentacion.pdf" : null,
             'empresa' => new EmpresaResource($this->whenLoaded('empresa')),
             'estudiante' => new EstudianteResource($this->whenLoaded('estudiante')),
             'vacante' => $this->whenLoaded('vacante', fn () => $this->vacante ? ['id' => $this->vacante->id, 'titulo' => $this->vacante->titulo, 'modalidad' => $this->enum($this->vacante->modalidad)] : null),
-            'autorizador' => $this->whenLoaded('autorizador', fn () => $this->autorizador?->correo),
+            // Docente que aprobó la hoja de vida: será el tutor de la práctica.
+            'tutor' => $this->when(
+                $this->relationLoaded('estudiante') && $this->estudiante->relationLoaded('hojaVida') && $this->estudiante->hojaVida?->relationLoaded('revisor'),
+                fn () => $this->estudiante->hojaVida?->revisor?->correo,
+            ),
             'director' => $this->whenLoaded('director', fn () => $this->director?->correo),
         ];
     }

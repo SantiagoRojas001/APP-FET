@@ -48,10 +48,11 @@ class AdministracionTest extends TestCase
     {
         Notification::fake();
         $periodo = PeriodoAcademico::create(['nombre' => '2026-2', 'fecha_inicio' => now()->subMonth(), 'fecha_fin' => now()->addMonths(3)]);
-        $cita = Cita::factory()->create(['estado' => EstadoCita::Seleccionado]);
+        $cita = Cita::factory()->create();
 
-        $this->como(Rol::Docente);
-        $this->patchJson("/api/docente/citas/{$cita->id}", ['autorizar' => true, 'fecha_inicio' => now()->addWeek()->toDateString()])->assertOk();
+        $this->comoEmpresa($cita->empresa)
+            ->postJson("/api/empresa/citas/{$cita->id}/decision", ['aceptar' => true, 'fecha_inicio' => now()->addWeek()->toDateString()])
+            ->assertOk();
 
         $director = Usuario::factory()->rol(Rol::Director)->create(['programa_id' => $cita->estudiante->programa_id]);
         Sanctum::actingAs($director);
@@ -66,18 +67,18 @@ class AdministracionTest extends TestCase
     {
         $empresa = Empresa::factory()->create(['razon_social' => 'Acme']);
         Vinculacion::factory()->count(2)->for($empresa)->create();
-        Cita::factory()->create(['estado' => EstadoCita::Presentado, 'decidida_en' => now(), 'autorizada_en' => now(), 'presentada_en' => now()]);
-        Cita::factory()->create(['estado' => EstadoCita::NoAutorizado, 'decidida_en' => now(), 'autorizada_en' => now()]);
-        Cita::factory()->create(['estado' => EstadoCita::Descartado, 'decidida_en' => now()]);
+        Cita::factory()->create(['estado' => EstadoCita::Presentado, 'decidida_en' => now(), 'presentada_en' => now()]);
+        Cita::factory()->create(['estado' => EstadoCita::Rechazado, 'decidida_en' => now()]);
         $this->como(Rol::Admin);
 
         $this->getJson('/api/admin/informes')
             ->assertOk()
             ->assertJsonPath('empresas_con_mas_practicantes.0.empresa', 'Acme')
             ->assertJsonPath('empresas_con_mas_practicantes.0.practicantes', 2)
-            ->assertJsonPath('citas.tasa_aprobacion_docente', 50)
-            ->assertJsonPath('citas.seleccionados_por_empresa', 2)
-            ->assertJsonPath('citas.cartas_enviadas', 1);
+            ->assertJsonPath('citas.tasa_aceptacion_empresa', 50)
+            ->assertJsonPath('citas.aceptados_por_empresa', 1)
+            ->assertJsonPath('citas.cartas_enviadas', 1)
+            ->assertJsonPath('hojas_vida.aprobadas', 2);
 
         $respuesta = $this->get('/api/admin/informes/exportar')->assertOk();
         $this->assertStringContainsString('spreadsheetml', $respuesta->headers->get('content-type'));
@@ -87,16 +88,17 @@ class AdministracionTest extends TestCase
     public function test_la_bitacora_registra_las_decisiones_con_su_autor(): void
     {
         Notification::fake();
-        $cita = Cita::factory()->create(['estado' => EstadoCita::Seleccionado]);
+        $estudiante = $this->estudiante(9);
+        $estudiante->hojaVida()->update(['estado' => 'EN_REVISION']);
         $docente = $this->como(Rol::Docente);
 
-        $this->patchJson("/api/docente/citas/{$cita->id}", ['autorizar' => false, 'observacion' => 'Falta el semestre'])->assertOk();
+        $this->patchJson("/api/docente/hojas-vida/{$estudiante->id}", ['aprobar' => false, 'observaciones' => 'Falta una referencia'])->assertOk();
 
         $this->como(Rol::Admin);
-        $this->getJson('/api/admin/auditoria?entidad=cita')
-            ->assertJsonPath('data.0.accion', 'cita.no_autorizada')
+        $this->getJson('/api/admin/auditoria?entidad=estudiante')
+            ->assertJsonPath('data.0.accion', 'hoja_vida.observada')
             ->assertJsonPath('data.0.usuario.id', $docente->id)
-            ->assertJsonPath('data.0.detalle.observacion', 'Falta el semestre');
+            ->assertJsonPath('data.0.detalle.observaciones', 'Falta una referencia');
     }
 
     public function test_la_hoja_de_vida_se_descarga_en_pdf(): void
@@ -108,7 +110,7 @@ class AdministracionTest extends TestCase
 
         $this->comoEmpresa(Empresa::factory()->create());
         $this->get("/api/estudiantes/{$estudiante->id}/hoja-vida.pdf")->assertForbidden();
-        $estudiante->hojaVida()->update(['publicada_en' => now()]);
+        $estudiante->hojaVida()->update(['estado' => 'APROBADA']);
         $this->get("/api/estudiantes/{$estudiante->id}/hoja-vida.pdf")->assertOk();
 
         $this->comoEstudiante($this->estudiante(8));

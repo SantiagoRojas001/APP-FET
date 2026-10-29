@@ -35,6 +35,23 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     return;
   }
 
+  if (hv.estado?.valor === 'EN_REVISION') {
+    mount(
+      root,
+      html`${pageHeader('Hoja de vida', 'Formato institucional FET (PA-GTH-F-10).')}
+        <section class="panel">
+          ${emptyState(
+            'clock-hour-4',
+            'Tu hoja de vida está en revisión docente',
+            'Podrás editarla cuando tu docente responda. Te avisaremos por correo y en la app.',
+            html`<button class="btn sec" id="preview">${icon('file-text')}Ver mi hoja de vida</button>`,
+          )}
+        </section>`,
+    );
+    root.querySelector('#preview').addEventListener('click', () => navigate('/hoja-vida/vista'));
+    return;
+  }
+
   const opciones = (lista, vacia = true) => [...(vacia ? [['', 'Sin especificar']] : []), ...lista.map((o) => [o, o])];
   const enumOpciones = (lista) => lista.map((o) => [o.valor, o.etiqueta]);
 
@@ -175,6 +192,11 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
         'Formato institucional FET (PA-GTH-F-10). Lo que no registres aparece como «No registra».',
         html`<button class="btn sec" type="button" id="preview">${icon('file-text')}Vista previa</button>`,
       )}
+      ${hv.estado?.valor === 'CON_OBSERVACIONES'
+        ? html`<p class="note-box">${icon('alert-circle')} Recomendaciones de tu docente: ${hv.observaciones}</p>`
+        : hv.estado?.valor === 'APROBADA'
+          ? html`<p class="note-box">${icon('circle-check')} Tu hoja de vida está aprobada. Si guardas cambios, deberás enviarla de nuevo a revisión y las empresas no la verán hasta que se apruebe.</p>`
+          : ''}
       <section class="panel">
         <div class="panel-h"><h2>Completa al ${hv.porcentaje} %</h2>${hv.porcentaje === 100 ? badge('ok', 'Completa') : badge('warn', 'Por completar')}</div>
         <div class="meter"><span style="width:${hv.porcentaje}%"></span></div>

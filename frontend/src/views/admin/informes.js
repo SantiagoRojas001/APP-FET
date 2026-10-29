@@ -18,7 +18,7 @@ export default async function informesView({ root }) {
     root,
     html`${pageHeader(
         'Informes',
-        'Prácticas por programa, empresas con más practicantes, tasas de selección y aprobación y tiempo promedio de cada etapa.',
+        'Prácticas por programa, empresas con más practicantes, tasas de aprobación y aceptación y tiempo promedio de cada etapa.',
         html`<button class="btn" id="export">${icon('file-spreadsheet')}Exportar a Excel</button>`,
       )}
       <div class="toolbar">
@@ -44,8 +44,8 @@ export default async function informesView({ root }) {
       body,
       html`<section class="kpis">
           <div class="kpi"><b>${p.total}</b><span>Citas</span></div>
-          <div class="kpi"><b>${pct(p.tasa_seleccion_empresa)}</b><span>Seleccionados por la empresa</span></div>
-          <div class="kpi"><b>${pct(p.tasa_aprobacion_docente)}</b><span>Aprobados por el docente</span></div>
+          <div class="kpi"><b>${pct(r.hojas_vida.tasa_aprobacion_docente)}</b><span>Hojas de vida aprobadas por el docente</span></div>
+          <div class="kpi"><b>${pct(p.tasa_aceptacion_empresa)}</b><span>Aceptados por la empresa</span></div>
           <div class="kpi">
             <b>${r.practicantes_por_programa.reduce((s, f) => s + f.total, 0)}</b><span>Prácticas</span>
           </div>
@@ -55,22 +55,22 @@ export default async function informesView({ root }) {
           <div class="lines">
             <div class="line">
               <div>
+                <b>Revisión de la hoja de vida</b
+                ><span>Desde que el estudiante la envía hasta que el docente responde</span>
+              </div>
+              <b>${dias(t.revision_docente)}</b>
+            </div>
+            <div class="line">
+              <div>
                 <b>Decisión de la empresa</b
-                ><span>Desde la cita hasta que la empresa selecciona o descarta</span>
+                ><span>Desde la cita hasta que la empresa acepta o rechaza</span>
               </div>
               <b>${dias(t.decision_empresa)}</b>
             </div>
             <div class="line">
               <div>
-                <b>Aprobación del docente</b
-                ><span>Desde la selección de la empresa hasta que el docente aprueba</span>
-              </div>
-              <b>${dias(t.aprobacion_docente)}</b>
-            </div>
-            <div class="line">
-              <div>
                 <b>Carta de presentación</b
-                ><span>Desde la aprobación docente hasta que el director envía la carta</span>
+                ><span>Desde que la empresa acepta hasta que el director envía la carta</span>
               </div>
               <b>${dias(t.carta_director)}</b>
             </div>
@@ -149,20 +149,20 @@ export default async function informesView({ root }) {
           <h2>Citas</h2>
           <dl class="kv">
             <div>
-              <dt>Seleccionados por la empresa</dt>
-              <dd>${p.seleccionados_por_empresa}</dd>
+              <dt>Hojas de vida en revisión</dt>
+              <dd>${r.hojas_vida.en_revision}</dd>
             </div>
             <div>
-              <dt>Descartados por la empresa</dt>
-              <dd>${p.descartados_por_empresa}</dd>
+              <dt>Hojas de vida aprobadas</dt>
+              <dd>${r.hojas_vida.aprobadas}</dd>
             </div>
             <div>
-              <dt>Aprobados por el docente</dt>
-              <dd>${p.aprobados_por_docente}</dd>
+              <dt>Aceptados por la empresa</dt>
+              <dd>${p.aceptados_por_empresa}</dd>
             </div>
             <div>
-              <dt>No aprobados por el docente</dt>
-              <dd>${p.no_aprobados_por_docente}</dd>
+              <dt>Rechazados por la empresa</dt>
+              <dd>${p.rechazados_por_empresa}</dd>
             </div>
             <div>
               <dt>Cartas de presentación enviadas</dt>

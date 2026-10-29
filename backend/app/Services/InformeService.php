@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Enums\EstadoCita;
+use App\Enums\EstadoHojaVida;
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoVinculacion;
 use App\Models\Cita;
+use App\Models\HojaVida;
 use App\Models\PeriodoAcademico;
 use App\Models\Vinculacion;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,11 +35,11 @@ class InformeService
         $porEstado = (clone $citas)->selectRaw('estado, count(*) as total')->groupBy('estado')->pluck('total', 'estado');
         $contar = fn (EstadoCita ...$estados) => collect($estados)->sum(fn ($e) => (int) ($porEstado[$e->value] ?? 0));
 
-        // Tras la cita la empresa decide; los seleccionados pasan al docente y luego a la carta del director.
-        $aprobadosDocente = $contar(EstadoCita::Autorizado, EstadoCita::Presentado);
-        $seleccionados = $contar(EstadoCita::Seleccionado, EstadoCita::NoAutorizado) + $aprobadosDocente;
-        $decididasEmpresa = $seleccionados + $contar(EstadoCita::Descartado);
-        $decididasDocente = $aprobadosDocente + $contar(EstadoCita::NoAutorizado);
+        // Tras la cita la empresa acepta o rechaza; los aceptados pasan a la carta del director.
+        $aceptados = $contar(EstadoCita::Aceptado, EstadoCita::Presentado);
+        $decididas = $aceptados + $contar(EstadoCita::Rechazado);
+        $hojas = HojaVida::query()->selectRaw('estado, count(*) as total')->groupBy('estado')->pluck('total', 'estado');
+        $revisadas = (int) ($hojas[EstadoHojaVida::Aprobada->value] ?? 0) + (int) ($hojas[EstadoHojaVida::ConObservaciones->value] ?? 0);
 
         return [
             'periodo' => $periodo?->nombre,
@@ -50,20 +52,24 @@ class InformeService
                 ->limit(10)
                 ->get()
                 ->map(fn ($f) => ['empresa' => $f->empresa, 'practicantes' => (int) $f->practicantes]),
+            // Estado actual de las hojas de vida (no depende del periodo).
+            'hojas_vida' => [
+                'en_revision' => (int) ($hojas[EstadoHojaVida::EnRevision->value] ?? 0),
+                'aprobadas' => (int) ($hojas[EstadoHojaVida::Aprobada->value] ?? 0),
+                'con_observaciones' => (int) ($hojas[EstadoHojaVida::ConObservaciones->value] ?? 0),
+                'tasa_aprobacion_docente' => $revisadas ? round((int) ($hojas[EstadoHojaVida::Aprobada->value] ?? 0) / $revisadas * 100, 1) : null,
+            ],
             'citas' => [
                 'total' => $porEstado->sum(),
-                'seleccionados_por_empresa' => $seleccionados,
-                'descartados_por_empresa' => $contar(EstadoCita::Descartado),
-                'aprobados_por_docente' => $aprobadosDocente,
-                'no_aprobados_por_docente' => $contar(EstadoCita::NoAutorizado),
+                'aceptados_por_empresa' => $aceptados,
+                'rechazados_por_empresa' => $contar(EstadoCita::Rechazado),
                 'cartas_enviadas' => $contar(EstadoCita::Presentado),
-                'tasa_seleccion_empresa' => $decididasEmpresa ? round($seleccionados / $decididasEmpresa * 100, 1) : null,
-                'tasa_aprobacion_docente' => $decididasDocente ? round($aprobadosDocente / $decididasDocente * 100, 1) : null,
+                'tasa_aceptacion_empresa' => $decididas ? round($aceptados / $decididas * 100, 1) : null,
             ],
             'tiempos_promedio_dias' => [
+                'revision_docente' => $this->promedioDias(HojaVida::query()->whereNotNull('enviada_en')->whereNotNull('revisada_en'), 'revisada_en - enviada_en'),
                 'decision_empresa' => $this->promedioDias((clone $citas)->whereNotNull('decidida_en'), 'decidida_en - fecha_hora'),
-                'aprobacion_docente' => $this->promedioDias((clone $citas)->whereNotNull('decidida_en')->whereNotNull('autorizada_en'), 'autorizada_en - decidida_en'),
-                'carta_director' => $this->promedioDias((clone $citas)->whereNotNull('autorizada_en')->whereNotNull('presentada_en'), 'presentada_en - autorizada_en'),
+                'carta_director' => $this->promedioDias((clone $citas)->whereNotNull('decidida_en')->whereNotNull('presentada_en'), 'presentada_en - decidida_en'),
                 'cumplir_horas' => $this->promedioDias((clone $vinculaciones)->whereNotNull('horas_cumplidas_en'), 'horas_cumplidas_en - fecha_inicio::timestamptz'),
                 'duracion_practica' => $this->promedioDias(
                     (clone $vinculaciones)->where('estado', '!=', EstadoVinculacion::Activa)->whereNotNull('fecha_fin'),
@@ -90,20 +96,23 @@ class InformeService
             Row::fromValuesWithStyle(['Informe de prácticas APP FET', $periodo ? "Periodo {$periodo->nombre}" : 'Todos los periodos'], $titulo),
             Row::fromValues(['Generado', now()->format('d/m/Y H:i')]),
             Row::fromValues([]),
+            Row::fromValuesWithStyle(['Hojas de vida', 'Valor'], $titulo),
+            Row::fromValues(['En revisión docente', $datos['hojas_vida']['en_revision']]),
+            Row::fromValues(['Aprobadas', $datos['hojas_vida']['aprobadas']]),
+            Row::fromValues(['Con recomendaciones por corregir', $datos['hojas_vida']['con_observaciones']]),
+            Row::fromValues(['Tasa de aprobación docente (%)', $datos['hojas_vida']['tasa_aprobacion_docente']]),
+            Row::fromValues([]),
             Row::fromValuesWithStyle(['Citas', 'Valor'], $titulo),
             Row::fromValues(['Total', $p['total']]),
-            Row::fromValues(['Seleccionados por la empresa', $p['seleccionados_por_empresa']]),
-            Row::fromValues(['Descartados por la empresa', $p['descartados_por_empresa']]),
-            Row::fromValues(['Aprobados por el docente', $p['aprobados_por_docente']]),
-            Row::fromValues(['No aprobados por el docente', $p['no_aprobados_por_docente']]),
+            Row::fromValues(['Aceptados por la empresa', $p['aceptados_por_empresa']]),
+            Row::fromValues(['Rechazados por la empresa', $p['rechazados_por_empresa']]),
             Row::fromValues(['Cartas de presentación enviadas', $p['cartas_enviadas']]),
-            Row::fromValues(['Tasa de selección de empresas (%)', $p['tasa_seleccion_empresa']]),
-            Row::fromValues(['Tasa de aprobación docente (%)', $p['tasa_aprobacion_docente']]),
+            Row::fromValues(['Tasa de aceptación de empresas (%)', $p['tasa_aceptacion_empresa']]),
             Row::fromValues([]),
             Row::fromValuesWithStyle(['Tiempo promedio por etapa', 'Días'], $titulo),
+            Row::fromValues(['Envío a revisión docente de la hoja de vida', $t['revision_docente']]),
             Row::fromValues(['Cita a decisión de la empresa', $t['decision_empresa']]),
-            Row::fromValues(['Selección a aprobación docente', $t['aprobacion_docente']]),
-            Row::fromValues(['Aprobación docente a carta de presentación', $t['carta_director']]),
+            Row::fromValues(['Aceptación a carta de presentación', $t['carta_director']]),
             Row::fromValues(['Inicio a completar las horas', $t['cumplir_horas']]),
             Row::fromValues(['Duración de la práctica', $t['duracion_practica']]),
         ]);

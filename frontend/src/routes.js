@@ -35,7 +35,7 @@ export const ROUTES = {
   ],
   DOCENTE: [
     { path: '/registro', label: 'Registro de estudiantes', icon: 'user-plus', load: () => import('./views/docente/registro.js') },
-    { path: '/autorizaciones', label: 'Aprobaciones', icon: 'clipboard-check', load: () => import('./views/docente/autorizaciones.js') },
+    { path: '/revision', label: 'Hojas de vida', icon: 'clipboard-check', load: () => import('./views/docente/revision.js') },
     { path: '/vacantes', label: 'Vacantes', icon: 'briefcase', load: () => import('./views/docente/vacantes.js') },
     { path: '/en-curso', label: 'Prácticas', icon: 'users', load: () => import('./views/docente/vinculaciones.js') },
     ...COMUNES,

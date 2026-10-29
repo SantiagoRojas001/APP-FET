@@ -25,7 +25,7 @@ class AutorizacionTest extends TestCase
     {
         return [
             'docente en rutas de estudiante' => [Rol::Docente, '/api/estudiante/citas'],
-            'estudiante en rutas de docente' => [Rol::Estudiante, '/api/docente/citas'],
+            'estudiante en rutas de docente' => [Rol::Estudiante, '/api/docente/hojas-vida'],
             'empresa en rutas de docente' => [Rol::Empresa, '/api/docente/vacantes'],
             'empresa en rutas de director' => [Rol::Empresa, '/api/director/estudiantes'],
             'docente en rutas de director' => [Rol::Docente, '/api/director/cartas'],

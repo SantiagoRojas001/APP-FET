@@ -7,13 +7,13 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 /**
  * Carta con la que el director de programa presenta al estudiante ante la
- * empresa. Se genera a partir de la cita autorizada.
+ * empresa. Se genera a partir de la cita en la que la empresa lo aceptó.
  */
 class CartaPresentacion
 {
     public function pdf(Cita $cita): string
     {
-        $cita->loadMissing('empresa', 'estudiante.programa', 'vacante', 'autorizador', 'director');
+        $cita->loadMissing('empresa', 'estudiante.programa', 'estudiante.hojaVida.revisor', 'vacante', 'director');
 
         return Pdf::loadView('pdf.carta-presentacion', [
             'cita' => $cita,
