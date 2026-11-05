@@ -26,11 +26,23 @@ class RegistroEstudiantesTest extends TestCase
         Notification::fake();
     }
 
+    /** Registra un estudiante como lo hace la confirmación del listado de modalidades. */
+    private function registrar(array $cambios = [])
+    {
+        return $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => [$this->datos($cambios)]]);
+    }
+
+    private function idDe(string $correo): int
+    {
+        return Estudiante::whereHas('usuario', fn ($q) => $q->where('correo', $correo))->value('id');
+    }
+
     /** @return array<string, mixed> */
     private function datos(array $cambios = []): array
     {
         return [
-            'correo' => 'Ana.Perez@fet.edu.co',
+            'fila' => 1,
+            'correo' => 'ana.perez@fet.edu.co',
             'nombres' => 'Ana',
             'apellidos' => 'Pérez',
             'programa_id' => $this->programa()->id,
@@ -44,14 +56,16 @@ class RegistroEstudiantesTest extends TestCase
     {
         $this->como(Rol::Docente);
 
-        $this->postJson('/api/docente/estudiantes', $this->datos(['semestre_actual' => 4]))
-            ->assertUnprocessable()
-            ->assertJsonPath('message', fn (string $m) => str_contains($m, '3.º, 5.º, 9.º'));
+        $this->registrar(['semestre_actual' => 4])
+            ->assertOk()
+            ->assertJsonPath('creados', 0)
+            ->assertJsonPath('errores.0.error', fn (string $m) => str_contains($m, '3.º, 5.º, 9.º'));
 
-        $this->postJson('/api/docente/estudiantes', $this->datos())
-            ->assertCreated()
-            ->assertJsonPath('ciclo', 'Tecnólogo')
-            ->assertJsonPath('promedio', null);
+        $this->registrar()
+            ->assertOk()
+            ->assertJsonPath('creados', 1)
+            ->assertJsonPath('pendientes_de_promedio', 1);
+        $this->getJson('/api/docente/estudiantes')->assertJsonPath('data.0.ciclo', 'Tecnólogo')->assertJsonPath('data.0.promedio', null);
 
         $this->assertDatabaseHas('usuario', ['correo' => 'ana.perez@fet.edu.co', 'rol' => 'ESTUDIANTE']);
         Notification::assertNothingSent();
@@ -62,7 +76,8 @@ class RegistroEstudiantesTest extends TestCase
     public function test_con_promedio_suficiente_recibe_usuario_y_contrasena_y_debe_cambiarla(): void
     {
         $docente = $this->como(Rol::Docente);
-        $id = $this->postJson('/api/docente/estudiantes', $this->datos())->json('id');
+        $this->registrar()->assertJsonPath('creados', 1);
+        $id = $this->idDe('ana.perez@fet.edu.co');
 
         $password = null;
         $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => '4,2'])
@@ -103,7 +118,8 @@ class RegistroEstudiantesTest extends TestCase
     {
         Parametro::guardar('promedio_minimo', '4.2');
         $this->como(Rol::Docente);
-        $id = $this->postJson('/api/docente/estudiantes', $this->datos())->json('id');
+        $this->registrar()->assertJsonPath('creados', 1);
+        $id = $this->idDe('ana.perez@fet.edu.co');
 
         $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => 4.19])
             ->assertOk()
@@ -119,7 +135,8 @@ class RegistroEstudiantesTest extends TestCase
     {
         Parametro::guardar('promedio_minimo', '3.8');
         $this->como(Rol::Docente);
-        $id = $this->postJson('/api/docente/estudiantes', $this->datos())->json('id');
+        $this->registrar()->assertJsonPath('creados', 1);
+        $id = $this->idDe('ana.perez@fet.edu.co');
 
         $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => 3.9])->assertJsonPath('habilitado', true);
     }
@@ -127,9 +144,9 @@ class RegistroEstudiantesTest extends TestCase
     public function test_solo_el_docente_registra_estudiantes(): void
     {
         Sanctum::actingAs($this->estudiante(9)->usuario);
-        $this->postJson('/api/docente/estudiantes', $this->datos())->assertForbidden();
+        $this->registrar()->assertForbidden();
 
         $this->como(Rol::Admin);
-        $this->postJson('/api/docente/estudiantes', $this->datos())->assertForbidden();
+        $this->registrar()->assertForbidden();
     }
 }

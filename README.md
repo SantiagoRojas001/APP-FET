@@ -95,8 +95,10 @@ Todas usan la contraseña `demo1234`. Solo existen fuera de producción.
 
 ### Cuentas y acceso
 
-Los estudiantes los registra un docente: cuando registra el promedio, quienes alcanzan el mínimo
-reciben por correo su usuario y una contraseña que deben cambiar al primer ingreso. La
+Los estudiantes los registra un docente cargando el listado de modalidades de grado (PDF, Excel o
+CSV): la app crea las cuentas de quienes eligieron pasantía o práctica en un semestre habilitado.
+Cuando se registra el promedio, quienes alcanzan el mínimo reciben por correo su usuario y una
+contraseña que deben cambiar al primer ingreso. La
 administración crea las cuentas de docentes, directores de programa y administradores (con correo
 `@fet.edu.co`) e invita a las empresas. Las empresas también pueden
 registrarse solas en `/empresasRegistro` (por ejemplo, `http://localhost:5173/empresasRegistro`)

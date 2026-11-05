@@ -42,9 +42,10 @@ Vinculación ACTIVA ──semanas aprobadas por la empresa suman las horas del p
    entorno de seguimiento: Mi pasantía, Horas semanales, Seguimiento (documentos) y Hoja de vida.
    Cada semana reporta sus horas con la evidencia y sube ARL, bitácora, control de asistencia e
    informes.
-2. **Docente**: registra a los estudiantes que eligieron pasantía o práctica (por ahora uno a uno;
-   la carga del PDF de modalidades de grado está pendiente) y su promedio, que dispara el correo
-   con el resultado. Revisa las hojas de vida: las aprueba (solo entonces las ven las empresas) o
+2. **Docente**: registra a los estudiantes cargando el listado de modalidades de grado (PDF, Excel
+   o CSV): la app filtra a quienes eligieron pasantía o práctica en un semestre habilitado y el
+   docente confirma la vista previa. Luego registra el promedio, que dispara el correo con el
+   resultado (si el listado trae el promedio, el correo sale al confirmar). Revisa las hojas de vida: las aprueba (solo entonces las ven las empresas) o
    las devuelve con recomendaciones; quien la aprueba queda como tutor si el estudiante empieza la
    práctica. Ve las vacantes de las empresas y les recomienda estudiantes. Hace el seguimiento de
    las vinculaciones, revisa los documentos, evalúa al practicante y puede finalizar una práctica
@@ -69,9 +70,16 @@ Todos los roles reciben notificaciones (dentro de la app y por correo) y pueden 
 
 Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
 
-- **Registro y habilitación** (`RegistroEstudianteService`, `ElegibilidadService`): el docente
-  registra solo a quienes eligieron pasantía o práctica y cursan un semestre habilitado (3.º, 5.º
-  y 9.º por defecto). Registrar no envía correo. Al registrar el promedio (una sola vez) se guarda
+- **Carga del listado de modalidades** (`ImportacionEstudiantesService`): lee PDF (reconstruye la
+  tabla con la posición de cada texto; si no hay tabla, arma un registro por correo), Excel o CSV.
+  Reconoce nombre, correo, programa, ciclo, modalidad y, si vienen, semestre, promedio, documento
+  y código. Deja fuera a quien no eligió pasantía ni práctica, cursa un semestre no habilitado o
+  ya tiene cuenta; si el listado trae el ciclo y no el semestre, toma el semestre habilitado del
+  ciclo (técnico 3.º, tecnólogo 5.º, profesional 9.º). La vista previa no guarda nada; al
+  confirmar se crean las cuentas.
+- **Registro y habilitación** (`RegistroEstudianteService`, `ElegibilidadService`): solo se
+  registran quienes eligieron pasantía o práctica y cursan un semestre habilitado (3.º, 5.º y 9.º
+  por defecto). Registrar no envía correo. Al registrar el promedio (una sola vez) se guarda
   el resultado: con el promedio mínimo (4,2 por defecto) el estudiante queda habilitado, se le
   genera una contraseña y la recibe por correo (`CredencialesAcceso`); si no, su cuenta queda
   inactiva y recibe un mensaje de ánimo (`NoHabilitado`). Los parámetros los define la
@@ -189,7 +197,8 @@ Todas las respuestas son JSON. Los enums se envían como `{ "valor": "APROBADA",
 | `POST /api/auth/primer-ingreso` | Estudiante con contraseña inicial | Cambia la contraseña y acepta la política |
 | `POST /api/estudiante/hoja-vida/envio` | Estudiante | Envía la hoja de vida a revisión docente |
 | `GET /api/estudiante/citas` · `/vinculaciones` | Estudiante | Empresas interesadas (citas) y prácticas propias |
-| `GET/POST /api/docente/estudiantes` · `PATCH …/{id}/promedio` | Docente | Registro de estudiantes y de su promedio (envía el resultado) |
+| `POST /api/docente/importaciones` · `…/confirmacion` | Docente | Vista previa del listado de modalidades y creación de las cuentas |
+| `GET /api/docente/estudiantes` · `PATCH …/{id}/promedio` | Docente | Estudiantes registrados y registro del promedio (envía el resultado) |
 | `GET /api/docente/hojas-vida` · `PATCH …/{estudiante}` | Docente | Revisar hojas de vida: aprobar o devolver con recomendaciones |
 | `GET /api/docente/vacantes` · `POST/DELETE …/{id}/recomendaciones` | Docente | Vacantes y recomendaciones |
 | `GET /api/empresa/hojas-vida` | Empresa | Hojas de vida aprobadas, recomendadas primero |

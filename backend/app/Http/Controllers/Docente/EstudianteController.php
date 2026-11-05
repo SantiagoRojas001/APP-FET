@@ -4,19 +4,18 @@ namespace App\Http\Controllers\Docente;
 
 use App\Enums\Modalidad;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Docente\RegistrarEstudianteRequest;
 use App\Http\Requests\Docente\RegistrarPromedioRequest;
 use App\Http\Resources\EstudianteResource;
 use App\Models\Estudiante;
 use App\Services\RegistroEstudianteService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 
 /**
- * Registro de estudiantes que eligieron pasantía o práctica y de su promedio.
+ * Estudiantes registrados desde el listado de modalidades de grado y registro
+ * de su promedio (ver ImportacionController).
  */
 class EstudianteController extends Controller
 {
@@ -48,13 +47,6 @@ class EstudianteController extends Controller
             ->withQueryString();
 
         return EstudianteResource::collection($estudiantes);
-    }
-
-    public function store(RegistrarEstudianteRequest $request, RegistroEstudianteService $registro): JsonResponse
-    {
-        $estudiante = $registro->registrar($request->validated(), $request->user());
-
-        return (new EstudianteResource($estudiante->load('usuario', 'programa')))->response()->setStatusCode(201);
     }
 
     /** Registra el promedio y envía el correo con el resultado (y las credenciales si queda habilitado). */

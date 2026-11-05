@@ -101,7 +101,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::prefix('docente')->middleware('rol:DOCENTE')->group(function () {
             Route::get('estudiantes', [Docente\EstudianteController::class, 'index']);
-            Route::post('estudiantes', [Docente\EstudianteController::class, 'store']);
+            Route::post('importaciones', [Docente\ImportacionController::class, 'vistaPrevia'])->middleware('throttle:20,1');
+            Route::post('importaciones/confirmacion', [Docente\ImportacionController::class, 'confirmar']);
             Route::patch('estudiantes/{estudiante}/promedio', [Docente\EstudianteController::class, 'promedio']);
             Route::get('hojas-vida', [Docente\HojaVidaController::class, 'index']);
             Route::patch('hojas-vida/{estudiante}', [Docente\HojaVidaController::class, 'update']);
