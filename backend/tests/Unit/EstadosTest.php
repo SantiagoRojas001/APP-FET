@@ -21,12 +21,13 @@ class EstadosTest extends TestCase
     /** @return array<string, array{class-string<BackedEnum>}> */
     public static function enums(): array
     {
-        return array_combine(
-            array_map(fn (string $c) => class_basename($c), $clases = [
-                EstadoCita::class, EstadoHojaVida::class, EstadoSolicitudConvenio::class, Rol::class, TipoDocumento::class,
-            ]),
-            array_map(fn (string $c) => [$c], $clases),
-        );
+        return [
+            'estados de la cita' => [EstadoCita::class],
+            'estados de la hoja de vida' => [EstadoHojaVida::class],
+            'estados de la solicitud de convenio' => [EstadoSolicitudConvenio::class],
+            'roles' => [Rol::class],
+            'tipos de documento' => [TipoDocumento::class],
+        ];
     }
 
     /** @param  class-string<BackedEnum>  $enum */
