@@ -78,16 +78,19 @@ class ImportacionEstudiantesTest extends TestCase
         $this->assertDatabaseCount('estudiante', 0);
         Notification::assertNothingSent();
 
-        // Al confirmar se crean las cuentas, sin correo hasta que se registre el promedio.
+        // El listado no trae el promedio: lo escribe el docente en la vista previa. Sin él no se registra.
         $nuevas = array_values(array_filter($filas, fn ($f) => $f['estado'] === 'nuevo'));
         $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => $nuevas])
+            ->assertJsonPath('creados', 0)
+            ->assertJsonPath('errores.0.error', 'Escribe el promedio.');
+        $nuevas = array_map(fn ($f) => [...$f, 'promedio' => 4.6], $nuevas);
+        $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => $nuevas])
             ->assertOk()
-            ->assertJsonPath('creados', 2)
-            ->assertJsonPath('pendientes_de_promedio', 2);
+            ->assertJsonPath('creados', 2);
 
         $this->assertDatabaseHas('usuario', ['correo' => 'ana.lopez@fet.edu.co', 'rol' => 'ESTUDIANTE']);
         $this->assertSame(9, Estudiante::where('nombres', 'Ana María')->value('semestre_actual'));
-        Notification::assertNothingSent();
+        Notification::assertSentTimes(CredencialesAcceso::class, 2);
 
         // Una segunda carga del mismo listado no duplica cuentas.
         $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => $nuevas])
@@ -108,7 +111,7 @@ class ImportacionEstudiantesTest extends TestCase
         $this->assertSame(['nuevo', 'valentina.ruiz@fet.edu.co', 9], [$filas[0]['estado'], $filas[0]['correo'], $filas[0]['semestre_actual']]);
         $this->assertSame(['no_habilitado', 'semestre'], [$filas[1]['estado'], $filas[1]['motivo_no_habilitado']]); // 7.º no está habilitado
 
-        $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => [$filas[0]], 'no_habilitados' => [$filas[1]]])
+        $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => [[...$filas[0], 'promedio' => 4.4]], 'no_habilitados' => [$filas[1]]])
             ->assertJsonPath('creados', 1)
             ->assertJsonPath('no_habilitados', 1);
 
@@ -146,7 +149,6 @@ class ImportacionEstudiantesTest extends TestCase
 
         $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => [$filas[0]], 'no_habilitados' => [$filas[1]]])
             ->assertJsonPath('creados', 1)
-            ->assertJsonPath('con_correo', 1)
             ->assertJsonPath('no_habilitados', 1);
 
         Notification::assertSentTo(Usuario::where('correo', 'sara.gomez@fet.edu.co')->first(), CredencialesAcceso::class);
@@ -166,6 +168,22 @@ class ImportacionEstudiantesTest extends TestCase
         $this->assertSame(['nuevo', 'Elena', 'Torres Ruiz'], [$filas[0]['estado'], $filas[0]['nombres'], $filas[0]['apellidos']]);
         $this->assertSame('revisar', $filas[1]['estado']);
         $this->assertStringContainsString('Contaduría Pública', $filas[1]['motivo']);
+    }
+
+    public function test_lee_un_formulario_de_google_con_encabezados_en_forma_de_pregunta(): void
+    {
+        $this->comoDocente();
+        $csv = '"Marca temporal","Nombre de usuario","Programa al que pertence","Ingrese su correo institucional","Ingrese su nombre","Ingrese el semestre al que pertenece","Ingrese su codigo estudiantil","Ingrese la modalidad de grado de su interes"'."\n"
+            .'"2026/11/10 11:34:17 a. m. GMT-5","ana_ruiz@fet.edu.co","","ana_ruiz@fet.edu.co","Ana María ruiz gómez","5","20232085","Pasantias o Practicas profesionales"'."\n"
+            .'"2026/11/10 11:55:00 a. m. GMT-5","luis_mora@fet.edu.co","ING de software","luis_mora@fet.edu.co","Luis mora","Noveno","SOF120232022","Proyecto de aplicacion"'."\n"
+            .'"2026/11/10 1:11:42 p. m. GMT-5","eva_diaz@fet.edu.co","ING de software","eva_diaz@fet.edu.co","Eva Díaz","VII","A1","Pasantias o Practicas profesionales"'."\n";
+
+        $filas = $this->vistaPrevia(UploadedFile::fake()->createWithContent('Formulario.csv', $csv))->json('filas');
+
+        // El programa vacío es el del docente; el semestre se lee en número, palabra o romano.
+        $this->assertSame(['nuevo', 'Ana María', 'Ruiz Gómez', 5, '20232085', 'PASANTIA'], [$filas[0]['estado'], $filas[0]['nombres'], $filas[0]['apellidos'], $filas[0]['semestre_actual'], $filas[0]['codigo'], $filas[0]['modalidad_grado']]);
+        $this->assertSame(['omitido', 9], [$filas[1]['estado'], $filas[1]['semestre_actual']]);
+        $this->assertSame(['no_habilitado', 7], [$filas[2]['estado'], $filas[2]['semestre_actual']]);
     }
 
     public function test_rechaza_archivos_sin_estudiantes_o_de_otro_tipo(): void

@@ -27,14 +27,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mailpit:
-        condition: service_started
-
-  mailpit:
-    # Buzón de pruebas: los correos de la app se ven en http://localhost:8025
-    image: axllent/mailpit
-    ports:
-      - "8025:8025"
 
   web:
     image: node:24-alpine

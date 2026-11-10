@@ -89,39 +89,39 @@ export function wireEvidencias(root, refresh) {
     }
   });
 
-  root.querySelectorAll('[data-evrev]').forEach((form) =>
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
+  // Delegado en el contenedor: sirve aunque la tabla se vuelva a dibujar.
+  root.addEventListener('submit', (e) => {
+    const revision = e.target.closest('[data-evrev]');
+    const correccion = e.target.closest('[data-evfix]');
+    if (!revision && !correccion) return;
+    e.preventDefault();
+
+    if (revision) {
       const estado = e.submitter?.value;
-      withBusy(e.submitter, async () => {
+      return withBusy(e.submitter, async () => {
         try {
-          await api.patch(`/evidencias/${form.dataset.evrev}/revision`, {
+          await api.patch(`/evidencias/${revision.dataset.evrev}/revision`, {
             estado,
-            comentario: form.comentario.value.trim() || null,
+            comentario: revision.comentario.value.trim() || null,
           });
           toast(estado === 'APROBADO' ? 'Horas aprobadas.' : 'Semana devuelta. Le avisamos al practicante.');
           refresh();
         } catch (error) {
-          showFieldErrors(form, error.errors) || toast(error.message);
+          showFieldErrors(revision, error.errors) || toast(error.message);
         }
       });
-    }),
-  );
+    }
 
-  root.querySelectorAll('[data-evfix]').forEach((form) =>
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const data = new FormData(form);
-      if (!form.archivo.files.length) data.delete('archivo');
-      withBusy(form.querySelector('[type=submit]'), async () => {
-        try {
-          await api.post(`/evidencias/${form.dataset.evfix}/correccion`, data);
-          toast('Corrección enviada a la empresa.');
-          refresh();
-        } catch (error) {
-          showFieldErrors(form, error.errors) || toast(error.message);
-        }
-      });
-    }),
-  );
+    const data = new FormData(correccion);
+    if (!correccion.archivo.files.length) data.delete('archivo');
+    withBusy(correccion.querySelector('[type=submit]'), async () => {
+      try {
+        await api.post(`/evidencias/${correccion.dataset.evfix}/correccion`, data);
+        toast('Corrección enviada a la empresa.');
+        refresh();
+      } catch (error) {
+        showFieldErrors(correccion, error.errors) || toast(error.message);
+      }
+    });
+  });
 }

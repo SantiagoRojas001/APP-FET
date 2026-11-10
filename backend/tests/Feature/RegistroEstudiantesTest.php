@@ -13,8 +13,9 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * El docente registra a los estudiantes que eligieron pasantía o práctica y
- * su promedio decide si quedan habilitados.
+ * El docente registra, al cargar el listado, a los estudiantes que eligieron
+ * pasantía o práctica con su promedio: el promedio decide si quedan
+ * habilitados (y se registran) o reciben el motivo por correo.
  */
 class RegistroEstudiantesTest extends TestCase
 {
@@ -32,11 +33,6 @@ class RegistroEstudiantesTest extends TestCase
         return $this->postJson('/api/docente/importaciones/confirmacion', ['filas' => [$this->datos($cambios)]]);
     }
 
-    private function idDe(string $correo): int
-    {
-        return Estudiante::whereHas('usuario', fn ($q) => $q->where('correo', $correo))->value('id');
-    }
-
     /** @return array<string, mixed> */
     private function datos(array $cambios = []): array
     {
@@ -48,44 +44,38 @@ class RegistroEstudiantesTest extends TestCase
             'programa_id' => $this->programa()->id,
             'semestre_actual' => 5,
             'modalidad_grado' => 'PASANTIA',
+            'promedio' => 4.5,
             ...$cambios,
         ];
     }
 
-    public function test_el_docente_registra_solo_semestres_habilitados_y_sin_enviar_correo(): void
+    public function test_el_promedio_es_obligatorio_y_solo_se_registran_semestres_habilitados(): void
     {
         $this->como(Rol::Docente);
 
-        $this->registrar(['semestre_actual' => 4])
+        $this->registrar(['promedio' => null])
             ->assertOk()
+            ->assertJsonPath('creados', 0)
+            ->assertJsonPath('errores.0.error', 'Escribe el promedio.');
+        $this->registrar(['semestre_actual' => 4])
             ->assertJsonPath('creados', 0)
             ->assertJsonPath('errores.0.error', fn (string $m) => str_contains($m, '3.º, 5.º, 9.º'));
 
-        $this->registrar()
-            ->assertOk()
-            ->assertJsonPath('creados', 1)
-            ->assertJsonPath('pendientes_de_promedio', 1);
-        $this->getJson('/api/docente/estudiantes')->assertJsonPath('data.0.ciclo.etiqueta', 'Tecnólogo')->assertJsonPath('data.0.promedio', null);
-
+        $this->registrar()->assertOk()->assertJsonPath('creados', 1);
+        $this->getJson('/api/docente/estudiantes')
+            ->assertJsonPath('data.0.ciclo.etiqueta', 'Tecnólogo')
+            ->assertJsonPath('data.0.promedio', 4.5);
         $this->assertDatabaseHas('usuario', ['correo' => 'ana.perez@fet.edu.co', 'rol' => 'ESTUDIANTE']);
-        Notification::assertNothingSent();
-
-        $this->getJson('/api/docente/estudiantes?estado=sin_promedio')->assertJsonCount(1, 'data');
     }
 
     public function test_con_promedio_suficiente_recibe_usuario_y_contrasena_y_debe_cambiarla(): void
     {
         $docente = $this->como(Rol::Docente);
-        $this->registrar()->assertJsonPath('creados', 1);
-        $id = $this->idDe('ana.perez@fet.edu.co');
+        $this->registrar(['promedio' => '4.2'])->assertJsonPath('creados', 1);
+        $estudiante = Estudiante::with('usuario')->sole();
+        $this->assertTrue($estudiante->habilitado);
 
         $password = null;
-        $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => '4,2'])
-            ->assertOk()
-            ->assertJsonPath('habilitado', true);
-        $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => '4,5'])->assertUnprocessable();
-
-        $estudiante = Estudiante::with('usuario')->find($id);
         Notification::assertSentTo($estudiante->usuario, CredencialesAcceso::class, function (CredencialesAcceso $aviso) use ($estudiante, &$password) {
             $correo = implode("\n", $aviso->toMail($estudiante->usuario)->introLines);
             preg_match('/Contraseña: (\S+)/', $correo, $m);
@@ -93,7 +83,7 @@ class RegistroEstudiantesTest extends TestCase
 
             return str_contains($correo, 'ana.perez@fet.edu.co') && $password !== null;
         });
-        $this->assertDatabaseHas('auditoria', ['accion' => 'estudiante.promedio_registrado', 'entidad_id' => $id]);
+        $this->assertDatabaseHas('auditoria', ['accion' => 'estudiante.promedio_registrado', 'entidad_id' => $estudiante->id]);
 
         // Primer ingreso: con la contraseña del correo solo puede cambiarla.
         auth()->forgetGuards();
@@ -118,15 +108,13 @@ class RegistroEstudiantesTest extends TestCase
     {
         Parametro::guardar('promedio_minimo', '4.2');
         $this->como(Rol::Docente);
-        $this->registrar(['codigo' => '20231045'])->assertJsonPath('creados', 1);
-        $id = $this->idDe('ana.perez@fet.edu.co');
 
-        $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => 4.19])
+        $this->registrar(['codigo' => '20231045', 'promedio' => 4.19])
             ->assertOk()
-            ->assertJsonPath('eliminado', true);
+            ->assertJsonPath('creados', 0)
+            ->assertJsonPath('no_habilitados', 1);
 
         $this->assertDatabaseMissing('usuario', ['correo' => 'ana.perez@fet.edu.co']);
-        $this->assertDatabaseMissing('estudiante', ['id' => $id]);
         Notification::assertSentOnDemand(NoHabilitado::class, function (NoHabilitado $aviso, array $canales, object $destino) {
             $correo = implode("\n", $aviso->toMail($destino)->introLines);
 
@@ -149,7 +137,6 @@ class RegistroEstudiantesTest extends TestCase
 
         $otro = $this->estudiante(5);
         $this->getJson('/api/docente/estudiantes')->assertJsonCount(1, 'data');
-        $this->patchJson("/api/docente/estudiantes/{$otro->id}/promedio", ['promedio' => 4.5])->assertForbidden();
         $this->getJson("/api/estudiantes/{$otro->id}")->assertForbidden();
     }
 
@@ -157,10 +144,8 @@ class RegistroEstudiantesTest extends TestCase
     {
         Parametro::guardar('promedio_minimo', '3.8');
         $this->como(Rol::Docente);
-        $this->registrar()->assertJsonPath('creados', 1);
-        $id = $this->idDe('ana.perez@fet.edu.co');
 
-        $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => 3.9])->assertJsonPath('habilitado', true);
+        $this->registrar(['promedio' => 3.9])->assertJsonPath('creados', 1);
     }
 
     public function test_solo_el_docente_registra_estudiantes(): void

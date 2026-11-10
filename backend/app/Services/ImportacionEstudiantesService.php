@@ -27,10 +27,11 @@ use Smalot\PdfParser\Parser as LectorPdf;
  *    que el del docente. Si el listado trae el ciclo y no el semestre, se
  *    toma el semestre habilitado de ese ciclo. No guarda nada: el docente
  *    revisa la vista previa y puede corregir cada fila.
- * 2. `registrar()` crea las cuentas de las filas confirmadas. A quien cursa
- *    un semestre no habilitado o trae un promedio inferior al mínimo no se
- *    le registra: recibe el correo con el motivo. Si una fila trae un
- *    promedio suficiente, se envían de una vez el usuario y la contraseña.
+ * 2. `registrar()` procesa las filas confirmadas, cada una con su promedio
+ *    (si el listado no lo trae, lo escribe el docente en la vista previa).
+ *    Con el promedio mínimo se crea la cuenta y se envían el usuario y la
+ *    contraseña; a quien cursa un semestre no habilitado o no alcanza el
+ *    promedio no se le registra: recibe el correo con el motivo.
  */
 class ImportacionEstudiantesService
 {
@@ -41,20 +42,30 @@ class ImportacionEstudiantesService
 
     /**
      * Encabezados reconocidos en Excel, CSV o tablas de PDF: el campo según
-     * cómo empieza el título de la columna (sin tildes ni mayúsculas).
+     * las palabras del título de la columna (sin tildes ni mayúsculas), en
+     * este orden. Sirven también los títulos en forma de pregunta de los
+     * formularios («Ingrese el semestre al que pertenece»); en Google Forms,
+     * «Nombre de usuario» es el correo de quien respondió.
      */
     private const ENCABEZADOS = [
-        'correo' => ['correo', 'email', 'e mail', 'mail'],
+        'correo' => ['correo', 'email', 'e mail', 'mail', 'nombre de usuario'],
+        'promedio' => ['promedio'],
+        'codigo' => ['codigo'],
+        'documento' => ['documento', 'cedula', 'identificacion', 'c c', 'cc'],
+        'programa' => ['programa', 'carrera'],
+        'modalidad' => ['modalidad', 'opcion de grado'],
+        'semestre' => ['semestre'],
+        'ciclo' => ['ciclo', 'nivel'],
         'apellidos' => ['apellido'],
         'nombres' => ['nombres'],
         'nombre' => ['nombre', 'estudiante', 'alumno'],
-        'programa' => ['programa', 'carrera'],
-        'ciclo' => ['ciclo', 'nivel'],
-        'semestre' => ['semestre'],
-        'modalidad' => ['modalidad', 'opcion'],
-        'promedio' => ['promedio'],
-        'documento' => ['documento', 'cedula', 'identificacion', 'c c', 'cc', 'no documento'],
-        'codigo' => ['codigo'],
+    ];
+
+    /** Semestres escritos con palabras o números romanos. */
+    private const SEMESTRES = [
+        'primer' => 1, 'primero' => 1, 'segundo' => 2, 'tercer' => 3, 'tercero' => 3, 'cuarto' => 4, 'quinto' => 5,
+        'sexto' => 6, 'septimo' => 7, 'setimo' => 7, 'octavo' => 8, 'noveno' => 9, 'decimo' => 10,
+        'i' => 1, 'ii' => 2, 'iii' => 3, 'iv' => 4, 'v' => 5, 'vi' => 6, 'vii' => 7, 'viii' => 8, 'ix' => 9, 'x' => 10,
     ];
 
     /** @var Collection<int, Programa>|null */
@@ -100,11 +111,11 @@ class ImportacionEstudiantesService
      *
      * @param  list<array<string, mixed>>  $filas
      * @param  list<array<string, mixed>>  $noHabilitados
-     * @return array{creados: int, con_correo: int, pendientes_de_promedio: int, no_habilitados: int, errores: list<array{fila: int, correo: string|null, error: string}>}
+     * @return array{creados: int, no_habilitados: int, errores: list<array{fila: int, correo: string|null, error: string}>}
      */
     public function registrar(array $filas, array $noHabilitados, Usuario $docente, RegistroEstudianteService $registro): array
     {
-        $resultado = ['creados' => 0, 'con_correo' => 0, 'pendientes_de_promedio' => 0, 'no_habilitados' => 0, 'errores' => []];
+        $resultado = ['creados' => 0, 'no_habilitados' => 0, 'errores' => []];
 
         foreach ($noHabilitados as $fila) {
             if ($error = $this->notificarNoHabilitado($fila, $registro)) {
@@ -122,13 +133,14 @@ class ImportacionEstudiantesService
                 'programa_id' => ['required', 'integer', 'exists:programa,id'],
                 'semestre_actual' => ['required', 'integer', 'min:1', 'max:12'],
                 'modalidad_grado' => ['required', 'in:'.implode(',', Modalidad::values())],
-                'promedio' => ['nullable', 'numeric', 'min:0', 'max:5'],
+                'promedio' => ['required', 'numeric', 'min:0', 'max:5'],
                 'codigo' => ['nullable', 'string', 'max:20', 'unique:estudiante,codigo'],
                 'documento' => ['nullable', 'string', 'max:20', 'unique:estudiante,documento'],
             ], [
                 'correo.unique' => 'Ya hay una cuenta con este correo.',
                 'programa_id.required' => 'Elige el programa.',
                 'semestre_actual.required' => 'Indica el semestre.',
+                'promedio.required' => 'Escribe el promedio.',
             ]);
 
             if ($validador->fails()) {
@@ -138,7 +150,7 @@ class ImportacionEstudiantesService
             }
 
             $datos = $validador->validated();
-            if (isset($datos['promedio']) && ! $this->elegibilidad->promedioSuficiente((float) $datos['promedio'])) {
+            if (! $this->elegibilidad->promedioSuficiente((float) $datos['promedio'])) {
                 $registro->notificarNoHabilitado($datos['correo'], $datos, NoHabilitado::POR_PROMEDIO);
                 $resultado['no_habilitados']++;
 
@@ -147,14 +159,8 @@ class ImportacionEstudiantesService
 
             try {
                 $estudiante = $registro->registrar(collect($datos)->except('promedio')->all(), $docente);
+                $registro->registrarPromedio($estudiante, (float) $datos['promedio'], $docente);
                 $resultado['creados']++;
-
-                if (isset($datos['promedio'])) {
-                    $registro->registrarPromedio($estudiante, (float) $datos['promedio'], $docente);
-                    $resultado['con_correo']++;
-                } else {
-                    $resultado['pendientes_de_promedio']++;
-                }
             } catch (ReglaNegocioException $e) {
                 $resultado['errores'][] = ['fila' => (int) ($fila['fila'] ?? 0), 'correo' => $fila['correo'] ?? null, 'error' => $e->getMessage()];
             }
@@ -213,7 +219,9 @@ class ImportacionEstudiantesService
             ? [Str::title(trim((string) ($r['nombres'] ?? ''))), Str::title(trim((string) $r['apellidos']))]
             : $this->separarNombre((string) ($r['nombre'] ?? $r['nombres'] ?? ''));
 
-        $programa = $this->programa((string) ($r['programa'] ?? $texto));
+        // Si el listado no dice el programa, es el del docente que lo carga.
+        $programa = $this->programa((string) ($r['programa'] ?? $texto))
+            ?? (blank($r['programa'] ?? null) && $programaDocente ? $this->programas->firstWhere('id', $programaDocente) : null);
         // El ciclo explícito manda; si no viene, se deduce del texto sin el nombre del programa
         // («Técnica Profesional…» no debe leerse como ciclo profesional) y, por último, del programa.
         $sinPrograma = filled($r['programa'] ?? null) ? str_replace($this->normalizar((string) $r['programa']), ' ', $texto) : $texto;
@@ -519,17 +527,17 @@ class ImportacionEstudiantesService
     /** Campo al que corresponde un título de columna, o null si no es un encabezado conocido. */
     private function campoDeEncabezado(string $titulo): ?string
     {
-        $titulo = trim(preg_replace('/[^a-z ]+/', ' ', $this->normalizar($titulo)));
-        if ($titulo === '' || strlen($titulo) > 40) {
+        $titulo = trim(preg_replace('/\s+/', ' ', preg_replace('/[^a-z ]+/', ' ', $this->normalizar($titulo))));
+        if ($titulo === '' || strlen($titulo) > 80) {
             return null;
         }
 
-        foreach (self::ENCABEZADOS as $campo => $inicios) {
-            foreach ($inicios as $inicio) {
+        foreach (self::ENCABEZADOS as $campo => $palabras) {
+            foreach ($palabras as $palabra) {
                 // Palabra completa (o su plural): «Programa académico» sí, «Programación de Software» no.
-                if (preg_match('/^'.preg_quote($inicio, '/').'(s|es)?( |$)/', $titulo)) {
+                if (preg_match('/(^| )'.preg_quote($palabra, '/').'(s|es)?( |$)/', $titulo)) {
                     // «Nombres y apellidos» o «Nombre completo» son el nombre completo.
-                    return $campo === 'nombres' && str_contains($titulo, 'apellido') ? 'nombre' : $campo;
+                    return in_array($campo, ['apellidos', 'nombres'], true) && str_contains($titulo, 'nombre') && str_contains($titulo, 'apellido') ? 'nombre' : $campo;
                 }
             }
         }
@@ -643,18 +651,23 @@ class ImportacionEstudiantesService
         };
     }
 
-    /** Semestre escrito como número suelto (columna) o como «9.º semestre» / «semestre 9» dentro del texto. */
+    /**
+     * Semestre escrito en su columna («9», «9.º», «noveno», «IX», «semestre 9»)
+     * o dentro del texto («9.º semestre», «semestre 9», «noveno semestre»).
+     */
     private function semestre(string $texto, bool $enTexto = false): ?int
     {
         $texto = $this->normalizar($texto);
+        $palabras = implode('|', array_keys(self::SEMESTRES));
         $patron = $enTexto
-            ? '/(?:\bsemestre\s*(\d{1,2})\b|\b(\d{1,2})\s*(?:o|°|º|\.o|\.º)?\s*semestre)/u'
-            : '/^\s*(\d{1,2})/';
+            ? '/(?:\bsemestre\s*(\d{1,2}|'.$palabras.')\b|\b(\d{1,2}|'.$palabras.')\s*(?:o|°|º|\.o|\.º|no|vo|mo)?\s*semestre)/u'
+            : '/^\s*(?:semestre\s*)?(\d{1,2}|'.$palabras.')\b/u';
 
         if (! preg_match($patron, $texto, $m)) {
             return null;
         }
-        $valor = (int) ($m[1] ?: ($m[2] ?? 0));
+        $hallado = $m[1] !== '' ? $m[1] : ($m[2] ?? '');
+        $valor = is_numeric($hallado) ? (int) $hallado : (self::SEMESTRES[$hallado] ?? 0);
 
         return $valor >= 1 && $valor <= 12 ? $valor : null;
     }

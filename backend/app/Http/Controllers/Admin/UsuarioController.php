@@ -110,7 +110,6 @@ class UsuarioController extends Controller
                 'empresas_por_validar' => Empresa::where('estado_validacion', EstadoValidacion::Pendiente)->count(),
                 'convenios_por_aprobar' => Acuerdo::where('estado', EstadoAcuerdo::Pendiente)->count(),
                 'reportes_abiertos' => Reporte::where('estado', '!=', EstadoReporte::Resuelto)->count(),
-                'estudiantes_sin_promedio' => Estudiante::whereNotNull('modalidad_grado')->whereNull('promedio')->count(),
             ],
             'cifras' => [
                 'estudiantes_habilitados' => Estudiante::where('habilitado', true)->where('es_egresado', false)->count(),

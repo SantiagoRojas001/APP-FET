@@ -84,6 +84,9 @@ export async function render() {
   }
 
   if (!session.user) {
+    // Sin sesión (por ejemplo, al volver atrás después de cerrarla) la dirección de una página
+    // interna se cambia por la del ingreso, sin dejar otra entrada en el historial.
+    if (!PUBLIC[path]) history.replaceState(null, '', '#/login');
     const load = PUBLIC[path] ?? PUBLIC['/login'];
     const { default: view } = await load();
     if (id === renderId) view({ root: app, navigate, query: currentQuery() });

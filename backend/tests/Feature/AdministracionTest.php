@@ -44,7 +44,7 @@ class AdministracionTest extends TestCase
             ->postJson("/api/empresa/citas/{$cita->id}/decision", ['aceptar' => true, 'fecha_inicio' => now()->addWeek()->toDateString()])
             ->assertOk();
 
-        $director = Usuario::factory()->rol(Rol::Director)->create(['programa_id' => $cita->estudiante->programa_id]);
+        $director = Usuario::factory()->rol(Rol::Director)->firmante()->create(['programa_id' => $cita->estudiante->programa_id]);
         Sanctum::actingAs($director);
         $this->postJson("/api/director/cartas/{$cita->id}")->assertOk();
 

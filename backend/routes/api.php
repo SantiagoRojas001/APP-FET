@@ -105,7 +105,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('estudiantes', [Docente\EstudianteController::class, 'index']);
             Route::post('importaciones', [Docente\ImportacionController::class, 'vistaPrevia'])->middleware('throttle:20,1');
             Route::post('importaciones/confirmacion', [Docente\ImportacionController::class, 'confirmar']);
-            Route::patch('estudiantes/{estudiante}/promedio', [Docente\EstudianteController::class, 'promedio']);
             Route::get('hojas-vida', [Docente\HojaVidaController::class, 'index']);
             Route::patch('hojas-vida/{estudiante}', [Docente\HojaVidaController::class, 'update']);
             Route::get('vacantes', [Docente\VacanteController::class, 'index']);
@@ -134,6 +133,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('estudiantes', [Director\EstudianteController::class, 'index']);
             Route::get('cartas', [Director\CitaController::class, 'index']);
             Route::post('cartas/{cita}', [Director\CitaController::class, 'presentar'])->whereNumber('cita');
+            Route::get('firma', [Director\FirmaController::class, 'show']);
+            Route::post('firma', [Director\FirmaController::class, 'update'])->middleware('throttle:10,1');
+            Route::get('firma/imagen', [Director\FirmaController::class, 'imagen']);
             Route::get('acuerdos', [AcuerdoController::class, 'index']);
         });
 

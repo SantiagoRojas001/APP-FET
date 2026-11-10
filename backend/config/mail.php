@@ -111,7 +111,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+        // Sin cuenta de envío configurada se usa una dirección por defecto (el correo queda en el log).
+        'address' => env('MAIL_FROM_ADDRESS') ?: 'no-responder@fet.edu.co',
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 

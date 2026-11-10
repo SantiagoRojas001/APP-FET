@@ -54,22 +54,23 @@ const revisionForm = (d) =>
 export function wireDocumentos(root, refresh) {
   wireArchivos(root);
 
-  root.querySelectorAll('[data-review]').forEach((form) =>
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const estado = e.submitter?.value;
-      withBusy(e.submitter, async () => {
-        try {
-          await api.patch(`/documentos/${form.dataset.review}/revision`, {
-            estado_revision: estado,
-            observaciones: form.observaciones.value.trim() || null,
-          });
-          toast('Revisión guardada.');
-          refresh();
-        } catch (error) {
-          showFieldErrors(form, error.errors) || toast(error.message);
-        }
-      });
-    }),
-  );
+  // Delegado en el contenedor: sirve aunque la tabla se vuelva a dibujar.
+  root.addEventListener('submit', (e) => {
+    const form = e.target.closest('[data-review]');
+    if (!form) return;
+    e.preventDefault();
+    const estado = e.submitter?.value;
+    withBusy(e.submitter, async () => {
+      try {
+        await api.patch(`/documentos/${form.dataset.review}/revision`, {
+          estado_revision: estado,
+          observaciones: form.observaciones.value.trim() || null,
+        });
+        toast('Revisión guardada.');
+        refresh();
+      } catch (error) {
+        showFieldErrors(form, error.errors) || toast(error.message);
+      }
+    });
+  });
 }

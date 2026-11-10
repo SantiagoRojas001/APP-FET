@@ -32,7 +32,7 @@ class CartaPresentacionController extends Controller
             : $cita->estado === EstadoCita::Presentado;
         abort_unless($disponible, 404, 'La carta de presentación aún no está disponible.');
 
-        return response($carta->pdf($cita), 200, [
+        return response($carta->pdf($cita, $usuario->rol === Rol::Director ? $usuario : null), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="carta-de-presentacion.pdf"',
         ]);

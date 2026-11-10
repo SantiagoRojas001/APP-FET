@@ -132,6 +132,10 @@ class CitaService
      */
     public function presentar(Cita $cita, Usuario $director): Cita
     {
+        if (! $director->puedeFirmarCartas()) {
+            throw new ReglaNegocioException('Antes de enviar cartas registra tu nombre, tu documento de identidad y tu firma.');
+        }
+
         $cita = DB::transaction(function () use ($cita, $director) {
             $cita = $this->bloquear($cita, EstadoCita::Aceptado);
             $cita->load('estudiante.hojaVida', 'vacante');

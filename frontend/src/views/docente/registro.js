@@ -17,9 +17,11 @@ const ESTADO_FILA = {
 /**
  * Carga del listado de modalidades de grado (PDF, Excel o CSV). La app se
  * queda con quienes eligieron pasantía o práctica en el programa del docente;
- * en la vista previa se corrige lo que haga falta y al confirmar se registran
- * los habilitados. A quien cursa un semestre no habilitado (o trae un promedio
- * inferior al mínimo) no se le registra: recibe un correo con el motivo.
+ * en la vista previa el docente escribe el promedio (si el listado no lo trae)
+ * y corrige lo que haga falta. Al confirmar, quien alcanza el promedio mínimo
+ * queda registrado y recibe su usuario y contraseña; a quien cursa un
+ * semestre no habilitado o no lo alcanza no se le registra: recibe un correo
+ * con el motivo.
  */
 export default async function registroView({ root }) {
   const cat = await api.get('/catalogos');
@@ -65,7 +67,8 @@ export default async function registroView({ root }) {
     <td><input class="input" type="email" name="correo" value="${f.correo ?? ''}" aria-label="Correo" /></td>
     <td><select class="input" name="programa_id" aria-label="Programa">${opcionesPrograma(f.programa_id)}</select>${f.ciclo ? html`<small>Ciclo ${f.ciclo.toLowerCase()}</small>` : ''}</td>
     <td><select class="input" name="semestre_actual" aria-label="Semestre">${opcionesSemestre(f.semestre_actual)}</select></td>
-    <td><select class="input" name="modalidad_grado" aria-label="Modalidad">${cat.modalidades.map((m) => html`<option value="${m.valor}" ${m.valor === f.modalidad_grado ? 'selected' : ''}>${m.etiqueta}</option>`)}</select>${f.promedio !== null ? html`<small>Promedio ${decimal.format(f.promedio)}</small>` : ''}</td>
+    <td><select class="input" name="modalidad_grado" aria-label="Modalidad">${cat.modalidades.map((m) => html`<option value="${m.valor}" ${m.valor === f.modalidad_grado ? 'selected' : ''}>${m.etiqueta}</option>`)}</select></td>
+    <td class="field"><input class="input narrow" name="promedio" inputmode="decimal" placeholder="4,25" value="${f.promedio !== null ? decimal.format(f.promedio) : ''}" aria-label="Promedio" /></td>
     <td>${badge(...ESTADO_FILA[f.estado])}${f.motivo ? html`<small>${f.motivo}</small>` : ''}</td>
   </tr>`;
 
@@ -88,15 +91,15 @@ export default async function registroView({ root }) {
           </div>
           ${resultado
             ? html`<p class="note-box">
-                ${icon('circle-check')} Se registraron ${resultado.creados} estudiantes.
-                ${resultado.con_correo ? `${resultado.con_correo} recibieron su usuario y contraseña. ` : ''}${resultado.pendientes_de_promedio ? `${resultado.pendientes_de_promedio} esperan el promedio. ` : ''}${resultado.no_habilitados ? `${resultado.no_habilitados} recibieron el correo con el motivo por el que no quedan habilitados.` : ''}
+                ${icon('circle-check')} Se registraron ${resultado.creados} estudiantes y recibieron su usuario y contraseña.
+                ${resultado.no_habilitados ? `${resultado.no_habilitados} recibieron el correo con el motivo por el que no quedan habilitados.` : ''}
                 ${resultado.errores.length ? html`<br />No se pudieron procesar ${resultado.errores.length}: ${resultado.errores.map((e) => `fila ${e.fila} (${e.correo ?? 'sin correo'}): ${e.error}`).join('; ')}` : ''}
               </p>`
             : ''}
         </section>
         ${candidatas.length
           ? html`<section class="panel flush"><div class="tbl"><table>
-              <thead><tr><th><span class="fine">Registrar</span></th><th>Estudiante</th><th>Correo</th><th>Programa</th><th>Semestre</th><th>Modalidad</th><th>Estado</th></tr></thead>
+              <thead><tr><th><span class="fine">Registrar</span></th><th>Estudiante</th><th>Correo</th><th>Programa</th><th>Semestre</th><th>Modalidad</th><th>Promedio</th><th>Estado</th></tr></thead>
               <tbody id="candidatas">${candidatas.map(([f, i]) => editable(f, i))}</tbody>
             </table></div></section>`
           : ''}
@@ -163,8 +166,16 @@ export default async function registroView({ root }) {
           programa_id: Number(valor('programa_id')) || null,
           semestre_actual: Number(valor('semestre_actual')) || null,
           modalidad_grado: valor('modalidad_grado'),
+          promedio: valor('promedio').replace(',', '.') || null,
         };
       });
+    // Sin promedio no se puede decidir si queda habilitado.
+    const sinPromedio = [...preview.querySelectorAll('#candidatas tr')].filter((tr) => tr.querySelector('[name=incluir]').checked && !tr.querySelector('[name=promedio]').value.trim());
+    if (sinPromedio.length) {
+      sinPromedio.forEach((tr) => tr.querySelector('[name=promedio]').setAttribute('aria-invalid', 'true'));
+      sinPromedio[0].querySelector('[name=promedio]').focus();
+      return toast('Escribe el promedio de los estudiantes marcados.');
+    }
     const avisos = [...preview.querySelectorAll('#noHabilitados [data-fila]')]
       .filter((l) => l.querySelector('[name=avisar]').checked)
       .map((l) => filas[Number(l.dataset.fila)]);
@@ -176,7 +187,14 @@ export default async function registroView({ root }) {
         const fallidas = new Set(resultado.errores.map((e) => e.fila));
         const listo = (f, lista, estado, motivo) => (lista.some((x) => x.fila === f.fila) && !fallidas.has(f.fila) ? { ...f, estado, motivo } : f);
         // Las filas procesadas salen de la vista previa; las que fallaron quedan para corregirlas.
-        filas = filas.map((f) => listo(listo(f, elegidas, 'registrado', 'Registrado.'), avisos, 'avisado', 'Se le envió el motivo por correo.'));
+        const habilitada = (f) => Number(f.promedio) >= cat.parametros.promedio_minimo;
+        const registradas = elegidas.filter(habilitada);
+        const avisadas = [...avisos, ...elegidas.filter((f) => !habilitada(f))];
+        filas = filas.map((f) => listo(listo(f, registradas, 'registrado', 'Registrado: se le enviaron su usuario y contraseña.'), avisadas, 'avisado', 'No alcanza el promedio o el semestre: se le envió el motivo.'));
+        filas = filas.map((f) => {
+          const editada = elegidas.find((x) => x.fila === f.fila);
+          return editada && fallidas.has(f.fila) ? { ...f, ...editada, promedio: editada.promedio === null ? null : Number(editada.promedio) } : f;
+        });
         drawPreview(resultado);
         toast(`Se registraron ${resultado.creados} estudiantes.`);
       } catch (error) {

@@ -21,7 +21,7 @@ use Laravel\Sanctum\HasApiTokens;
  * Cuenta de acceso de una persona o empresa.
  */
 #[Table('usuario', timestamps: false)]
-#[Fillable(['correo', 'password_hash', 'rol', 'activo', 'tema', 'debe_cambiar_password', 'programa_id', 'tutorial_visto'])]
+#[Fillable(['correo', 'password_hash', 'rol', 'activo', 'tema', 'debe_cambiar_password', 'programa_id', 'tutorial_visto', 'nombre', 'documento', 'firma_url'])]
 #[Hidden(['password_hash'])]
 class Usuario extends Authenticatable
 {
@@ -32,6 +32,9 @@ class Usuario extends Authenticatable
         'debe_cambiar_password' => false,
         'tutorial_visto' => false,
         'programa_id' => null,
+        'nombre' => null,
+        'documento' => null,
+        'firma_url' => null,
     ];
 
     protected $authPasswordName = 'password_hash';
@@ -93,6 +96,12 @@ class Usuario extends Authenticatable
         $delPrograma = (clone $activos)->where('programa_id', $programaId)->get();
 
         return $delPrograma->isNotEmpty() ? $delPrograma : $activos->whereNull('programa_id')->get();
+    }
+
+    /** El director firma las cartas de presentación con su nombre, documento y firma. */
+    public function puedeFirmarCartas(): bool
+    {
+        return filled($this->nombre) && filled($this->documento) && filled($this->firma_url);
     }
 
     /** @return HasOne<Estudiante, $this> */

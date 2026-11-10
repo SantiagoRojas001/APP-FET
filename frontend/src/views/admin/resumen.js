@@ -14,7 +14,6 @@ export default async function resumenView({ root, navigate }) {
     [p.empresas_por_validar, 'Empresas por validar', '/empresas'],
     [p.convenios_por_aprobar, 'Convenios por aprobar', '/convenios'],
     [p.reportes_abiertos, 'Reportes sin resolver', '/reportes'],
-    [p.estudiantes_sin_promedio, 'Estudiantes registrados sin promedio (lo registra su docente)', null],
   ];
 
   mount(
@@ -26,7 +25,7 @@ export default async function resumenView({ root, navigate }) {
           ${pendientes.map(
             ([n, texto, ruta]) => html`<div class="line">
               <div><b class="num">${n}</b><span>${texto}</span></div>
-              ${n === 0 ? badge('ok', 'Al día') : ruta ? html`<button class="btn sm" data-go="${ruta}">Revisar</button>` : badge('warn', 'Pendiente')}
+              ${n === 0 ? badge('ok', 'Al día') : html`<button class="btn sm" data-go="${ruta}">Revisar</button>`}
             </div>`,
           )}
         </div>

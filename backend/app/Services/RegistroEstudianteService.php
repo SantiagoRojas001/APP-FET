@@ -21,9 +21,10 @@ use Illuminate\Support\Str;
  * 1. Se crea la cuenta de quien eligió pasantía o práctica y cursa un
  *    semestre habilitado. Nadie conoce aún su contraseña. A quien cursa otro
  *    semestre no se le registra: solo recibe el correo con el motivo.
- * 2. El docente registra el promedio. Si alcanza el mínimo, se genera una
- *    contraseña y se envía al estudiante, que debe cambiarla al primer
- *    ingreso. Si no, recibe el correo con el motivo y su registro se elimina.
+ * 2. Con el promedio (que trae el listado o escribe el docente al cargarlo):
+ *    si alcanza el mínimo, se genera una contraseña y se envía al
+ *    estudiante, que debe cambiarla al primer ingreso. Si no, recibe el
+ *    correo con el motivo y su registro se elimina.
  */
 class RegistroEstudianteService
 {

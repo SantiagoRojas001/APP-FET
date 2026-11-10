@@ -37,7 +37,7 @@ class HojaVidaService
             // La firma es obligatoria: sin ella la hoja de vida no se puede enviar a revisión.
             ['seccion' => 'Firma', 'completa' => filled($hoja?->firma_url)],
             ['seccion' => 'Contacto de emergencia', 'completa' => filled($hoja?->contacto_emergencia_nombre) && filled($hoja?->contacto_emergencia_telefono)],
-            ['seccion' => 'Referencias', 'completa' => $referencias->contains('tipo', TipoReferencia::Familiar) && $referencias->contains('tipo', TipoReferencia::Personal)],
+            ['seccion' => 'Referencias (una familiar y una personal)', 'completa' => $referencias->contains('tipo', TipoReferencia::Familiar) && $referencias->contains('tipo', TipoReferencia::Personal)],
             ['seccion' => 'Perfil profesional', 'completa' => filled($hoja?->perfil_profesional)],
             ['seccion' => 'Competencias', 'completa' => $estudiante->competencias->isNotEmpty()],
             ['seccion' => 'Repositorio de proyectos', 'completa' => $estudiante->proyectos->isNotEmpty()],

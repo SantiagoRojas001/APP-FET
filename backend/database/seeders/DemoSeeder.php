@@ -62,7 +62,13 @@ class DemoSeeder extends Seeder
         $docente = $this->usuario('p.vargas@fet.edu.co', Rol::Docente);
         $docente->update(['programa_id' => $software]);
         $director = $this->usuario('direccion.software@fet.edu.co', Rol::Director);
-        $director->update(['programa_id' => $software]);
+        // El director firma las cartas de presentación con su nombre, documento y firma.
+        $director->update([
+            'programa_id' => $software,
+            'nombre' => 'Marta Liliana Díaz',
+            'documento' => '36.184.552',
+            'firma_url' => $this->firmaDeEjemplo('firmas-directores/demo.png', 7),
+        ]);
 
         $empresas = $this->empresas();
         $this->acuerdos($empresas);
@@ -109,7 +115,7 @@ class DemoSeeder extends Seeder
     }
 
     /** Trazo de ejemplo como el que se dibuja en la app: PNG transparente con tinta oscura. */
-    private function firmaDeEjemplo(Estudiante $estudiante): string
+    private function firmaDeEjemplo(string $ruta, int $fase): string
     {
         $imagen = imagecreatetruecolor(1200, 400);
         imagesavealpha($imagen, true);
@@ -118,14 +124,12 @@ class DemoSeeder extends Seeder
         imagealphablending($imagen, true);
         imagesetthickness($imagen, 5);
         $tinta = imagecolorallocate($imagen, 0x1A, 0x1D, 0x24);
-        $fase = $estudiante->id;
         for ($x = 120; $x < 1040; $x += 12) {
             $y = fn (int $x) => 200 + (int) (90 * sin(($x + $fase * 40) / 55) * cos($x / 230));
             imageline($imagen, $x, $y($x), $x + 12, $y($x + 12), $tinta);
         }
         ob_start();
         imagepng($imagen);
-        $ruta = "firmas/demo-{$estudiante->id}.png";
         Storage::disk('local')->put($ruta, (string) ob_get_clean());
 
         return $ruta;
@@ -194,7 +198,7 @@ class DemoSeeder extends Seeder
     {
         $is = Programa::where('nombre', 'Ingeniería de Software')->value('id');
 
-        // alias, programa, código, nombres, apellidos, semestre, promedio (null: sin registrar), modalidad, estado de la hoja de vida
+        // alias, programa, código, nombres, apellidos, semestre, promedio, modalidad, estado de la hoja de vida
         $datos = [
             'mateo' => ['mateo.suarez', $is, '20211130', 'Mateo', 'Suárez', 9, 4.6, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
             'julian' => ['julian.castro', $is, '20252018', 'Julián', 'Castro', 3, 4.3, Modalidad::Pasantia, EstadoHojaVida::Borrador],
@@ -203,7 +207,7 @@ class DemoSeeder extends Seeder
             'paula' => ['paula.ortiz', $is, '20241033', 'Paula', 'Ortiz', 5, 4.3, Modalidad::Pasantia, EstadoHojaVida::ConObservaciones],
             'andres' => ['andres.rojas', $is, '20231190', 'Andrés', 'Rojas', 6, 4.5, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
             'valentina' => ['valentina.torres', $is, '20201055', 'Valentina', 'Torres', 10, 4.8, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
-            'camila' => ['camila.perez', $is, '20261004', 'Camila', 'Pérez', 3, null, Modalidad::Practica, EstadoHojaVida::Borrador],
+            'camila' => ['camila.perez', $is, '20261004', 'Camila', 'Pérez', 3, 4.3, Modalidad::Practica, EstadoHojaVida::Borrador],
         ];
 
         $competencias = Competencia::pluck('id', 'nombre');
@@ -211,15 +215,14 @@ class DemoSeeder extends Seeder
         return collect($datos)->map(function (array $d, string $clave) use ($competencias, $docente) {
             [$alias, $programa, $codigo, $nombres, $apellidos, $semestre, $promedio, $modalidad, $estadoHoja] = $d;
             $usuario = $this->usuario("{$alias}@fet.edu.co", Rol::Estudiante);
-            $habilitado = $promedio === null ? null : true;
             // Julián aún debe cambiar su contraseña inicial.
             $usuario->update(['debe_cambiar_password' => $clave === 'julian']);
 
             $estudiante = Estudiante::firstOrCreate(['usuario_id' => $usuario->id], [
                 'modalidad_grado' => $modalidad,
                 'promedio' => $promedio,
-                'habilitado' => $habilitado,
-                'resultado_enviado_en' => $promedio === null ? null : now()->subMonths(3),
+                'habilitado' => true,
+                'resultado_enviado_en' => now()->subMonths(3),
                 'registrado_por' => $docente->id,
                 'programa_id' => $programa,
                 'codigo' => $codigo,
@@ -279,7 +282,7 @@ class DemoSeeder extends Seeder
             'contacto_emergencia_nombre' => $avanzado ? "Familiar de {$estudiante->nombres}" : null,
             'contacto_emergencia_telefono' => $avanzado ? '3201234567' : null,
             // Quien ya envió su hoja de vida a revisión la firmó (la firma es obligatoria).
-            'firma_url' => $estado === EstadoHojaVida::Borrador ? null : $this->firmaDeEjemplo($estudiante),
+            'firma_url' => $estado === EstadoHojaVida::Borrador ? null : $this->firmaDeEjemplo("firmas/demo-{$estudiante->id}.png", $estudiante->id),
         ]);
 
         if (! $avanzado) {

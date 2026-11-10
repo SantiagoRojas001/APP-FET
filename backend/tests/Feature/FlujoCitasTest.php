@@ -115,6 +115,12 @@ class FlujoCitasTest extends TestCase
         Sanctum::actingAs($director);
         $this->getJson('/api/director/cartas')->assertJsonCount(1);
         $this->get("/api/citas/{$id}/carta-presentacion.pdf")->assertOk()->assertHeader('content-type', 'application/pdf');
+        // La carta la firma el director: sin su nombre, documento y firma no se envía.
+        $this->postJson("/api/director/cartas/{$id}")->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'firma'));
+        $this->post('/api/director/firma', ['nombre' => 'Marta Díaz', 'documento' => '36.123.456', 'firma' => $this->firmaPng()], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('completa', true);
+        $this->get('/api/director/firma/imagen')->assertOk();
         $this->postJson("/api/director/cartas/{$id}")->assertOk()->assertJsonPath('estado.valor', 'PRESENTADO');
 
         $vinculacion = Vinculacion::sole();

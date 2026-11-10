@@ -29,6 +29,12 @@ class UsuarioFactory extends Factory
         return $this->state(['rol' => $rol]);
     }
 
+    /** Director con los datos con los que firma las cartas de presentación. */
+    public function firmante(): static
+    {
+        return $this->state(['nombre' => fake()->name(), 'documento' => (string) fake()->numberBetween(10000000, 1999999999), 'firma_url' => 'firmas-directores/prueba.png']);
+    }
+
     public function inactivo(): static
     {
         return $this->state(['activo' => false]);

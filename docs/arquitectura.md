@@ -49,8 +49,8 @@ desde el perfil). Las páginas no llevan textos descriptivos.
 2. **Docente**: pertenece a un programa (sin programa asignado, atiende a todos) y solo trabaja con
    sus estudiantes. En «Cargar listado» sube el listado de modalidades de grado (PDF, Excel o CSV):
    la app filtra a quienes eligieron pasantía o práctica en su programa y el docente confirma la
-   vista previa. En «Estudiantes» registra el promedio, que dispara el correo con el resultado (si
-   el listado trae el promedio, el correo sale al confirmar). Revisa las hojas de vida: las aprueba (solo entonces las ven las empresas) o
+   vista previa con el promedio de cada uno (si el listado no lo trae, lo escribe ahí): al
+   confirmar sale el correo con el resultado. «Estudiantes» es solo de consulta. Revisa las hojas de vida: las aprueba (solo entonces las ven las empresas) o
    las devuelve con recomendaciones; quien la aprueba queda como tutor si el estudiante empieza la
    práctica. Ve las vacantes de las empresas y les recomienda estudiantes. Hace el seguimiento de
    las vinculaciones, revisa los documentos, evalúa al practicante y puede finalizar una práctica
@@ -59,12 +59,14 @@ desde el perfil). Las páginas no llevan textos descriptivos.
    vida aprobadas por los docentes (primero las que un docente le recomendó) y asigna citas. Según
    cada cita acepta al estudiante (con la fecha de inicio) o lo rechaza, y recibe la carta de
    presentación del director. Publica vacantes, que solo ven los docentes. Durante la práctica
-   aprueba las horas semanales con acceso a todo lo que envió el practicante (soportes, documentos
-   y hoja de vida) y, al final, lo evalúa: con esa evaluación la práctica culmina. Puede registrarse sola en `/empresasRegistro` y espera la validación de la FET.
+   aprueba las horas semanales con acceso a todo lo que envió el practicante: en Mis practicantes
+   cada uno se despliega con sus semanas (con soporte) y sus entregas, con vista previa y descarga,
+   y su hoja de vida. Al final lo evalúa: con esa evaluación la práctica culmina. Puede registrarse sola en `/empresasRegistro` y espera la validación de la FET.
 4. **Director de programa**: consulta los convenios de las empresas (existentes y pendientes, sin
    aprobarlos), ve los estudiantes de su programa con su ciclo académico y si cursan pasantía,
    práctica o aún no, y envía la carta de presentación de los estudiantes que una empresa aceptó:
-   con la carta empieza la práctica.
+   con la carta empieza la práctica. La carta lleva su nombre, su documento y su firma dibujada
+   (los registra una vez en Cartas de presentación; sin ellos no puede enviarlas).
 5. **Administrador**: crea las cuentas de docentes, directores y administradores y asigna su
    programa, corrige los datos de los estudiantes, valida empresas, aprueba o rechaza sus convenios
    y define los parámetros generales (promedio mínimo y, por ciclo, semestres habilitados y horas
@@ -79,21 +81,24 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
 
 - **Carga del listado de modalidades** (`ImportacionEstudiantesService`): lee PDF (reconstruye la
   tabla con la posición de cada texto; si no hay tabla, arma un registro por correo), Excel o CSV.
-  Reconoce nombre, correo, programa (por sus palabras propias, en cualquier ciclo: «Tecnología en
+  Reconoce los encabezados por sus palabras, también en forma de pregunta (formularios de Google:
+  «Ingrese el semestre al que pertenece»; «Nombre de usuario» es el correo). Reconoce nombre,
+  correo, programa (si viene vacío, el del docente; si no, por sus palabras propias, en cualquier ciclo: «Tecnología en
   Desarrollo de Software» es Ingeniería de Software), ciclo, modalidad y, si vienen, semestre,
-  promedio, documento y código. Ignora a quien no eligió pasantía ni práctica, es de otro programa
+  promedio, documento y código; el semestre puede venir en número, palabra o romano. Ignora a quien no eligió pasantía ni práctica, es de otro programa
   que el del docente o ya tiene cuenta; si el listado trae el ciclo y no el semestre, toma el
   semestre habilitado del ciclo (técnico 3.º, tecnólogo 5.º, profesional 9.º). Marca como «no
   habilitado» a quien cursa un semestre no habilitado o trae un promedio inferior al mínimo. La
-  vista previa no guarda nada; al confirmar se crean las cuentas de los habilitados y los no
-  habilitados reciben el correo con el motivo, sin registrarse.
+  vista previa no guarda nada. Al confirmar, cada fila lleva su promedio (obligatorio): se crean
+  las cuentas de los habilitados y los no habilitados reciben el correo con el motivo, sin
+  registrarse.
 - **Registro y habilitación** (`RegistroEstudianteService`, `ElegibilidadService`): solo se
   guarda a quien queda habilitado. Se registran quienes eligieron pasantía o práctica, son del
-  programa del docente y cursan un semestre habilitado (3.º, 5.º y 9.º por defecto). Registrar no
-  envía correo. Al registrar el promedio (una sola vez): con el promedio mínimo (4,2 por defecto)
+  programa del docente y cursan un semestre habilitado (3.º, 5.º y 9.º por defecto), con su
+  promedio: con el promedio mínimo (4,2 por defecto)
   el estudiante queda habilitado, se le genera una contraseña y la recibe por correo
   (`CredencialesAcceso`); si no, recibe el correo con su nombre, código y el motivo
-  (`NoHabilitado`, a la dirección del listado) y su registro se elimina. Los parámetros los define
+  (`NoHabilitado`, a la dirección del listado) y no se registra. Los parámetros los define
   la administración (tabla `parametro`).
 - **Primer ingreso**: la cuenta con contraseña inicial (`usuario.debe_cambiar_password`) solo puede
   cambiarla (`POST /api/auth/primer-ingreso`, middleware `primer-ingreso`) y aceptar la política.
@@ -111,7 +116,8 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
   él; el estudiante recibe la empresa, la dirección, la fecha y la hora (`CitaAsignada`). Después
   de la cita la empresa acepta (con la fecha de inicio) o rechaza. Si acepta, se avisa al director
   del programa (o a la administración si no hay director), que envía la carta de presentación
-  (`CartaPresentacion`, adjunta al correo de la empresa): se crea la vinculación con el docente
+  (`CartaPresentacion`, adjunta al correo de la empresa, con el nombre, el documento y la firma del
+  director; también el documento y el código del estudiante si se conocen): se crea la vinculación con el docente
   que aprobó la hoja de vida como tutor, se avisa al estudiante, su hoja de vida se deshabilita y sus demás citas abiertas se cancelan. Las decisiones bloquean la fila
   (`SELECT … FOR UPDATE`).
 - **Recomendaciones** (`RecomendacionService`): un docente recomienda estudiantes disponibles
@@ -227,13 +233,14 @@ Todas las respuestas son JSON. Los enums se envían como `{ "valor": "APROBADA",
 | `POST /api/estudiante/hoja-vida/envio` | Estudiante | Envía la hoja de vida a revisión docente |
 | `GET /api/estudiante/citas` · `/vinculaciones` | Estudiante | Empresas interesadas (citas) y prácticas propias |
 | `POST /api/docente/importaciones` · `…/confirmacion` | Docente | Vista previa del listado de modalidades; crea las cuentas y avisa a los no habilitados |
-| `GET /api/docente/estudiantes` · `PATCH …/{id}/promedio` | Docente | Estudiantes de su programa y registro del promedio (envía el resultado; si no alcanza, elimina el registro) |
+| `GET /api/docente/estudiantes` | Docente | Estudiantes de su programa (consulta) |
 | `GET /api/docente/hojas-vida` · `PATCH …/{estudiante}` | Docente | Revisar hojas de vida: aprobar o devolver con recomendaciones |
 | `GET /api/docente/vacantes` · `POST/DELETE …/{id}/recomendaciones` | Docente | Vacantes y recomendaciones |
 | `GET /api/empresa/hojas-vida` | Empresa | Hojas de vida aprobadas, recomendadas primero |
 | `GET/POST /api/empresa/citas` · `POST …/{id}/cancelacion` · `…/{id}/decision` | Empresa | Asignar y cancelar citas; aceptar o rechazar al estudiante |
 | `GET/POST /api/empresa/acuerdos` | Empresa | Convenio con la FET |
 | `GET /api/director/estudiantes` · `/acuerdos` · `GET/POST /cartas` | Director | Estudiantes del programa, convenios y cartas de presentación |
+| `GET/POST /api/director/firma` · `GET …/firma/imagen` | Director | Nombre, documento y firma con los que firma las cartas |
 | `GET /api/citas/{id}/carta-presentacion.pdf` · `/api/acuerdos/{id}/archivo` | Según permisos | Carta de presentación y PDF del convenio |
 | `GET/PATCH /api/docente/vinculaciones` | Docente | Listar (por estado y periodo, p. ej. `periodo=2026-2`) y asignarse como tutor |
 | `GET/POST/PATCH /api/empresa/vacantes` | Empresa | Vacantes propias |
@@ -254,7 +261,8 @@ llaves. Se agregaron:
 1. **Sin postulaciones ni reglas de semestre mínimo**: las tablas `postulacion` y
    `regla_elegibilidad` se eliminaron; las reemplazan `cita` y `parametro`.
 2. **`usuario.debe_cambiar_password`, `usuario.programa_id`** (programa del docente o del
-   director) y **`usuario.tutorial_visto`** (recorrido guiado del primer ingreso).
+   director), **`usuario.tutorial_visto`** (recorrido guiado del primer ingreso) y
+   **`usuario.nombre`, `documento` y `firma_url`** (con los que el director firma las cartas).
 3. **Sin contratación directa**: el modelo original contemplaba ofertas y vinculaciones por
    contratación directa. Se eliminó esa modalidad; solo hay pasantía y práctica profesional.
 4. **`usuario.tema`** (`varchar(10)`, por defecto `system`): tema visual de cada cuenta, para que

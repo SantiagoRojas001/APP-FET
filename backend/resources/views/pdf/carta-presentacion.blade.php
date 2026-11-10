@@ -21,6 +21,7 @@
     td.k { width: 38%; font-weight: bold; }
     .firma { margin-top: 16mm; page-break-inside: avoid; }
     .firma .linea { width: 95mm; border-top: 1px solid #15171C; padding-top: 1.5mm; }
+    .firma img { display: block; width: 60mm; margin-bottom: 1mm; }
 </style>
 </head>
 <body>
@@ -40,6 +41,12 @@
 
 <table>
     <tr><td class="k">Estudiante</td><td>{{ $e->nombre_completo }}</td></tr>
+    @if ($e->documento)
+        <tr><td class="k">Documento de identidad</td><td>{{ $e->documento }}</td></tr>
+    @endif
+    @if ($e->codigo)
+        <tr><td class="k">Código estudiantil</td><td>{{ $e->codigo }}</td></tr>
+    @endif
     <tr><td class="k">Programa y semestre</td><td>{{ $e->programa->nombre }}, {{ $e->semestre_actual }}.º semestre</td></tr>
     <tr><td class="k">Modalidad</td><td>{{ ucfirst($modalidad) }}</td></tr>
     @if ($cita->vacante)
@@ -56,9 +63,14 @@
 </p>
 
 <div class="firma">
+    @if ($firma)
+        <img src="{{ $firma }}" alt="Firma">
+    @endif
     <div class="linea">
+        <b>{{ $firmante?->nombre ?? 'Director(a) de programa' }}</b><br>
+        @if ($firmante?->documento)C.C. {{ $firmante->documento }}<br>@endif
         Director(a) de programa · {{ $e->programa->nombre }}<br>
-        {{ $cita->director?->correo }}<br>
+        {{ $firmante?->correo }}<br>
         Fundación Escuela Tecnológica de Neiva
     </div>
 </div>

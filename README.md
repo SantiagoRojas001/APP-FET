@@ -42,7 +42,6 @@ Abre **http://localhost:5173**.
 | --- | --- |
 | Aplicación web | http://localhost:5173 |
 | API | http://localhost:8000/api |
-| Correos de prueba (Mailpit) | http://localhost:8025 |
 | PostgreSQL (pgAdmin, DBeaver…) | `localhost:5433`, base `app_fet`, usuario y clave `app_fet` |
 
 Para apagar todo: `docker compose down` (los datos se conservan en un volumen).
@@ -60,9 +59,10 @@ La IP puede cambiar al reconectarte al Wi-Fi; si deja de abrir, consúltala de n
 ### Recuperar contraseña
 
 En la pantalla de ingreso, **¿Olvidaste tu contraseña?** envía un enlace al correo de la cuenta.
-En desarrollo ningún correo sale a internet: todos llegan a Mailpit (http://localhost:8025), donde
-puedes abrir el enlace. En producción se configura un servidor SMTP real en `backend/.env`
-(`MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`) y `FRONTEND_URL` con el dominio público.
+Los correos son reales: salen por el SMTP de Google Workspace con la cuenta institucional
+configurada en `backend/.env` (`MAIL_USERNAME` y una contraseña de aplicación en `MAIL_PASSWORD`).
+Si el SMTP falla o no está configurado, el correo queda en `backend/storage/logs/laravel.log`. En
+producción, además, `FRONTEND_URL` lleva el dominio público.
 
 ### Vista previa de GitHub
 
@@ -83,11 +83,11 @@ Todas usan la contraseña `demo1234`. Solo existen fuera de producción.
 | Estudiante | daniel.gomez@fet.edu.co | Hoja de vida en revisión docente |
 | Estudiante | paula.ortiz@fet.edu.co | Hoja de vida devuelta con recomendaciones |
 | Estudiante | sofia.ramirez@fet.edu.co | Aceptada por Agroandina, espera la carta de presentación del director |
-| Estudiante | camila.perez@fet.edu.co | Registrada sin promedio: aún no recibe su correo |
+| Estudiante | camila.perez@fet.edu.co | Técnica, hoja de vida en borrador |
 | Estudiante | andres.rojas@fet.edu.co | Pasantía activa: a 8 horas de completar, con una semana por aprobar y 3 reportes |
 | Estudiante | valentina.torres@fet.edu.co | Pasantía con las horas cumplidas, esperando la evaluación de la empresa |
-| Docente | p.vargas@fet.edu.co | Ingeniería de Software: carga el listado, registra promedios, revisa hojas de vida y recomienda |
-| Director de programa | direccion.software@fet.edu.co | Ingeniería de Software: estudiantes, convenios y cartas de presentación |
+| Docente | p.vargas@fet.edu.co | Ingeniería de Software: carga el listado con los promedios, revisa hojas de vida y recomienda |
+| Director de programa | direccion.software@fet.edu.co | Ingeniería de Software: estudiantes, convenios y cartas de presentación (ya tiene su firma registrada) |
 | Empresa | talento@nododigital.co | Convenio vigente y renovación pendiente; practicante: Andrés |
 | Empresa | ti@clinicasangabriel.co | Puede evaluar la pasantía de Valentina |
 | Empresa | rrhh@agrosur.co | Pendiente de validación (no puede ingresar) |

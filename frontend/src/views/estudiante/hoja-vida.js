@@ -113,7 +113,8 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     referencias: {
       titulo: '5. Referencias (al menos una familiar y una personal)',
       item: 'Referencia',
-      nuevo: () => ({ tipo: 'FAMILIAR' }),
+      // La nueva referencia es del tipo que falta: el formato pide una familiar y una personal.
+      nuevo: () => ({ tipo: draft.referencias.some((x) => x.tipo === 'FAMILIAR') ? 'PERSONAL' : 'FAMILIAR' }),
       campos: [
         ['tipo', 'Tipo', 'select', enumOpciones(cat.tipos_referencia)],
         ['nombre', 'Nombre completo'],
@@ -292,7 +293,27 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
       const el = form.querySelector(`[data-list="${lista}"]`);
       mount(el, draft[lista].length ? draft[lista].map(item(lista)) : html`<p class="fine">No registra.</p>`);
     }
+    avisoReferencias();
   }
+
+  /** Avisa qué tipo de referencia falta, antes de guardar. */
+  function avisoReferencias() {
+    const tipos = new Set(draft.referencias.map((x) => x.tipo));
+    const faltan = [['FAMILIAR', 'una familiar'], ['PERSONAL', 'una personal']].filter(([t]) => !tipos.has(t)).map(([, l]) => l);
+    form.querySelector('[data-ref-aviso]')?.remove();
+    if (!faltan.length) return;
+    const aviso = document.createElement('p');
+    aviso.className = 'note-box';
+    aviso.dataset.refAviso = '';
+    aviso.textContent = `Te falta ${faltan.join(' y ')} referencia${faltan.length > 1 ? 's' : ''}. Cambia el tipo de una existente o agrega otra.`;
+    form.querySelector('[data-list="referencias"]').after(aviso);
+  }
+
+  form.addEventListener('change', (e) => {
+    if (!e.target.name?.startsWith('referencias.')) return;
+    syncDraft();
+    avisoReferencias();
+  });
 
   form.addEventListener('click', (e) => {
     const add = e.target.closest('[data-add]');
