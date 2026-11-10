@@ -35,6 +35,8 @@ export default defineConfig({
   plugins: [mediapipeWasm()],
   server: {
     port: 5173,
+    // Acceso desde otra red con el túnel temporal de Cloudflare.
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY ?? 'http://localhost:8000',
