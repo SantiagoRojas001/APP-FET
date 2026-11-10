@@ -14,7 +14,8 @@ class VinculacionPolicy
     public function view(Usuario $usuario, Vinculacion $vinculacion): bool
     {
         return match ($usuario->rol) {
-            Rol::Admin, Rol::Docente => true,
+            Rol::Admin => true,
+            Rol::Docente => $usuario->programa_id === null || $usuario->programa_id === $vinculacion->estudiante()->value('programa_id'),
             Rol::Director => $usuario->programa_id !== null && $usuario->programa_id === $vinculacion->estudiante()->value('programa_id'),
             Rol::Estudiante => $usuario->loadMissing('estudiante')->estudiante?->id === $vinculacion->estudiante_id,
             Rol::Empresa => $usuario->loadMissing('empresa')->empresa?->id === $vinculacion->empresa_id,

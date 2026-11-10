@@ -16,7 +16,7 @@ export default async function vinculacionesDocenteView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Prácticas', 'Avance de horas, documentos y reportes de cada práctica.')}
+    html`${pageHeader('Prácticas')}
       <div class="toolbar">
         <div class="seg" role="group" aria-label="Filtrar por estado">
           ${ESTADOS.map(([v, l]) => html`<button data-estado="${v}" aria-pressed="${filters.estado === v}">${l}</button>`)}

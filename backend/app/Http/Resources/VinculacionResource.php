@@ -25,12 +25,13 @@ class VinculacionResource extends Recurso
             'fecha_fin' => $this->fecha_fin?->toDateString(),
             'reconocida_como_practica' => $this->reconocida_como_practica,
             'observacion_final' => $this->observacion_final,
-            'periodo' => $this->whenLoaded('periodo', fn () => $this->periodo?->nombre),
+            'periodo' => $this->periodo(),
+            'ciclo' => $this->enum($this->ciclo()),
             'horas' => $this->when(
                 array_key_exists('horas_aprobadas', $this->resource->getAttributes()) && $this->relationLoaded('estudiante'),
                 fn () => [
                     'aprobadas' => (float) $this->horas_aprobadas,
-                    'requeridas' => $this->estudiante->programa->horas_requeridas,
+                    'requeridas' => $this->horasRequeridas(),
                     'cumplidas_en' => $this->horas_cumplidas_en?->toIso8601String(),
                     'semanas_por_revisar' => (int) $this->evidencias_por_revisar,
                 ],
@@ -46,6 +47,7 @@ class VinculacionResource extends Recurso
                     : null,
             ]),
             'puede' => $this->when($usuario !== null, fn () => [
+                'subir_documento' => $usuario->can('subirDocumento', $this->resource),
                 'registrar_evidencia' => $usuario->can('registrarEvidencia', $this->resource),
                 'revisar_evidencias' => $usuario->can('revisarEvidencias', $this->resource),
                 'revisar_documentos' => $usuario->can('revisarDocumentos', $this->resource),

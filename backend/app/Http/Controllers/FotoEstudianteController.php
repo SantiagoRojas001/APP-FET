@@ -12,16 +12,23 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Foto de la hoja de vida. Se guarda en el disco privado: la ve el propio
- * estudiante y quien consulta perfiles (empresas, docentes y administración).
+ * Foto de la hoja de vida. La app comprueba que tenga un rostro y la recorta
+ * en formato documento (vertical, 4:5) antes de subirla; aquí se exige ese
+ * formato. Se guarda en el disco privado: la ve el propio estudiante y quien
+ * consulta perfiles (empresas, docentes y administración).
  */
 class FotoEstudianteController extends Controller
 {
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:'.config('fet.hoja_vida.foto_max_kb'), 'dimensions:min_width=200,min_height=200'],
-        ], ['foto.dimensions' => 'La foto debe medir al menos 200 × 200 píxeles.']);
+            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:'.config('fet.hoja_vida.foto_max_kb'), 'dimensions:min_width=240,min_height=300'],
+        ], ['foto.dimensions' => 'La foto debe medir al menos 240 × 300 píxeles.']);
+
+        [$ancho, $alto] = getimagesize($request->file('foto')->getRealPath()) ?: [1, 0];
+        if ($alto / $ancho < 1.15 || $alto / $ancho > 1.4) {
+            throw new ReglaNegocioException('La foto debe ser vertical, tipo documento. Súbela desde tu hoja de vida para recortarla.');
+        }
 
         $estudiante = $request->user()->estudiante()->firstOrFail();
 

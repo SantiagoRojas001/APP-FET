@@ -48,7 +48,7 @@ export default async function reportarView({ root, refresh }) {
 
   mount(
     root,
-    html`${pageHeader('Reportar un problema', 'Cuéntale a la coordinación de prácticas qué pasó. Te avisaremos cuando lo atiendan.')}
+    html`${pageHeader('Reportar un problema')}
       <section class="panel">
         <form id="repForm" class="form-grid" novalidate>
           <div class="field">

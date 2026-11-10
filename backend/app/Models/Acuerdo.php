@@ -4,7 +4,9 @@ namespace App\Models;
 
 use App\Enums\EstadoAcuerdo;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -36,6 +38,15 @@ class Acuerdo extends Model
         return $this->estado === EstadoAcuerdo::Aprobado
             && $this->vigencia_inicio->lte(today())
             && $this->vigencia_fin->gte(today());
+    }
+
+    /** @param  Builder<self>  $query */
+    #[Scope]
+    protected function vigentes(Builder $query): void
+    {
+        $query->where('estado', EstadoAcuerdo::Aprobado)
+            ->whereDate('vigencia_inicio', '<=', today())
+            ->whereDate('vigencia_fin', '>=', today());
     }
 
     /** @return BelongsTo<Empresa, $this> */

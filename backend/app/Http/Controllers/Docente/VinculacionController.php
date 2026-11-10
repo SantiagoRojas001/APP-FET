@@ -24,14 +24,15 @@ class VinculacionController extends Controller
     {
         $filtros = $request->validate([
             'estado' => ['nullable', Rule::enum(EstadoVinculacion::class)],
-            'periodo_id' => ['nullable', 'integer'],
+            'periodo' => ['nullable', 'string', 'regex:/^20\d{2}-[12]$/'],
             'mias' => ['nullable', 'boolean'],
         ]);
 
         $vinculaciones = Vinculacion::query()
             ->conSeguimiento()
+            ->whereHas('estudiante', fn ($q) => $q->delPrograma($request->user()->programaAsignado()))
             ->when($filtros['estado'] ?? null, fn ($q, string $estado) => $q->where('estado', $estado))
-            ->when($filtros['periodo_id'] ?? null, fn ($q, int $periodo) => $q->where('periodo_id', $periodo))
+            ->when($filtros['periodo'] ?? null, fn ($q, string $periodo) => $q->delPeriodo($periodo))
             ->when($request->boolean('mias'), fn ($q) => $q->where('tutor_id', $request->user()->id))
             ->latest('fecha_inicio')
             ->get();

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Table('hoja_vida', timestamps: false)]
 #[Fillable([
-    'estudiante_id', 'perfil_profesional', 'actualizado_en', 'foto_url', 'fecha_nacimiento', 'lugar_nacimiento',
+    'estudiante_id', 'perfil_profesional', 'actualizado_en', 'foto_url', 'firma_url', 'fecha_nacimiento', 'lugar_nacimiento',
     'estado_civil', 'lugar_residencia', 'direccion', 'rh', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
     'estado', 'observaciones', 'enviada_en', 'revisada_por', 'revisada_en',
 ])]

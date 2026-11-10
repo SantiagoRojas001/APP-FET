@@ -34,8 +34,8 @@
 
 <p>
     Reciban un cordial saludo. La Fundación Escuela Tecnológica de Neiva «Jesús Oviedo Pérez» presenta a
-    <b>{{ $e->nombre_completo }}</b>, estudiante de {{ $e->programa->nombre }}, para realizar su {{ $modalidad }}
-    en su organización, de acuerdo con el proceso de selección que adelantaron y el acuerdo vigente con la institución.
+    <b>{{ $e->nombre_completo }}</b>, estudiante de {{ $e->programa->nombre }} (ciclo {{ mb_strtolower($e->ciclo()->label()) }}), para realizar su {{ $modalidad }}
+    en su organización, de acuerdo con el proceso de selección que adelantaron y el convenio vigente con la institución.
 </p>
 
 <table>
@@ -46,7 +46,7 @@
         <tr><td class="k">Cargo o vacante</td><td>{{ $cita->vacante->titulo }}</td></tr>
     @endif
     <tr><td class="k">Fecha de inicio</td><td>{{ $inicio->format('d/m/Y') }}</td></tr>
-    <tr><td class="k">Horas requeridas</td><td>{{ $e->programa->horas_requeridas }}</td></tr>
+    <tr><td class="k">Horas requeridas</td><td>{{ \App\Models\Parametro::horasRequeridas($e->ciclo()) }}</td></tr>
     <tr><td class="k">Docente tutor</td><td>{{ $e->hojaVida?->revisor?->correo ?? 'Por asignar' }}</td></tr>
 </table>
 

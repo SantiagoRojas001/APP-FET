@@ -14,7 +14,6 @@ class ProgramaResource extends Recurso
             'id' => $this->id,
             'nombre' => $this->nombre,
             'total_semestres' => $this->total_semestres,
-            'horas_requeridas' => $this->horas_requeridas,
         ];
     }
 }

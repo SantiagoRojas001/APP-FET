@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Director;
 
+use App\Enums\Ciclo;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Modalidad;
 use App\Http\Controllers\Controller;
@@ -21,7 +22,7 @@ class EstudianteController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $filtros = $request->validate([
-            'ciclo' => ['nullable', Rule::in(['Técnico', 'Tecnólogo', 'Profesional'])],
+            'ciclo' => ['nullable', Rule::enum(Ciclo::class)],
             'practica' => ['nullable', Rule::in([...Modalidad::values(), 'NINGUNA'])],
             'q' => ['nullable', 'string', 'max:100'],
         ]);
@@ -30,11 +31,7 @@ class EstudianteController extends Controller
         $estudiantes = Estudiante::query()
             ->where('programa_id', $request->user()->programa_id)
             ->with('usuario', 'programa', 'hojaVida.referencias', 'vinculacionActiva.empresa')
-            ->when($filtros['ciclo'] ?? null, fn (Builder $q, string $c) => match ($c) {
-                'Técnico' => $q->where('semestre_actual', '<=', 4),
-                'Tecnólogo' => $q->whereBetween('semestre_actual', [5, 6]),
-                'Profesional' => $q->where('semestre_actual', '>=', 7),
-            })
+            ->when($filtros['ciclo'] ?? null, fn (Builder $q, string $c) => $q->delCiclo(Ciclo::from($c)))
             ->when($filtros['practica'] ?? null, fn (Builder $q, string $p) => $p === 'NINGUNA'
                 ? $q->whereDoesntHave('vinculaciones', $activa)
                 : $q->whereHas('vinculaciones', fn (Builder $v) => $activa($v)->where('tipo', $p)))

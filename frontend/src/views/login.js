@@ -20,7 +20,7 @@ const DEMO = import.meta.env.DEV
         [
           ['p.vargas@fet.edu.co', 'Patricia Vargas', 'Docente'],
           ['direccion.software@fet.edu.co', 'Dirección de Ingeniería de Software', 'Director de programa'],
-          ['talento@nododigital.co', 'Nodo Digital', 'Empresa con acuerdo'],
+          ['talento@nododigital.co', 'Nodo Digital', 'Empresa con convenio'],
           ['admin@fet.edu.co', 'Administración', 'Configuración general'],
         ],
       ],
@@ -32,7 +32,7 @@ export default function loginView({ root, navigate }) {
     root,
     html`<div class="login-wrap"><div class="login">
       <section class="l-art" aria-label="Presentación">
-        <div class="l-logo"><img src="/logo-fet.png" alt="APP-FET, Agencia para Pasantes y Practicantes. Fundación Escuela Tecnológica de Neiva" /></div>
+        <a class="l-logo" href="/#/" aria-label="APP-FET, ir al inicio"><img src="/logo-fet.png" alt="APP-FET, Agencia para Pasantes y Practicantes. Fundación Escuela Tecnológica de Neiva" /></a>
         <div class="l-body">
           <div class="l-copy">
             <h1>Tu pasantía, de la hoja de vida al informe final</h1>

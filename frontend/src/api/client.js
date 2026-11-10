@@ -76,6 +76,9 @@ export const api = {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
 
+  /** Archivo protegido (con token) como Blob, para mostrarlo en un visor. */
+  blob: (path) => fetchFile(path),
+
   /** URL local (blob) de un archivo protegido, para mostrarlo en un <img>. */
   async blobUrl(path) {
     return URL.createObjectURL(await fetchFile(path));

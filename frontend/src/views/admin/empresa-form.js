@@ -1,9 +1,8 @@
 import { html } from '../../lib/html.js';
 
-/** Campos de una empresa, compartidos por la invitación y la edición. */
-export const empresaFields = (c = {}, { conCorreo = false } = {}) =>
-  html` ${conCorreo ? html`<div class="field"><label for="correo">Correo de la cuenta</label><input class="input" type="email" id="correo" name="correo" /></div>` : ''}
-    <div class="field">
+/** Campos de una empresa que corrige la administración. */
+export const empresaFields = (c = {}) =>
+  html`<div class="field">
       <label for="razon_social">Razón social</label
       ><input class="input" id="razon_social" name="razon_social" value="${c.razon_social ?? ''}" />
     </div>
@@ -41,7 +40,6 @@ export const empresaFields = (c = {}, { conCorreo = false } = {}) =>
 
 /** Lee los campos del formulario de empresa. */
 export const empresaData = (form) => ({
-  ...(form.correo ? { correo: form.correo.value.trim() } : {}),
   razon_social: form.razon_social.value.trim(),
   nit: form.nit.value.trim(),
   sector: form.sector.value.trim() || null,

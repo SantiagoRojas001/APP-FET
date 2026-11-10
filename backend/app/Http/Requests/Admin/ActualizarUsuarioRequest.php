@@ -8,6 +8,10 @@ class ActualizarUsuarioRequest extends FormRequest
 {
     public function rules(): array
     {
-        return ['activo' => ['required', 'boolean']];
+        return [
+            'activo' => ['sometimes', 'boolean'],
+            // Programa del docente o director.
+            'programa_id' => ['sometimes', 'nullable', 'integer', 'exists:programa,id'],
+        ];
     }
 }

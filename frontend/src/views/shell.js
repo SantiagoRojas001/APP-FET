@@ -7,9 +7,10 @@ import { mountPerfil } from './perfil.js';
 
 /**
  * Estructura de la app autenticada: menú lateral (marca y opciones) y área
- * principal. La campana y el perfil se montan en el encabezado de cada página,
- * en cuanto aparece su hueco `[data-perfil-slot]`. Devuelve el contenedor
- * donde se dibuja la vista.
+ * principal. El logo siempre lleva al inicio: la primera opción del menú.
+ * La campana y el perfil se montan en el encabezado de cada página, en
+ * cuanto aparece su hueco `[data-perfil-slot]`. Devuelve el contenedor donde
+ * se dibuja la vista.
  */
 export function renderShell(app, path, navigate) {
   const items = ROUTES[session.environment];
@@ -18,10 +19,10 @@ export function renderShell(app, path, navigate) {
     app,
     html`<div class="app">
       <aside class="side" aria-label="Navegación">
-        <div class="brand">
-          <img class="brand-logo" src="/logo-fet-sello.png" alt="APP-FET" />
+        <a class="brand" href="#${items[0].path}" aria-label="APP-FET, ir al inicio">
+          <img class="brand-logo" src="/logo-fet-sello.png" alt="" />
           <small>Pasantías y prácticas</small>
-        </div>
+        </a>
         <nav class="nav">
           ${items.filter((r) => !r.hidden).map(
             (r) =>

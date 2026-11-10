@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\Ciclo;
 use App\Enums\Modalidad;
 use App\Exceptions\ReglaNegocioException;
 use App\Models\Parametro;
 use App\Models\Programa;
 use App\Models\Usuario;
+use App\Notifications\NoHabilitado;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -21,20 +23,21 @@ use Smalot\PdfParser\Parser as LectorPdf;
  *
  * 1. `leer()` extrae las filas y las interpreta: nombre, correo, programa,
  *    ciclo, modalidad y, si vienen, semestre, promedio, documento y código.
- *    Se queda solo con quienes eligieron pasantía o práctica en un semestre
- *    habilitado; si el listado trae el ciclo y no el semestre, se toma el
- *    semestre habilitado de ese ciclo (técnico 1.º a 4.º, tecnólogo 5.º y
- *    6.º, profesional 7.º a 10.º). No guarda nada: el docente revisa la
- *    vista previa y puede corregir cada fila.
- * 2. `registrar()` crea las cuentas de las filas confirmadas. Si una fila
- *    trae promedio, se registra de una vez y se envía el correo con el
- *    resultado (usuario y contraseña si alcanza el mínimo).
+ *    Se ignora a quien no eligió pasantía ni práctica o es de otro programa
+ *    que el del docente. Si el listado trae el ciclo y no el semestre, se
+ *    toma el semestre habilitado de ese ciclo. No guarda nada: el docente
+ *    revisa la vista previa y puede corregir cada fila.
+ * 2. `registrar()` crea las cuentas de las filas confirmadas. A quien cursa
+ *    un semestre no habilitado o trae un promedio inferior al mínimo no se
+ *    le registra: recibe el correo con el motivo. Si una fila trae un
+ *    promedio suficiente, se envían de una vez el usuario y la contraseña.
  */
 class ImportacionEstudiantesService
 {
     public const MAX_FILAS = 2000;
 
-    private const CICLOS = ['Técnico' => [1, 4], 'Tecnólogo' => [5, 6], 'Profesional' => [7, 10]];
+    /** Palabras genéricas de los nombres de programa: no sirven para reconocerlos. */
+    private const GENERICAS = ['ingenieria', 'administracion', 'tecnologia', 'tecnica', 'profesional', 'gestion', 'de', 'del', 'la', 'el', 'en', 'y'];
 
     /**
      * Encabezados reconocidos en Excel, CSV o tablas de PDF: el campo según
@@ -65,7 +68,7 @@ class ImportacionEstudiantesService
      *
      * @return array{filas: list<array<string, mixed>>, resumen: array<string, int>}
      */
-    public function leer(UploadedFile $archivo): array
+    public function leer(UploadedFile $archivo, Usuario $docente): array
     {
         $registros = match (strtolower($archivo->getClientOriginalExtension())) {
             'pdf' => $this->registrosPdf($archivo->getRealPath()),
@@ -82,20 +85,34 @@ class ImportacionEstudiantesService
         }
 
         $existentes = Usuario::query()->whereIn('correo', array_filter(array_column($registros, 'correo')))->pluck('correo')->flip();
-        $filas = array_map(fn (array $r, int $i) => $this->interpretar($r, $i + 1, $existentes->has($r['correo'] ?? '')), $registros, array_keys($registros));
+        $filas = array_map(
+            fn (array $r, int $i) => $this->interpretar($r, $i + 1, $existentes->has($r['correo'] ?? ''), $docente->programaAsignado()),
+            $registros,
+            array_keys($registros),
+        );
 
-        return ['filas' => $filas, 'resumen' => array_count_values(array_column($filas, 'estado')) + ['nuevo' => 0, 'registrado' => 0, 'omitido' => 0, 'revisar' => 0]];
+        return ['filas' => $filas, 'resumen' => array_count_values(array_column($filas, 'estado')) + ['nuevo' => 0, 'no_habilitado' => 0, 'registrado' => 0, 'omitido' => 0, 'revisar' => 0]];
     }
 
     /**
-     * Crea las cuentas de las filas que el docente confirmó.
+     * Crea las cuentas de las filas que el docente confirmó y envía el correo
+     * con el motivo a quienes no quedan habilitados (sin registrarlos).
      *
      * @param  list<array<string, mixed>>  $filas
-     * @return array{creados: int, con_correo: int, pendientes_de_promedio: int, errores: list<array{fila: int, correo: string|null, error: string}>}
+     * @param  list<array<string, mixed>>  $noHabilitados
+     * @return array{creados: int, con_correo: int, pendientes_de_promedio: int, no_habilitados: int, errores: list<array{fila: int, correo: string|null, error: string}>}
      */
-    public function registrar(array $filas, Usuario $docente, RegistroEstudianteService $registro): array
+    public function registrar(array $filas, array $noHabilitados, Usuario $docente, RegistroEstudianteService $registro): array
     {
-        $resultado = ['creados' => 0, 'con_correo' => 0, 'pendientes_de_promedio' => 0, 'errores' => []];
+        $resultado = ['creados' => 0, 'con_correo' => 0, 'pendientes_de_promedio' => 0, 'no_habilitados' => 0, 'errores' => []];
+
+        foreach ($noHabilitados as $fila) {
+            if ($error = $this->notificarNoHabilitado($fila, $registro)) {
+                $resultado['errores'][] = ['fila' => (int) ($fila['fila'] ?? 0), 'correo' => $fila['correo'] ?? null, 'error' => $error];
+            } else {
+                $resultado['no_habilitados']++;
+            }
+        }
 
         foreach ($filas as $fila) {
             $validador = Validator::make($fila, [
@@ -120,8 +137,15 @@ class ImportacionEstudiantesService
                 continue;
             }
 
+            $datos = $validador->validated();
+            if (isset($datos['promedio']) && ! $this->elegibilidad->promedioSuficiente((float) $datos['promedio'])) {
+                $registro->notificarNoHabilitado($datos['correo'], $datos, NoHabilitado::POR_PROMEDIO);
+                $resultado['no_habilitados']++;
+
+                continue;
+            }
+
             try {
-                $datos = $validador->validated();
                 $estudiante = $registro->registrar(collect($datos)->except('promedio')->all(), $docente);
                 $resultado['creados']++;
 
@@ -142,12 +166,45 @@ class ImportacionEstudiantesService
     }
 
     /**
+     * Envía el correo a quien no queda habilitado, después de comprobar que
+     * de verdad no lo está. Devuelve el error, si lo hay.
+     *
+     * @param  array<string, mixed>  $fila
+     */
+    private function notificarNoHabilitado(array $fila, RegistroEstudianteService $registro): ?string
+    {
+        $validador = Validator::make($fila, [
+            'correo' => ['required', 'email', 'max:150', 'unique:usuario,correo'],
+            'nombres' => ['required', 'string', 'max:80'],
+            'apellidos' => ['required', 'string', 'max:80'],
+            'codigo' => ['nullable', 'string', 'max:20'],
+            'motivo_no_habilitado' => ['required', 'in:'.NoHabilitado::POR_SEMESTRE.','.NoHabilitado::POR_PROMEDIO],
+            'semestre_actual' => ['required_if:motivo_no_habilitado,'.NoHabilitado::POR_SEMESTRE, 'nullable', 'integer', 'min:1', 'max:12'],
+            'promedio' => ['required_if:motivo_no_habilitado,'.NoHabilitado::POR_PROMEDIO, 'nullable', 'numeric', 'min:0', 'max:5'],
+        ], ['correo.unique' => 'Ya hay una cuenta con este correo.']);
+
+        if ($validador->fails()) {
+            return $validador->errors()->first();
+        }
+
+        $datos = $validador->validated();
+        $porSemestre = $datos['motivo_no_habilitado'] === NoHabilitado::POR_SEMESTRE;
+        if ($porSemestre ? $this->elegibilidad->semestreHabilitado((int) $datos['semestre_actual']) : $this->elegibilidad->promedioSuficiente((float) $datos['promedio'])) {
+            return 'El estudiante sí está habilitado: regístralo.';
+        }
+
+        $registro->notificarNoHabilitado($datos['correo'], [...$datos, 'semestre' => $datos['semestre_actual'] ?? null], $datos['motivo_no_habilitado']);
+
+        return null;
+    }
+
+    /**
      * Interpreta un registro crudo y decide si se puede registrar.
      *
      * @param  array<string, string|null>  $r
      * @return array<string, mixed>
      */
-    private function interpretar(array $r, int $numero, bool $yaRegistrado): array
+    private function interpretar(array $r, int $numero, bool $yaRegistrado, ?int $programaDocente): array
     {
         $texto = $this->normalizar(implode(' ', array_filter($r)));
         $correo = mb_strtolower(trim((string) ($r['correo'] ?? '')));
@@ -159,17 +216,26 @@ class ImportacionEstudiantesService
         $programa = $this->programa((string) ($r['programa'] ?? $texto));
         // El ciclo explícito manda; si no viene, se deduce del texto sin el nombre del programa
         // («Técnica Profesional…» no debe leerse como ciclo profesional) y, por último, del programa.
-        $sinPrograma = $programa ? str_replace($this->normalizar($programa->nombre), ' ', $texto) : $texto;
-        $ciclo = $this->ciclo((string) ($r['ciclo'] ?? $sinPrograma)) ?? ($programa ? $this->ciclo($programa->nombre) : null);
+        $sinPrograma = filled($r['programa'] ?? null) ? str_replace($this->normalizar((string) $r['programa']), ' ', $texto) : $texto;
+        $ciclo = $this->ciclo((string) ($r['ciclo'] ?? $sinPrograma)) ?? $this->ciclo((string) ($r['programa'] ?? ''));
         $modalidad = $this->modalidad((string) ($r['modalidad'] ?? $texto));
         $semestre = $this->semestre((string) ($r['semestre'] ?? '')) ?? (isset($r['semestre']) ? null : $this->semestre($texto, true));
         $semestre ??= $ciclo ? $this->semestreDelCiclo($ciclo) : null;
         $promedio = $this->promedio((string) ($r['promedio'] ?? ''));
+        $datosCompletos = filter_var($correo, FILTER_VALIDATE_EMAIL) && filled($nombres) && filled($apellidos);
+        $noHabilitado = match (true) {
+            $semestre !== null && ! $this->elegibilidad->semestreHabilitado($semestre) => NoHabilitado::POR_SEMESTRE,
+            $promedio !== null && ! $this->elegibilidad->promedioSuficiente($promedio) => NoHabilitado::POR_PROMEDIO,
+            default => null,
+        };
 
         [$estado, $motivo] = match (true) {
             $yaRegistrado => ['registrado', 'Ya tiene cuenta en APP FET.'],
             ! $modalidad => ['omitido', 'No eligió pasantía ni práctica'.(filled($r['modalidad'] ?? null) ? " ({$r['modalidad']})." : '.')],
-            $semestre !== null && ! $this->elegibilidad->semestreHabilitado($semestre) => ['omitido', "Cursa {$semestre}.º semestre, que no está habilitado."],
+            $programa && $programaDocente && $programa->id !== $programaDocente => ['omitido', "Es de otro programa ({$programa->nombre})."],
+            $noHabilitado && $datosCompletos => ['no_habilitado', $noHabilitado === NoHabilitado::POR_SEMESTRE
+                ? "Cursa {$semestre}.º semestre, que no está habilitado."
+                : 'Su promedio ('.number_format($promedio, 2, ',', '').') es inferior al mínimo.'],
             ! filter_var($correo, FILTER_VALIDATE_EMAIL) => ['revisar', 'Revisa el correo.'],
             blank($nombres) || blank($apellidos) => ['revisar', 'Revisa el nombre y los apellidos.'],
             ! $programa => ['revisar', 'Elige el programa'.(filled($r['programa'] ?? null) ? " (el documento dice «{$r['programa']}»)." : '.')],
@@ -181,12 +247,13 @@ class ImportacionEstudiantesService
             'fila' => $numero,
             'estado' => $estado,
             'motivo' => $motivo,
+            'motivo_no_habilitado' => $estado === 'no_habilitado' ? $noHabilitado : null,
             'correo' => $correo ?: null,
             'nombres' => $nombres ?: null,
             'apellidos' => $apellidos ?: null,
             'programa_id' => $programa?->id,
             'programa_texto' => $r['programa'] ?? $programa?->nombre,
-            'ciclo' => $ciclo,
+            'ciclo' => $ciclo?->label(),
             'semestre_actual' => $semestre,
             'modalidad_grado' => $modalidad?->value,
             'modalidad_texto' => $r['modalidad'] ?? $modalidad?->label(),
@@ -564,14 +631,14 @@ class ImportacionEstudiantesService
         };
     }
 
-    private function ciclo(string $texto): ?string
+    private function ciclo(string $texto): ?Ciclo
     {
         $texto = $this->normalizar($texto);
 
         return match (true) {
-            (bool) preg_match('/\btecnolog|\bciclo\s*(2|ii|dos)\b|\bsegundo ciclo/', $texto) => 'Tecnólogo',
-            (bool) preg_match('/\btecnic|\bciclo\s*(1|i|uno)\b|\bprimer ciclo/', $texto) => 'Técnico',
-            (bool) preg_match('/\bprofesional\b|\bingenier|\buniversitari|\bciclo\s*(3|iii|tres)\b|\btercer ciclo/', $texto) => 'Profesional',
+            (bool) preg_match('/\btecnolog|\bciclo\s*(2|ii|dos)\b|\bsegundo ciclo/', $texto) => Ciclo::Tecnologo,
+            (bool) preg_match('/\btecnic|\bciclo\s*(1|i|uno)\b|\bprimer ciclo/', $texto) => Ciclo::Tecnico,
+            (bool) preg_match('/\bprofesional\b|\bingenier|\buniversitari|\bciclo\s*(3|iii|tres)\b|\btercer ciclo/', $texto) => Ciclo::Profesional,
             default => null,
         };
     }
@@ -593,9 +660,9 @@ class ImportacionEstudiantesService
     }
 
     /** Primer semestre habilitado dentro del ciclo (3.º, 5.º y 9.º por defecto). */
-    private function semestreDelCiclo(string $ciclo): ?int
+    private function semestreDelCiclo(Ciclo $ciclo): ?int
     {
-        [$desde, $hasta] = self::CICLOS[$ciclo];
+        [$desde, $hasta] = $ciclo->semestres();
 
         foreach (Parametro::semestresHabilitados() as $semestre) {
             if ($semestre >= $desde && $semestre <= $hasta) {
@@ -615,29 +682,24 @@ class ImportacionEstudiantesService
         return (float) str_replace(',', '.', $m[1]);
     }
 
-    /** Programa de la FET al que más se parece el texto. */
+    /**
+     * Programa de la FET que nombra el texto, en cualquiera de sus ciclos: se
+     * reconoce por sus palabras propias («Tecnología en Desarrollo de
+     * Software» es Ingeniería de Software; «Mantenimiento Eléctrico», Eléctrica).
+     */
     private function programa(string $texto): ?Programa
     {
-        $this->programas ??= Programa::query()->orderByDesc('total_semestres')->get();
+        $this->programas ??= Programa::query()->get();
         $texto = $this->normalizar($texto);
-        $mejor = null;
-        $puntaje = 0;
 
         foreach ($this->programas as $programa) {
-            $nombre = $this->normalizar($programa->nombre);
-            if (str_contains($texto, $nombre)) {
+            $claves = array_diff(preg_split('/\s+/', $this->normalizar($programa->nombre)), self::GENERICAS);
+            // Raíz de cada palabra (6 letras): «electrica» también reconoce «electrico» y «electricidad».
+            if ($claves && collect($claves)->every(fn (string $p) => preg_match('/\b'.preg_quote(substr($p, 0, 6), '/').'/', $texto))) {
                 return $programa;
-            }
-
-            $palabras = array_filter(preg_split('/\s+/', $nombre), fn ($p) => strlen($p) > 3);
-            $coinciden = count(array_filter($palabras, fn ($p) => str_contains($texto, $p)));
-            $valor = $palabras ? $coinciden / count($palabras) : 0;
-
-            if ($valor > $puntaje) {
-                [$mejor, $puntaje] = [$programa, $valor];
             }
         }
 
-        return $puntaje >= 0.75 ? $mejor : null;
+        return null;
     }
 }

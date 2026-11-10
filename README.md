@@ -83,28 +83,32 @@ Todas usan la contraseña `demo1234`. Solo existen fuera de producción.
 | Estudiante | daniel.gomez@fet.edu.co | Hoja de vida en revisión docente |
 | Estudiante | paula.ortiz@fet.edu.co | Hoja de vida devuelta con recomendaciones |
 | Estudiante | sofia.ramirez@fet.edu.co | Aceptada por Agroandina, espera la carta de presentación del director |
-| Estudiante | laura.mendez@fet.edu.co | Promedio insuficiente: cuenta inactiva |
+| Estudiante | camila.perez@fet.edu.co | Registrada sin promedio: aún no recibe su correo |
 | Estudiante | andres.rojas@fet.edu.co | Pasantía activa: a 8 horas de completar, con una semana por aprobar y 3 reportes |
 | Estudiante | valentina.torres@fet.edu.co | Pasantía con las horas cumplidas, esperando la evaluación de la empresa |
-| Docente | p.vargas@fet.edu.co | Registra estudiantes y promedios, revisa hojas de vida y recomienda |
-| Director de programa | direccion.software@fet.edu.co | Ingeniería de Software: estudiantes, acuerdos y cartas de presentación |
-| Empresa | talento@nododigital.co | Acuerdo vigente y renovación pendiente; practicante: Andrés |
+| Docente | p.vargas@fet.edu.co | Ingeniería de Software: carga el listado, registra promedios, revisa hojas de vida y recomienda |
+| Director de programa | direccion.software@fet.edu.co | Ingeniería de Software: estudiantes, convenios y cartas de presentación |
+| Empresa | talento@nododigital.co | Convenio vigente y renovación pendiente; practicante: Andrés |
 | Empresa | ti@clinicasangabriel.co | Puede evaluar la pasantía de Valentina |
 | Empresa | rrhh@agrosur.co | Pendiente de validación (no puede ingresar) |
-| Administrador | admin@fet.edu.co | Cuentas, empresas, acuerdos, parámetros, periodos, informes, reportes y auditoría |
+| Administrador | admin@fet.edu.co | Cuentas, empresas, convenios, parámetros, informes, reportes y auditoría |
+
+Todas las cuentas de ejemplo ven el recorrido guiado en su primer ingreso.
 
 ### Cuentas y acceso
 
-Los estudiantes los registra un docente cargando el listado de modalidades de grado (PDF, Excel o
-CSV): la app crea las cuentas de quienes eligieron pasantía o práctica en un semestre habilitado.
-Cuando se registra el promedio, quienes alcanzan el mínimo reciben por correo su usuario y una
-contraseña que deben cambiar al primer ingreso. La
-administración crea las cuentas de docentes, directores de programa y administradores (con correo
-`@fet.edu.co`) e invita a las empresas. Las empresas también pueden
-registrarse solas en `/empresasRegistro` (por ejemplo, `http://localhost:5173/empresasRegistro`)
-y ingresan cuando la administración las valida. Cada cuenta nueva recibe un
-correo con el enlace para definir la contraseña y aceptar la política de datos; el enlace dura
-7 días y se puede reenviar desde Usuarios o Empresas. En un servidor nuevo, la primera cuenta de
+Los estudiantes los registra un docente de su programa cargando el listado de modalidades de grado
+(PDF, Excel o CSV): la app registra a quienes eligieron pasantía o práctica en un semestre
+habilitado. Cuando se registra el promedio, quienes alcanzan el mínimo reciben por correo su
+usuario y una contraseña que deben cambiar al primer ingreso; a quienes no quedan habilitados (por
+semestre o promedio) les llega un correo con el motivo y no se guardan. La administración crea las
+cuentas de docentes, directores de programa y administradores (con correo `@fet.edu.co`) y les
+asigna el programa. Las empresas se registran en `/empresasRegistro` (por ejemplo,
+`http://localhost:5173/empresasRegistro`) con la firma de su representante legal y su convenio con
+la FET, e ingresan cuando la administración las valida; sin convenio, envían una solicitud y se
+registran cuando la FET les envía el convenio. Cada
+cuenta nueva de la FET recibe un correo con el enlace para definir la contraseña y aceptar la
+política de datos; el enlace dura 7 días y se puede reenviar desde Usuarios. En un servidor nuevo, la primera cuenta de
 administración se crea con `php artisan fet:crear-admin correo@fet.edu.co`.
 
 ## Comandos frecuentes
@@ -131,7 +135,7 @@ APPfet/
 │   ├── app/Http/           Controladores por rol, Form Requests y Resources
 │   ├── app/Models/         Un modelo por tabla del modelo de datos
 │   ├── app/Policies/       Permisos sobre vinculaciones y documentos
-│   ├── app/Services/       Reglas de negocio (registro y habilitación, citas, acuerdos, horas y cierre, evaluaciones, informes)
+│   ├── app/Services/       Reglas de negocio (registro y habilitación, citas, convenios, horas y cierre, evaluaciones, informes)
 │   ├── config/evaluaciones.php  Cuestionarios de cierre de la práctica
 │   ├── database/           Migraciones, factories y seeders
 │   ├── routes/api.php      Todas las rutas de la API

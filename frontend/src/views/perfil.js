@@ -9,7 +9,7 @@ import { session } from '../session.js';
 function subtitulo(user) {
   if (user.estudiante) return `${user.estudiante.semestre_actual}.º semestre, ${user.estudiante.programa?.nombre ?? ''}`;
   if (user.empresa) return `Empresa${user.empresa.sector ? `, ${user.empresa.sector}` : ''}`;
-  if (user.programa) return `Dirección de ${user.programa.nombre}`;
+  if (user.programa) return user.rol.valor === 'DIRECTOR' ? `Dirección de ${user.programa.nombre}` : `Docente de ${user.programa.nombre}`;
   return user.rol.etiqueta;
 }
 
@@ -38,7 +38,8 @@ function avatar(user) {
 /**
  * Campana de notificaciones y perfil con su menú, arriba a la derecha del
  * encabezado de cada página (el hueco `[data-perfil-slot]` de `pageHeader`).
- * El menú reúne Mis prácticas, Reportar un problema, el tema y Cerrar sesión.
+ * El menú reúne Mis prácticas, Reportar un problema, el recorrido guiado, el
+ * tema y Cerrar sesión.
  */
 export function mountPerfil(slot, { path, navigate }) {
   const user = session.user;
@@ -68,6 +69,7 @@ export function mountPerfil(slot, { path, navigate }) {
           </div>
           ${perfil?.tiene_practicas_terminadas ? html`<button type="button" class="pm-item" role="menuitem" data-go="/mis-practicas">${icon('certificate')}Mis prácticas</button>` : ''}
           ${user.rol.valor !== 'ADMIN' ? html`<button type="button" class="pm-item" role="menuitem" data-go="/reportar">${icon('flag')}Reportar un problema</button>` : ''}
+          <button type="button" class="pm-item" role="menuitem" id="tour">${icon('help-circle')}Ver recorrido de la app</button>
           <div class="pm-theme"><span class="fine">Tema</span><div id="themeSwitch"></div></div>
           <button type="button" class="pm-item pm-out" role="menuitem" id="logout">${icon('logout')}Cerrar sesión</button>
         </div>
@@ -129,6 +131,11 @@ export function mountPerfil(slot, { path, navigate }) {
         toast('No se pudo guardar el tema. Inténtalo de nuevo.');
       });
     },
+  });
+
+  slot.querySelector('#tour').addEventListener('click', async () => {
+    cerrar();
+    (await import('./tutorial.js')).iniciarTutorial();
   });
 
   slot.querySelector('#logout').addEventListener('click', async () => {

@@ -3,6 +3,8 @@ import { html, mount } from '../../lib/html.js';
 import { todayIso } from '../../lib/format.js';
 import { badge, emptyState, errorBox, icon, pageHeader, showFieldErrors, toast, withBusy } from '../../lib/ui.js';
 import { session } from '../../session.js';
+import { padDeFirma } from '../../lib/firma.js';
+import { recortarRostro } from '../../lib/rostro.js';
 import { hydrateFoto } from '../hoja-vida-detalle.js';
 
 /**
@@ -21,7 +23,7 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
   if (perfil.hoja_vida_habilitada === false) {
     mount(
       root,
-      html`${pageHeader('Hoja de vida', 'Formato institucional FET (PA-GTH-F-10).')}
+      html`${pageHeader('Hoja de vida')}
         <section class="panel">
           ${emptyState(
             'lock',
@@ -38,7 +40,7 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
   if (hv.estado?.valor === 'EN_REVISION') {
     mount(
       root,
-      html`${pageHeader('Hoja de vida', 'Formato institucional FET (PA-GTH-F-10).')}
+      html`${pageHeader('Hoja de vida')}
         <section class="panel">
           ${emptyState(
             'clock-hour-4',
@@ -189,7 +191,7 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     root,
     html`${pageHeader(
         'Hoja de vida',
-        'Formato institucional FET (PA-GTH-F-10). Lo que no registres aparece como «No registra».',
+        '',
         html`<button class="btn sec" type="button" id="preview">${icon('file-text')}Vista previa</button>`,
       )}
       ${hv.estado?.valor === 'CON_OBSERVACIONES'
@@ -233,7 +235,6 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
         </section>
         <section class="panel">
           <h2>2. Formación académica</h2>
-          <p class="help">Tu programa en la FET se incluye solo, como pregrado en curso. Agrega aquí otros títulos.</p>
           ${seccionLista('formaciones')}
           ${seccionLista('cursos')}
         </section>
@@ -241,8 +242,22 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
         <section class="panel">${seccionLista('investigaciones')}</section>
         <section class="panel">${seccionLista('referencias')}</section>
         <section class="panel">
+          <h2>Firma</h2>
+          <div class="firma-actual">
+            ${hv.url_firma ? html`<img class="firma-img" data-foto="${hv.url_firma}" alt="Tu firma" />` : html`<p class="fine">Aún no registras tu firma.</p>`}
+            <button type="button" class="btn sec sm" id="firmar">${icon('pencil')}${hv.url_firma ? 'Cambiar firma' : 'Dibujar firma'}</button>
+          </div>
+          <div class="firma-editor" id="firmaEditor" hidden>
+            <canvas class="firma-pad" id="firmaPad" aria-label="Recuadro para dibujar tu firma"></canvas>
+            <div class="actions">
+              <button type="button" class="btn sm" id="firmaGuardar">Guardar firma</button>
+              <button type="button" class="btn sec sm" id="firmaLimpiar">Borrar</button>
+              <button type="button" class="btn sec sm" id="firmaCancelar">Cancelar</button>
+            </div>
+          </div>
+        </section>
+        <section class="panel">
           <h2>Perfil para las empresas</h2>
-          <p class="help">No hace parte del formato impreso, pero las empresas lo ven en APP FET junto con tus proyectos.</p>
           <div class="form-grid">
             <div class="field wide"><label for="perfil_profesional">Perfil profesional</label><textarea class="input" id="perfil_profesional" name="perfil_profesional">${hv.perfil_profesional ?? ''}</textarea></div>
             <div class="field wide"><label for="disponibilidad">Disponibilidad</label><input class="input" id="disponibilidad" name="disponibilidad" value="${perfil.disponibilidad ?? ''}" placeholder="Ej.: medio tiempo en las mañanas" /></div>
@@ -333,19 +348,52 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     });
   });
 
+  // La foto debe tener un rostro: se revisa y se recorta en el navegador antes de subirla.
   root.querySelector('#foto').addEventListener('change', async (e) => {
     const archivo = e.target.files[0];
+    e.target.value = '';
     if (!archivo) return;
+    const boton = e.target.closest('label');
+    boton.classList.add('busy');
     const data = new FormData();
-    data.append('foto', archivo);
     try {
+      data.append('foto', await recortarRostro(archivo), 'foto.jpg');
       await api.post('/estudiante/foto', data);
       await actualizarPerfil();
       toast('Foto actualizada.');
       refresh();
     } catch (error) {
       toast(error.errors?.foto?.[0] ?? error.message);
+    } finally {
+      boton.classList.remove('busy');
     }
+  });
+
+  // Firma: se dibuja en el recuadro (no se sube un archivo) y la API comprueba que sea un trazo.
+  const editor = root.querySelector('#firmaEditor');
+  let pad = null;
+  root.querySelector('#firmar').addEventListener('click', () => {
+    editor.hidden = false;
+    pad ??= padDeFirma(root.querySelector('#firmaPad'));
+  });
+  root.querySelector('#firmaLimpiar').addEventListener('click', () => pad.limpiar());
+  root.querySelector('#firmaCancelar').addEventListener('click', () => {
+    pad.limpiar();
+    editor.hidden = true;
+  });
+  root.querySelector('#firmaGuardar').addEventListener('click', (e) => {
+    if (pad.vacia()) return toast('Dibuja tu firma en el recuadro.');
+    withBusy(e.currentTarget, async () => {
+      const data = new FormData();
+      data.append('firma', await pad.png(), 'firma.png');
+      try {
+        await api.post('/estudiante/firma', data);
+        toast('Firma guardada.');
+        refresh();
+      } catch (error) {
+        toast(error.errors?.firma?.[0] ?? error.message);
+      }
+    });
   });
 
   root.querySelector('#preview').addEventListener('click', () => navigate('/hoja-vida/vista'));

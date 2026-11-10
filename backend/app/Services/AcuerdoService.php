@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Notification;
 /**
  * Acuerdos (convenios) de las empresas: la empresa sube el PDF con su
  * vigencia, la administración lo aprueba o lo rechaza con un motivo y el
- * director de programa los consulta. Sin acuerdo aprobado y vigente la
+ * director de programa los consulta. Sin convenio aprobado y vigente la
  * empresa no asigna citas.
  */
 class AcuerdoService
@@ -27,7 +27,7 @@ class AcuerdoService
     public function subir(Empresa $empresa, array $datos, UploadedFile $archivo): Acuerdo
     {
         if ($empresa->acuerdos()->where('estado', EstadoAcuerdo::Pendiente)->exists()) {
-            throw new ReglaNegocioException('Ya tienes un acuerdo pendiente de aprobación.');
+            throw new ReglaNegocioException('Ya tienes un convenio pendiente de aprobación.');
         }
 
         $acuerdo = $empresa->acuerdos()->create([
@@ -45,7 +45,7 @@ class AcuerdoService
     public function revisar(Acuerdo $acuerdo, Usuario $admin, bool $aprobar, ?string $observacion): Acuerdo
     {
         if ($acuerdo->estado !== EstadoAcuerdo::Pendiente) {
-            throw new ReglaNegocioException("Este acuerdo ya fue revisado ({$acuerdo->estado->label()}).");
+            throw new ReglaNegocioException("Este convenio ya fue revisado ({$acuerdo->estado->label()}).");
         }
 
         if (! $aprobar && blank($observacion)) {

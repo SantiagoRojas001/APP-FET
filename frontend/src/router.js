@@ -119,6 +119,8 @@ export async function render() {
     const { default: view } = await route.load();
     if (id !== renderId) return;
     await view(ctx);
+    // Primer ingreso a la app: recorrido guiado por el menú (se puede saltar).
+    if (!session.user.tutorial_visto) import('./views/tutorial.js').then((m) => id === renderId && m.iniciarTutorial());
   } catch (error) {
     if (id !== renderId) return;
     console.error(error);

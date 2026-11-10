@@ -8,8 +8,8 @@ use App\Enums\EstadoRevision;
 use App\Enums\EstadoVinculacion;
 use App\Models\Cita;
 use App\Models\HojaVida;
-use App\Models\PeriodoAcademico;
 use App\Models\Vinculacion;
+use App\Support\Periodo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -27,7 +27,7 @@ class InformeService
     /**
      * @return array<string, mixed>
      */
-    public function resumen(?PeriodoAcademico $periodo = null): array
+    public function resumen(?string $periodo = null): array
     {
         $vinculaciones = $this->vinculaciones($periodo);
         $citas = $this->citas($periodo);
@@ -42,7 +42,7 @@ class InformeService
         $revisadas = (int) ($hojas[EstadoHojaVida::Aprobada->value] ?? 0) + (int) ($hojas[EstadoHojaVida::ConObservaciones->value] ?? 0);
 
         return [
-            'periodo' => $periodo?->nombre,
+            'periodo' => $periodo,
             'practicantes_por_programa' => $this->porPrograma($vinculaciones),
             'empresas_con_mas_practicantes' => (clone $vinculaciones)
                 ->join('empresa', 'empresa.id', '=', 'vinculacion.empresa_id')
@@ -80,7 +80,7 @@ class InformeService
     }
 
     /** Escribe el informe en un archivo .xlsx temporal y devuelve su ruta. */
-    public function exportar(?PeriodoAcademico $periodo = null): string
+    public function exportar(?string $periodo = null): string
     {
         $datos = $this->resumen($periodo);
         $ruta = sys_get_temp_dir().'/informe-'.Str::uuid().'.xlsx';
@@ -93,7 +93,7 @@ class InformeService
         $p = $datos['citas'];
         $t = $datos['tiempos_promedio_dias'];
         $writer->addRows([
-            Row::fromValuesWithStyle(['Informe de prácticas APP FET', $periodo ? "Periodo {$periodo->nombre}" : 'Todos los periodos'], $titulo),
+            Row::fromValuesWithStyle(['Informe de prácticas APP FET', $periodo ? "Periodo {$periodo}" : 'Todos los periodos'], $titulo),
             Row::fromValues(['Generado', now()->format('d/m/Y H:i')]),
             Row::fromValues([]),
             Row::fromValuesWithStyle(['Hojas de vida', 'Valor'], $titulo),
@@ -135,11 +135,11 @@ class InformeService
             $titulo,
         ));
         $this->vinculaciones($periodo)
-            ->with('estudiante.programa', 'empresa', 'periodo')
+            ->with('estudiante.programa', 'empresa')
             ->withSum(['evidencias as horas_aprobadas' => fn ($q) => $q->where('estado', EstadoRevision::Aprobado)], 'horas')
             ->orderBy('fecha_inicio')
             ->each(fn (Vinculacion $v) => $writer->addRow(Row::fromValues([
-                $v->periodo?->nombre ?? '',
+                $v->periodo(),
                 $v->estudiante->codigo,
                 $v->estudiante->nombre_completo,
                 $v->estudiante->programa->nombre,
@@ -149,7 +149,7 @@ class InformeService
                 $v->fecha_inicio->format('d/m/Y'),
                 $v->fecha_fin?->format('d/m/Y') ?? '',
                 (float) $v->horas_aprobadas,
-                $v->estudiante->programa->horas_requeridas,
+                $v->horasRequeridas(),
                 match ($v->reconocida_como_practica) {
                     true => 'Sí',
                     false => 'No',
@@ -163,17 +163,20 @@ class InformeService
     }
 
     /** @return Builder<Vinculacion> */
-    private function vinculaciones(?PeriodoAcademico $periodo): Builder
+    private function vinculaciones(?string $periodo): Builder
     {
-        return Vinculacion::query()->when($periodo, fn ($q) => $q->where('vinculacion.periodo_id', $periodo->id));
+        return Vinculacion::query()->when($periodo, fn ($q, string $p) => $q->delPeriodo($p));
     }
 
     /** Citas programadas dentro de las fechas del periodo. */
-    private function citas(?PeriodoAcademico $periodo): Builder
+    private function citas(?string $periodo): Builder
     {
-        return Cita::query()->when($periodo, fn ($q) => $q
-            ->whereDate('fecha_hora', '>=', $periodo->fecha_inicio)
-            ->whereDate('fecha_hora', '<=', $periodo->fecha_fin));
+        if (! $periodo) {
+            return Cita::query();
+        }
+        [$inicio, $fin] = Periodo::rango($periodo);
+
+        return Cita::query()->whereDate('fecha_hora', '>=', $inicio)->whereDate('fecha_hora', '<=', $fin);
     }
 
     /**

@@ -21,7 +21,6 @@ use App\Models\Competencia;
 use App\Models\Empresa;
 use App\Models\Estudiante;
 use App\Models\EvidenciaSemanal;
-use App\Models\PeriodoAcademico;
 use App\Models\Programa;
 use App\Models\Reporte;
 use App\Models\Usuario;
@@ -45,7 +44,6 @@ class DemoSeeder extends Seeder
      * datos en la demostración. Los estudiantes reales enlazan los suyos.
      */
     private const REPOSITORIOS = [
-        'laura' => ['Aplicación móvil con Flutter', 'https://github.com/flutter/samples'],
         'mateo' => ['API REST con Laravel', 'https://github.com/laravel/laravel'],
         'julian' => ['Interfaz web con Vite', 'https://github.com/vitejs/vite'],
         'sofia' => ['Componentes con Vue.js', 'https://github.com/vuejs/core'],
@@ -60,17 +58,18 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $this->admin = $this->usuario('admin@fet.edu.co', Rol::Admin);
+        $software = Programa::where('nombre', 'Ingeniería de Software')->value('id');
         $docente = $this->usuario('p.vargas@fet.edu.co', Rol::Docente);
+        $docente->update(['programa_id' => $software]);
         $director = $this->usuario('direccion.software@fet.edu.co', Rol::Director);
-        $director->update(['programa_id' => Programa::where('nombre', 'Ingeniería de Software')->value('id')]);
+        $director->update(['programa_id' => $software]);
 
         $empresas = $this->empresas();
         $this->acuerdos($empresas);
         $vacantes = $this->vacantes($empresas);
         $estudiantes = $this->estudiantes($docente);
 
-        $periodo = $this->periodos();
-        $vinculaciones = $this->vinculaciones($estudiantes, $empresas, $vacantes, $docente, $periodo);
+        $vinculaciones = $this->vinculaciones($estudiantes, $empresas, $vacantes, $docente);
         $this->citas($estudiantes, $empresas, $vacantes, $vinculaciones, $director);
         $this->recomendaciones($estudiantes, $vacantes, $docente);
         $this->reportes($estudiantes, $empresas);
@@ -109,14 +108,27 @@ class DemoSeeder extends Seeder
         $nodo->acuerdos()->create(['archivo_url' => $ruta, 'vigencia_inicio' => '2028-01-01', 'vigencia_fin' => '2029-12-31']);
     }
 
-    /** 2026-1 ya cerrado y 2026-2 en curso. */
-    private function periodos(): PeriodoAcademico
+    /** Trazo de ejemplo como el que se dibuja en la app: PNG transparente con tinta oscura. */
+    private function firmaDeEjemplo(Estudiante $estudiante): string
     {
-        PeriodoAcademico::firstOrCreate(['nombre' => '2026-1'], [
-            'fecha_inicio' => '2026-01-19', 'fecha_fin' => '2026-06-30', 'cerrado_en' => '2026-07-01 08:00:00',
-        ]);
+        $imagen = imagecreatetruecolor(1200, 400);
+        imagesavealpha($imagen, true);
+        imagealphablending($imagen, false);
+        imagefill($imagen, 0, 0, imagecolorallocatealpha($imagen, 0, 0, 0, 127));
+        imagealphablending($imagen, true);
+        imagesetthickness($imagen, 5);
+        $tinta = imagecolorallocate($imagen, 0x1A, 0x1D, 0x24);
+        $fase = $estudiante->id;
+        for ($x = 120; $x < 1040; $x += 12) {
+            $y = fn (int $x) => 200 + (int) (90 * sin(($x + $fase * 40) / 55) * cos($x / 230));
+            imageline($imagen, $x, $y($x), $x + 12, $y($x + 12), $tinta);
+        }
+        ob_start();
+        imagepng($imagen);
+        $ruta = "firmas/demo-{$estudiante->id}.png";
+        Storage::disk('local')->put($ruta, (string) ob_get_clean());
 
-        return PeriodoAcademico::firstOrCreate(['nombre' => '2026-2'], ['fecha_inicio' => '2026-07-13', 'fecha_fin' => '2026-12-18']);
+        return $ruta;
     }
 
     private function usuario(string $correo, Rol $rol): Usuario
@@ -181,18 +193,15 @@ class DemoSeeder extends Seeder
     private function estudiantes(Usuario $docente): array
     {
         $is = Programa::where('nombre', 'Ingeniería de Software')->value('id');
-        $tds = Programa::where('nombre', 'Tecnología en Desarrollo de Software')->value('id');
-        $tps = Programa::where('nombre', 'Técnica Profesional en Programación de Software')->value('id');
 
         // alias, programa, código, nombres, apellidos, semestre, promedio (null: sin registrar), modalidad, estado de la hoja de vida
         $datos = [
-            'laura' => ['laura.mendez', $is, '20231045', 'Laura', 'Méndez', 5, 3.9, Modalidad::Pasantia, EstadoHojaVida::Borrador],
             'mateo' => ['mateo.suarez', $is, '20211130', 'Mateo', 'Suárez', 9, 4.6, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
-            'julian' => ['julian.castro', $tps, '20252018', 'Julián', 'Castro', 3, 4.3, Modalidad::Pasantia, EstadoHojaVida::Borrador],
+            'julian' => ['julian.castro', $is, '20252018', 'Julián', 'Castro', 3, 4.3, Modalidad::Pasantia, EstadoHojaVida::Borrador],
             'sofia' => ['sofia.ramirez', $is, '20211077', 'Sofía', 'Ramírez', 9, 4.4, Modalidad::Practica, EstadoHojaVida::Aprobada],
             'daniel' => ['daniel.gomez', $is, '20211102', 'Daniel', 'Gómez', 9, 4.5, Modalidad::Practica, EstadoHojaVida::EnRevision],
-            'paula' => ['paula.ortiz', $tds, '20241033', 'Paula', 'Ortiz', 5, 4.3, Modalidad::Pasantia, EstadoHojaVida::ConObservaciones],
-            'andres' => ['andres.rojas', $tds, '20231190', 'Andrés', 'Rojas', 6, 4.5, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
+            'paula' => ['paula.ortiz', $is, '20241033', 'Paula', 'Ortiz', 5, 4.3, Modalidad::Pasantia, EstadoHojaVida::ConObservaciones],
+            'andres' => ['andres.rojas', $is, '20231190', 'Andrés', 'Rojas', 6, 4.5, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
             'valentina' => ['valentina.torres', $is, '20201055', 'Valentina', 'Torres', 10, 4.8, Modalidad::Pasantia, EstadoHojaVida::Aprobada],
             'camila' => ['camila.perez', $is, '20261004', 'Camila', 'Pérez', 3, null, Modalidad::Practica, EstadoHojaVida::Borrador],
         ];
@@ -202,9 +211,9 @@ class DemoSeeder extends Seeder
         return collect($datos)->map(function (array $d, string $clave) use ($competencias, $docente) {
             [$alias, $programa, $codigo, $nombres, $apellidos, $semestre, $promedio, $modalidad, $estadoHoja] = $d;
             $usuario = $this->usuario("{$alias}@fet.edu.co", Rol::Estudiante);
-            $habilitado = $promedio === null ? null : $promedio >= 4.2;
-            // Laura no alcanzó el promedio (cuenta inactiva); Julián aún debe cambiar su contraseña inicial.
-            $usuario->update(['activo' => $habilitado !== false, 'debe_cambiar_password' => $clave === 'julian']);
+            $habilitado = $promedio === null ? null : true;
+            // Julián aún debe cambiar su contraseña inicial.
+            $usuario->update(['debe_cambiar_password' => $clave === 'julian']);
 
             $estudiante = Estudiante::firstOrCreate(['usuario_id' => $usuario->id], [
                 'modalidad_grado' => $modalidad,
@@ -269,6 +278,8 @@ class DemoSeeder extends Seeder
             'rh' => $avanzado ? 'O+' : null,
             'contacto_emergencia_nombre' => $avanzado ? "Familiar de {$estudiante->nombres}" : null,
             'contacto_emergencia_telefono' => $avanzado ? '3201234567' : null,
+            // Quien ya envió su hoja de vida a revisión la firmó (la firma es obligatoria).
+            'firma_url' => $estado === EstadoHojaVida::Borrador ? null : $this->firmaDeEjemplo($estudiante),
         ]);
 
         if (! $avanzado) {
@@ -298,14 +309,14 @@ class DemoSeeder extends Seeder
      * @param  array<int, Vacante>  $vacantes
      */
     /** @return array<string, Vinculacion> */
-    private function vinculaciones(array $estudiantes, array $empresas, array $vacantes, Usuario $docente, PeriodoAcademico $periodo): array
+    private function vinculaciones(array $estudiantes, array $empresas, array $vacantes, Usuario $docente): array
     {
         $creadas = [];
-        // A Andrés solo le falta que la empresa apruebe su última semana para completar
-        // las horas; Valentina ya las completó y espera que la empresa la evalúe.
+        // A Andrés (tecnólogo, 480 horas) solo le falta que la empresa apruebe su última semana
+        // para completarlas; Valentina (profesional, 640) ya las completó y espera su evaluación.
         $datos = [
             ['andres', 'nodo', 1, '2026-07-21', 472],
-            ['valentina', 'csg', 4, '2026-07-14', 488],
+            ['valentina', 'csg', 4, '2026-07-14', 648],
         ];
 
         foreach ($datos as [$alias, $empresa, $vacante, $inicio, $horas]) {
@@ -317,7 +328,6 @@ class DemoSeeder extends Seeder
                 'tipo' => Modalidad::Pasantia,
                 'semestre_al_vincular' => $estudiante->semestre_actual,
                 'fecha_inicio' => $inicio,
-                'periodo_id' => $periodo->id,
             ]);
 
             $creadas[$alias] = $vinculacion;
@@ -450,7 +460,7 @@ class DemoSeeder extends Seeder
 
         EvidenciaSemanal::insert($filas);
 
-        $requeridas = $vinculacion->estudiante->programa->horas_requeridas;
+        $requeridas = $vinculacion->horasRequeridas();
         if ($total >= $requeridas) {
             $vinculacion->update(['horas_cumplidas_en' => Carbon::parse($filas[0]['revisada_en'])]);
             $vinculacion->load('estudiante.usuario');
@@ -471,7 +481,7 @@ class DemoSeeder extends Seeder
             return;
         }
 
-        $estudiantes['laura']->usuario->reportes()->create([
+        $estudiantes['mateo']->usuario->reportes()->create([
             'categoria' => CategoriaReporte::FallaPlataforma,
             'asunto' => 'No se guarda la foto del repositorio',
             'descripcion' => 'Al agregar el enlace de GitHub en mi hoja de vida, la vista previa no aparece.',

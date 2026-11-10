@@ -3,7 +3,7 @@ import { api } from './api/client.js';
 import { render, startRouter } from './router.js';
 import { session } from './session.js';
 import { syncThemeWithUser } from './lib/theme.js';
-import { toast } from './lib/ui.js';
+import { passwordToggles, toast } from './lib/ui.js';
 
 session.onChange((reason) => {
   syncThemeWithUser(session.user);
@@ -25,4 +25,5 @@ async function boot() {
   startRouter();
 }
 
+passwordToggles();
 boot();

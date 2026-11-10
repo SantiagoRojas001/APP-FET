@@ -3,51 +3,41 @@
 namespace Tests\Feature;
 
 use App\Enums\EstadoCita;
-use App\Enums\EstadoVacante;
 use App\Enums\Rol;
 use App\Models\Cita;
 use App\Models\Empresa;
-use App\Models\PeriodoAcademico;
 use App\Models\Usuario;
-use App\Models\Vacante;
 use App\Models\Vinculacion;
+use App\Support\Periodo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * Periodos académicos, informes, bitácora de auditoría y hoja de vida en PDF.
+ * Periodo académico calculado, informes, bitácora de auditoría y hoja de vida en PDF.
  */
 class AdministracionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_un_periodo_recoge_las_practicas_de_sus_fechas_y_al_cerrarse_cierra_las_vacantes(): void
+    public function test_el_periodo_se_calcula_con_la_fecha_de_inicio_y_filtra_los_informes(): void
     {
-        $dentro = Vinculacion::factory()->create(['fecha_inicio' => '2026-08-10']);
-        $fuera = Vinculacion::factory()->create(['fecha_inicio' => '2026-03-10']);
-        $vacante = Vacante::factory()->create();
+        $segundo = Vinculacion::factory()->create(['fecha_inicio' => '2026-08-10']);
+        Vinculacion::factory()->create(['fecha_inicio' => '2026-03-10']);
         $this->como(Rol::Admin);
 
-        $id = $this->postJson('/api/admin/periodos', ['nombre' => '2026-2', 'fecha_inicio' => '2026-07-15', 'fecha_fin' => '2026-12-15'])
-            ->assertCreated()->assertJsonPath('vinculaciones', 1)->json('id');
-
-        $this->assertSame($id, $dentro->fresh()->periodo_id);
-        $this->assertNull($fuera->fresh()->periodo_id);
-
-        $this->postJson('/api/admin/periodos', ['nombre' => '2026-1', 'fecha_inicio' => '2026-01-15', 'fecha_fin' => '2026-08-01'])
-            ->assertJsonValidationErrors('fecha_inicio');
-
-        $this->postJson("/api/admin/periodos/{$id}/cierre")->assertOk()->assertJsonPath('cerrado_en', fn ($v) => $v !== null);
-        $this->assertSame(EstadoVacante::Cerrada, $vacante->fresh()->estado);
-        $this->postJson("/api/admin/periodos/{$id}/cierre")->assertStatus(422);
+        $this->getJson("/api/vinculaciones/{$segundo->id}")->assertJsonPath('periodo', '2026-2');
+        $this->getJson('/api/admin/informes?periodo=2026-1')
+            ->assertOk()
+            ->assertJsonPath('periodo', '2026-1')
+            ->assertJsonPath('practicantes_por_programa.0.total', 1);
+        $this->getJson('/api/admin/informes?periodo=2026-3')->assertJsonValidationErrors('periodo');
     }
 
-    public function test_la_practica_presentada_queda_en_el_periodo_abierto(): void
+    public function test_la_practica_presentada_empieza_en_la_fecha_que_acepta_la_empresa(): void
     {
         Notification::fake();
-        $periodo = PeriodoAcademico::create(['nombre' => '2026-2', 'fecha_inicio' => now()->subMonth(), 'fecha_fin' => now()->addMonths(3)]);
         $cita = Cita::factory()->create();
 
         $this->comoEmpresa($cita->empresa)
@@ -59,8 +49,8 @@ class AdministracionTest extends TestCase
         $this->postJson("/api/director/cartas/{$cita->id}")->assertOk();
 
         $vinculacion = Vinculacion::sole();
-        $this->assertSame($periodo->id, $vinculacion->periodo_id);
         $this->assertSame(now()->addWeek()->toDateString(), $vinculacion->fecha_inicio->toDateString());
+        $this->assertSame(Periodo::deFecha(now()->addWeek()), $vinculacion->periodo());
     }
 
     public function test_el_informe_resume_las_practicas_y_se_exporta_a_excel(): void
@@ -117,11 +107,18 @@ class AdministracionTest extends TestCase
         $this->get("/api/estudiantes/{$estudiante->id}/hoja-vida.pdf")->assertForbidden();
     }
 
-    public function test_el_admin_ajusta_las_horas_de_un_programa(): void
+    public function test_el_resumen_muestra_lo_pendiente_y_las_cifras_por_programa(): void
     {
-        $programa = $this->programa();
+        Empresa::factory()->create(['estado_validacion' => 'PENDIENTE']);
+        Vinculacion::factory()->create(['fecha_inicio' => now()->toDateString()]);
         $this->como(Rol::Admin);
 
-        $this->patchJson("/api/admin/programas/{$programa->id}", ['horas_requeridas' => 640])->assertOk()->assertJsonPath('horas_requeridas', 640);
+        $this->getJson('/api/admin/resumen')
+            ->assertOk()
+            ->assertJsonPath('periodo', Periodo::actual())
+            ->assertJsonPath('pendientes.empresas_por_validar', 1)
+            ->assertJsonPath('cifras.practicas_activas', 1)
+            ->assertJsonPath('cifras.practicas_del_periodo', 1)
+            ->assertJsonPath('programas', fn (array $p) => collect($p)->sum('en_practica') === 1);
     }
 }

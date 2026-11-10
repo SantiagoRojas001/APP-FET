@@ -1,15 +1,16 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
 import { formatDate } from '../../lib/format.js';
-import { emptyState, hoursMeter, icon, modalityTag, pageHeader, statusBadge, toast, withBusy } from '../../lib/ui.js';
+import { emptyState, hoursMeter, icon, modalityTag, pageHeader, statusBadge } from '../../lib/ui.js';
 import { session } from '../../session.js';
 import { hydrateRepositories, repositorySlot } from '../repositorio.js';
 
 const count = (docs, estado) => docs.filter((d) => d.estado_revision.valor === estado).length;
 
 /**
- * Inicio del entorno de pasantía: resumen de la práctica activa, carta de
- * bienvenida, estado de los documentos y vista previa del repositorio.
+ * Inicio del entorno de pasantía: resumen de la práctica activa, estado de
+ * los documentos y vista previa del repositorio. Las horas y las entregas
+ * tienen su propia sección en el menú.
  */
 export default async function pasantiaView({ root, navigate }) {
   const [v, perfil] = await Promise.all([
@@ -20,11 +21,7 @@ export default async function pasantiaView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader(
-        v.vacante?.titulo ?? v.tipo.etiqueta,
-        `${v.empresa.razon_social}, desde el ${formatDate(v.fecha_inicio)}.`,
-        html`<div class="actions"><button class="btn sec" id="toAsis">${icon('clock-hour-4')}Reportar horas de la semana</button><button class="btn" id="toSeg">${icon('upload')}Subir documento</button></div>`,
-      )}
+    html`${pageHeader(v.vacante?.titulo ?? v.tipo.etiqueta, `${v.empresa.razon_social}, desde el ${formatDate(v.fecha_inicio)}.`)}
       <section class="panel">
         ${hoursMeter(v.horas)}
         ${v.horas.cumplidas_en
@@ -32,7 +29,7 @@ export default async function pasantiaView({ root, navigate }) {
           : ''}
         ${docs.some((d) => d.tipo.valor === 'ARL')
           ? ''
-          : html`<p class="note-box">${icon('alert-circle')} Sube tu certificado de ARL en Seguimiento: es obligatorio para iniciar la práctica.</p>`}
+          : html`<p class="note-box">${icon('alert-circle')} Sube tu certificado de ARL en Entregas: es obligatorio para iniciar la práctica.</p>`}
       </section>
       <section class="kpis">
         <div class="kpi"><b>${docs.length}</b><span>Documentos entregados</span></div>
@@ -51,31 +48,18 @@ export default async function pasantiaView({ root, navigate }) {
             <div><dt>Semestre al iniciar</dt><dd>${v.semestre_al_vincular}.º</dd></div>
           </dl>
           ${count(docs, 'OBSERVADO')
-            ? html`<p class="note-box">${icon('alert-circle')} Tienes documentos con observaciones. Revísalos en Seguimiento.</p>`
+            ? html`<p class="note-box">${icon('alert-circle')} Tienes documentos con observaciones. Revísalos en Entregas.</p>`
             : ''}
-          <div class="actions">
-            <button class="btn sec" id="toSeg2">${icon('list-check')}Ver seguimiento</button>
-            <button class="btn sec" id="carta">${icon('download')}Carta de bienvenida</button>
-          </div>
         </section>
         <section class="panel">
           <h2>Mi repositorio</h2>
           ${perfil.proyectos.length
-            ? html`${repositorySlot(perfil.proyectos[0])}
-                <p class="help">Tu empresa y tu docente ven esta misma vista en tu hoja de vida.</p>`
+            ? repositorySlot(perfil.proyectos[0])
             : emptyState('brand-github', 'Aún no vinculas un repositorio', 'Agrégalo en tu hoja de vida.', html`<button class="btn sec sm" id="toHv">Ir a hoja de vida</button>`)}
         </section>
       </div>`,
   );
 
-  root.querySelector('#toSeg').addEventListener('click', () => navigate('/seguimiento'));
-  root.querySelector('#toAsis').addEventListener('click', () => navigate('/evidencias'));
-  root.querySelector('#carta').addEventListener('click', (e) =>
-    withBusy(e.currentTarget, () =>
-      api.download(`/api/vinculaciones/${v.id}/carta-bienvenida.pdf`, 'carta-de-bienvenida.pdf').catch((err) => toast(err.message)),
-    ),
-  );
-  root.querySelector('#toSeg2').addEventListener('click', () => navigate('/seguimiento'));
   root.querySelector('#toHv')?.addEventListener('click', () => navigate('/hoja-vida'));
   hydrateRepositories(root);
 }

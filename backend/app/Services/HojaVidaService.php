@@ -34,6 +34,8 @@ class HojaVidaService
         return [
             ['seccion' => 'Datos personales', 'completa' => filled($estudiante->telefono) && collect(self::DATOS_PERSONALES)->every(fn ($c) => filled($hoja?->{$c}))],
             ['seccion' => 'Foto', 'completa' => filled($hoja?->foto_url)],
+            // La firma es obligatoria: sin ella la hoja de vida no se puede enviar a revisión.
+            ['seccion' => 'Firma', 'completa' => filled($hoja?->firma_url)],
             ['seccion' => 'Contacto de emergencia', 'completa' => filled($hoja?->contacto_emergencia_nombre) && filled($hoja?->contacto_emergencia_telefono)],
             ['seccion' => 'Referencias', 'completa' => $referencias->contains('tipo', TipoReferencia::Familiar) && $referencias->contains('tipo', TipoReferencia::Personal)],
             ['seccion' => 'Perfil profesional', 'completa' => filled($hoja?->perfil_profesional)],
@@ -69,7 +71,7 @@ class HojaVidaService
 
         $estudiante->loadMissing('programa');
         Notification::send(
-            Usuario::query()->where('rol', Rol::Docente)->where('activo', true)->get(),
+            Usuario::delPrograma(Rol::Docente, $estudiante->programa_id),
             new HojaVidaPorRevisar($estudiante),
         );
 

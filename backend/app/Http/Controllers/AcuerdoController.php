@@ -51,6 +51,6 @@ class AcuerdoController extends Controller
         );
         abort_unless(Storage::disk('local')->exists($acuerdo->archivo_url), 404, 'El archivo ya no está disponible.');
 
-        return Storage::disk('local')->download($acuerdo->archivo_url, "acuerdo_{$acuerdo->vigencia_inicio->format('Y-m-d')}.pdf");
+        return Storage::disk('local')->download($acuerdo->archivo_url, "convenio_{$acuerdo->vigencia_inicio->format('Y-m-d')}.pdf");
     }
 }

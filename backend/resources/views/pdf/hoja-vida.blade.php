@@ -55,6 +55,8 @@
     table.cursos td { border: 1px solid #C9E0B0; padding: 1mm 1.5mm; vertical-align: top; }
     .referencia { font-weight: bold; font-size: 12.5pt; margin: 8mm 0 3mm; }
     .firma { margin: 30mm auto 0; width: 70mm; text-align: center; font-weight: bold; border-top: 1.5px solid #000; padding-top: 1mm; }
+    .firma.con-trazo { margin-top: 0; }
+    .trazo { display: block; width: 60mm; margin: 14mm auto 0; }
 </style>
 </head>
 <body>
@@ -241,6 +243,9 @@
     @endforelse
 @endforeach
 
-<div class="firma">FIRMA</div>
+@if ($firma)
+    <img class="trazo" src="{{ $firma }}" alt="Firma">
+@endif
+<div class="firma{{ $firma ? ' con-trazo' : '' }}">FIRMA</div>
 </body>
 </html>

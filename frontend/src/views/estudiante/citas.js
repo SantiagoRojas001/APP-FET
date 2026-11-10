@@ -31,7 +31,7 @@ export default async function citasEstudianteView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Empresas interesadas', 'Las empresas que revisaron tu hoja de vida y te asignaron una cita. Te avisamos de cada una por correo y en la app.')}
+    html`${pageHeader('Empresas interesadas')}
       ${perfil && perfil.hoja_vida_estado?.valor !== 'APROBADA'
         ? html`<section class="callout">
             ${icon('alert-circle')}

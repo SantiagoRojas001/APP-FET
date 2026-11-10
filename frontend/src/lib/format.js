@@ -29,3 +29,17 @@ export const initials = (name = '') =>
     .join('');
 
 export const todayIso = () => new Date().toLocaleDateString('en-CA');
+
+/**
+ * Periodos académicos recientes, del actual hacia atrás: de enero a junio es
+ * AAAA-1 y de julio a diciembre AAAA-2 (igual que la API).
+ */
+export function periodosRecientes(cantidad = 6) {
+  const hoy = new Date();
+  let [anio, semestre] = [hoy.getFullYear(), hoy.getMonth() < 6 ? 1 : 2];
+  return Array.from({ length: cantidad }, () => {
+    const periodo = `${anio}-${semestre}`;
+    [anio, semestre] = semestre === 2 ? [anio, 1] : [anio - 1, 2];
+    return periodo;
+  });
+}

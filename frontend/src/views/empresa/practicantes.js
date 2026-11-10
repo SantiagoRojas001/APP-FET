@@ -8,7 +8,7 @@ export default async function practicantesView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Mis practicantes', 'Aprueba las horas semanales de cada practicante. Cuando complete sus horas, evalúalo: con tu evaluación la práctica culmina.')}
+    html`${pageHeader('Mis practicantes')}
       ${items.length
         ? items.map(
             (v) => html`<section class="panel">

@@ -39,17 +39,16 @@ class HojaVidaPdfController extends Controller
             // Las empresas no ven el documento de identidad (igual que en la API).
             'verDocumento' => $usuario->id === $estudiante->usuario_id || $usuario->tieneRol(Rol::Docente, Rol::Admin, Rol::Director),
             'logo' => base64_encode(file_get_contents(resource_path('img/logo-fet.png'))),
-            'foto' => $this->foto($estudiante),
+            'foto' => $this->imagen($estudiante->hojaVida?->foto_url),
+            'firma' => $this->imagen($estudiante->hojaVida?->firma_url),
         ])->setPaper('letter');
 
         return $pdf->download('hoja-de-vida-'.Str::slug($estudiante->nombre_completo).'.pdf');
     }
 
-    /** Foto como data URI para incrustarla en el PDF, o null si no la ha subido. */
-    private function foto(Estudiante $estudiante): ?string
+    /** Foto o firma como data URI para incrustarla en el PDF, o null si no la hay. */
+    private function imagen(?string $ruta): ?string
     {
-        $ruta = $estudiante->hojaVida?->foto_url;
-
         if (! $ruta || ! Storage::disk('local')->exists($ruta)) {
             return null;
         }

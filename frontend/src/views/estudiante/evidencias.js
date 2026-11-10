@@ -16,7 +16,7 @@ export default async function evidenciasView({ root, navigate, refresh }) {
 
   mount(
     root,
-    html`${pageHeader('Horas semanales', 'Cada semana reporta tus horas y lo que hiciste. Cuentan cuando la empresa las aprueba.')}
+    html`${pageHeader('Horas semanales')}
       <section class="panel">
         ${hoursMeter(v.horas)}
         ${v.horas.semanas_por_revisar ? html`<p class="help">${v.horas.semanas_por_revisar} semana(s) esperan la aprobación de la empresa.</p>` : ''}

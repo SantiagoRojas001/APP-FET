@@ -1,4 +1,5 @@
 import { api } from '../api/client.js';
+import { archivoAcciones, wireArchivos } from '../lib/archivos.js';
 import { html } from '../lib/html.js';
 import { formatShortDate } from '../lib/format.js';
 import { emptyState, icon, showFieldErrors, statusBadge, toast, withBusy } from '../lib/ui.js';
@@ -29,7 +30,7 @@ export function evidenciasTabla(items, { revisar = false, corregir = false, vaci
             <td class="num">${e.horas}</td>
             <td>
               ${e.actividades}
-              ${e.url_archivo ? html`<small><button class="link" data-evfile="${e.url_archivo}">${icon('download')}Ver soporte</button></small>` : ''}
+              ${e.url_archivo ? html`<small>Soporte: ${archivoAcciones(e.url_archivo, `soporte-semana-${e.semana_inicio}`)}</small>` : ''}
             </td>
             <td>
               ${statusBadge(e.estado)}${e.comentario ? html`<small>Empresa: ${e.comentario}</small>` : ''}
@@ -70,12 +71,10 @@ const correccionForm = (e) =>
     <button class="btn sm" type="submit">${icon('upload')}Enviar corrección</button>
   </form>`;
 
-/** Conecta descargas, revisiones, correcciones y la aprobación en bloque (`[data-evall]`). */
+/** Conecta los soportes, revisiones, correcciones y la aprobación en bloque (`[data-evall]`). */
 export function wireEvidencias(root, refresh) {
+  wireArchivos(root);
   root.addEventListener('click', (e) => {
-    const file = e.target.closest('[data-evfile]');
-    if (file) api.open(file.dataset.evfile).catch((err) => toast(err.message));
-
     const all = e.target.closest('[data-evall]');
     if (all) {
       withBusy(all, async () => {

@@ -7,24 +7,24 @@ const ABIERTAS = ['PROGRAMADA', 'ACEPTADO'];
 
 /**
  * Hojas de vida de estudiantes habilitados que aprobó un docente. Primero aparecen los
- * que un docente recomendó para tus vacantes. Con acuerdo vigente, la empresa
+ * que un docente recomendó para tus vacantes. Con convenio vigente, la empresa
  * asigna una cita y el estudiante recibe la empresa, la dirección, la fecha y
  * la hora.
  */
 export default async function hojasVidaView({ root, navigate }) {
-  const [cat, acuerdos, vacantes] = await Promise.all([api.get('/catalogos'), api.get('/empresa/acuerdos'), api.get('/empresa/vacantes')]);
-  const conAcuerdo = acuerdos.some((a) => a.vigente);
+  const [cat, convenios, vacantes] = await Promise.all([api.get('/catalogos'), api.get('/empresa/acuerdos'), api.get('/empresa/vacantes')]);
+  const conAcuerdo = convenios.some((a) => a.vigente);
   const filters = { programa_id: '', modalidad: '', q: '', page: 1 };
 
   mount(
     root,
-    html`${pageHeader('Hojas de vida', 'Hojas de vida aprobadas por los docentes de la FET. Asigna una cita: al estudiante le llega con la dirección, la fecha y la hora.')}
+    html`${pageHeader('Hojas de vida')}
       ${conAcuerdo
         ? ''
         : html`<section class="callout">
             ${icon('alert-circle')}
-            <p><b>Para asignar citas necesitas un acuerdo aprobado y vigente con la FET.</b> Puedes revisar las hojas de vida mientras tanto.</p>
-            <button class="btn sm" id="toAcuerdo">Subir acuerdo</button>
+            <p><b>Para asignar citas necesitas un convenio aprobado y vigente con la FET.</b> Puedes revisar las hojas de vida mientras tanto.</p>
+            <button class="btn sm" id="toAcuerdo">Subir convenio</button>
           </section>`}
       <form class="toolbar" id="filters">
         <label class="input-ic search">${icon('search')}<input class="input" name="q" type="search" placeholder="Buscar por nombre" aria-label="Buscar por nombre" /></label>
@@ -64,7 +64,7 @@ export default async function hojasVidaView({ root, navigate }) {
       <div class="av lg">${initials(s.nombre_completo)}</div>
       <div class="rowi-main">
         <div class="panel-h">
-          <div><h3>${s.nombre_completo}</h3><div class="sub">${s.programa.nombre}, ${s.semestre_actual}.º semestre (ciclo ${s.ciclo.toLowerCase()})</div></div>
+          <div><h3>${s.nombre_completo}</h3><div class="sub">${s.programa.nombre}, ${s.semestre_actual}.º semestre (ciclo ${s.ciclo.etiqueta.toLowerCase()})</div></div>
           ${s.recomendado ? badge('info', 'Recomendado por la FET') : ''}
         </div>
         ${s.recomendaciones?.map((r) => html`<p class="note-box">${icon('star')} Recomendado para «${r.vacante}»${r.comentario ? `: ${r.comentario}` : ''}</p>`)}
@@ -109,7 +109,7 @@ export default async function hojasVidaView({ root, navigate }) {
   filtros.addEventListener('submit', (e) => e.preventDefault());
 
   root.addEventListener('click', (e) => {
-    if (e.target.closest('#toAcuerdo')) return navigate('/acuerdo');
+    if (e.target.closest('#toAcuerdo')) return navigate('/convenio');
     const abrir = e.target.closest('[data-abrir]');
     if (abrir) {
       const form = root.querySelector(`[data-cita="${abrir.dataset.abrir}"]`);

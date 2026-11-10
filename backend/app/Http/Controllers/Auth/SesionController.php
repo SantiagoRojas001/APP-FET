@@ -25,7 +25,7 @@ class SesionController extends Controller
     public function store(LoginRequest $request): JsonResponse
     {
         $usuario = Usuario::query()
-            ->with('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa')
+            ->with('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa', 'programa')
             ->where('correo', mb_strtolower($request->input('correo')))
             ->first();
 
@@ -51,7 +51,7 @@ class SesionController extends Controller
 
     public function show(Request $request): UsuarioResource
     {
-        return new UsuarioResource($request->user()->load('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa'));
+        return new UsuarioResource($request->user()->load('estudiante.programa', 'estudiante.vinculacionActiva', 'empresa', 'programa'));
     }
 
     /** Primer ingreso: cambia la contraseña inicial y acepta la política de datos. */
@@ -69,10 +69,13 @@ class SesionController extends Controller
         return $this->show($request);
     }
 
-    /** Guarda las preferencias de la cuenta (por ahora, el tema visual). */
+    /** Guarda las preferencias de la cuenta: el tema visual y si ya vio el recorrido guiado. */
     public function preferencias(Request $request): UsuarioResource
     {
-        $datos = $request->validate(['tema' => ['required', Rule::in(['light', 'dark', 'system'])]]);
+        $datos = $request->validate([
+            'tema' => ['sometimes', Rule::in(['light', 'dark', 'system'])],
+            'tutorial_visto' => ['sometimes', 'boolean'],
+        ]);
 
         $request->user()->update($datos);
 

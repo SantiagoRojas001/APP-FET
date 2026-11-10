@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Ciclo;
 use App\Enums\EstadoHojaVida;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Modalidad;
@@ -116,17 +117,29 @@ class Estudiante extends Model
         return $this->hasMany(Proyecto::class);
     }
 
-    /**
-     * Ciclo académico según el semestre: técnico hasta 4.º, tecnólogo en 5.º y
-     * 6.º, profesional de 7.º a 10.º.
-     */
-    public function ciclo(): string
+    /** Ciclo académico según el semestre que cursa. */
+    public function ciclo(): Ciclo
     {
-        return match (true) {
-            $this->semestre_actual <= 4 => 'Técnico',
-            $this->semestre_actual <= 6 => 'Tecnólogo',
-            default => 'Profesional',
-        };
+        return Ciclo::deSemestre($this->semestre_actual);
+    }
+
+    /**
+     * Estudiantes de un programa; sin programa (administración o docente sin
+     * programa asignado), todos.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function delPrograma(Builder $query, ?int $programaId): void
+    {
+        $query->when($programaId, fn (Builder $q, int $id) => $q->where('estudiante.programa_id', $id));
+    }
+
+    /** @param  Builder<self>  $query */
+    #[Scope]
+    protected function delCiclo(Builder $query, Ciclo $ciclo): void
+    {
+        $query->whereBetween('semestre_actual', $ciclo->semestres());
     }
 
     /** @return HasMany<Cita, $this> */

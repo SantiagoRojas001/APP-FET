@@ -8,25 +8,18 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Empresa que invita o corrige la administración. Al invitarla se pide el
- * correo de la cuenta, al que llega el enlace de activación.
+ * Datos de una empresa que corrige la administración (el correo de la cuenta
+ * no cambia).
  */
 class GuardarEmpresaRequest extends FormRequest
 {
-    protected function prepareForValidation(): void
-    {
-        if ($this->has('correo')) {
-            $this->merge(['correo' => mb_strtolower(trim((string) $this->input('correo')))]);
-        }
-    }
-
     public function rules(): array
     {
         /** @var Empresa|null $empresa */
         $empresa = $this->route('empresa');
 
         return [
-            'correo' => $empresa ? ['prohibited'] : ['required', 'email', 'max:150', 'unique:usuario,correo'],
+            'correo' => ['prohibited'],
             'nit' => ['required', 'string', 'max:20', 'regex:/^[0-9.\-]+$/', Rule::unique('empresa', 'nit')->ignore($empresa)],
             'razon_social' => ['required', 'string', 'max:150'],
             'sector' => ['nullable', 'string', 'max:80'],

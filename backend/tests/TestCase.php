@@ -8,6 +8,7 @@ use App\Models\Estudiante;
 use App\Models\Programa;
 use App\Models\Usuario;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 
 abstract class TestCase extends BaseTestCase
@@ -39,6 +40,30 @@ abstract class TestCase extends BaseTestCase
         Sanctum::actingAs($empresa->usuario);
 
         return $this;
+    }
+
+    /** Firma como la que se dibuja en la app: PNG transparente con un trazo (o vacío, o relleno). */
+    protected function firmaPng(string $color = '#1A1D24', bool $relleno = false, bool $vacio = false): UploadedFile
+    {
+        $imagen = imagecreatetruecolor(1200, 400);
+        imagesavealpha($imagen, true);
+        imagealphablending($imagen, false);
+        imagefill($imagen, 0, 0, imagecolorallocatealpha($imagen, 0, 0, 0, 127));
+        imagealphablending($imagen, true);
+        [$r, $g, $b] = sscanf($color, '#%02x%02x%02x');
+        $tinta = imagecolorallocate($imagen, $r, $g, $b);
+        if ($relleno) {
+            imagefilledrectangle($imagen, 0, 0, 1199, 399, $tinta);
+        } elseif (! $vacio) {
+            imagesetthickness($imagen, 5);
+            for ($x = 100; $x < 1000; $x += 40) {
+                imageline($imagen, $x, 200 + (int) (80 * sin($x / 60)), $x + 40, 200 + (int) (80 * sin(($x + 40) / 60)), $tinta);
+            }
+        }
+        $ruta = tempnam(sys_get_temp_dir(), 'firma').'.png';
+        imagepng($imagen, $ruta);
+
+        return new UploadedFile($ruta, 'firma.png', 'image/png', null, true);
     }
 
     protected function como(Rol $rol): Usuario

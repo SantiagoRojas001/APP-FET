@@ -24,17 +24,22 @@ const ROLES = [
 
 /**
  * Cuentas de APP FET. La administración crea las de docentes, directores de
- * programa y administradores (con invitación por correo); los estudiantes los
- * registran los docentes y las empresas se invitan desde Empresas.
+ * programa y administradores (con invitación por correo) y asigna el programa
+ * de cada docente y director. Los estudiantes los registran los docentes y
+ * las empresas se registran en /empresasRegistro.
  */
 export default async function usuariosView({ root, navigate }) {
   const filters = { rol: '', q: '', page: 1 };
   const cat = await api.get('/catalogos');
   const dominio = `@${cat.dominio_correo}`;
+  const opcionesPrograma = (actual, todos) => [
+    todos ? html`<option value="" ${actual ? '' : 'selected'}>Todos los programas</option>` : '',
+    ...cat.programas.map((p) => html`<option value="${p.id}" ${p.id === actual ? 'selected' : ''}>${p.nombre}</option>`),
+  ];
 
   mount(
     root,
-    html`${pageHeader('Usuarios', `Docentes, directores y administradores usan su correo ${dominio} y reciben una invitación para definir su contraseña. Los estudiantes los registran los docentes; las empresas se invitan desde Empresas.`)}
+    html`${pageHeader('Usuarios')}
       <section class="panel">
         <h2>Crear docente, director o administrador</h2>
         <form id="userForm" class="form-grid" novalidate>
@@ -50,10 +55,10 @@ export default async function usuariosView({ root, navigate }) {
               <option value="ADMIN">Administrador</option>
             </select>
           </div>
-          <div class="field" id="programaField" hidden>
-            <label for="programa_id">Programa que dirige</label
+          <div class="field" id="programaField">
+            <label for="programa_id">Programa</label
             ><select class="input" id="programa_id" name="programa_id">
-              ${cat.programas.map((p) => html`<option value="${p.id}">${p.nombre}</option>`)}
+              ${opcionesPrograma(null, true)}
             </select>
           </div>
           <div><button class="btn" type="submit">${icon('user-plus')}Crear e invitar</button></div>
@@ -110,7 +115,10 @@ export default async function usuariosView({ root, navigate }) {
                     html`<tr>
                       <td>
                         <b>${u.nombre}</b
-                        >${u.estudiante ? html`<small>${u.estudiante.programa?.nombre}, ${u.estudiante.semestre_actual}.º</small>` : ''}${u.programa ? html`<small>Dirige ${u.programa.nombre}</small>` : ''}
+                        >${u.estudiante ? html`<small>${u.estudiante.programa?.nombre}, ${u.estudiante.semestre_actual}.º</small>` : ''}
+                        ${['DOCENTE', 'DIRECTOR'].includes(u.rol.valor)
+                          ? html`<select class="input" data-programa="${u.id}" aria-label="Programa de ${u.correo}">${opcionesPrograma(u.programa?.id ?? null, u.rol.valor === 'DOCENTE')}</select>`
+                          : ''}
                       </td>
                       <td class="mono">${u.correo}</td>
                       <td>${u.rol.etiqueta}</td>
@@ -202,8 +210,27 @@ export default async function usuariosView({ root, navigate }) {
       }
     });
 
+  list.addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-programa]');
+    if (!sel) return;
+    withBusy(sel, async () => {
+      try {
+        await api.patch(`/admin/usuarios/${sel.dataset.programa}`, { programa_id: Number(sel.value) || null });
+        toast('Programa actualizado.');
+      } catch (error) {
+        toast(error.message);
+        load();
+      }
+    });
+  });
+
+  // El docente pertenece a un programa (o atiende a todos); el director dirige uno; el administrador no tiene.
   const userForm = root.querySelector('#userForm');
-  userForm.rol.addEventListener('change', () => (root.querySelector('#programaField').hidden = userForm.rol.value !== 'DIRECTOR'));
+  userForm.rol.addEventListener('change', () => {
+    const rol = userForm.rol.value;
+    root.querySelector('#programaField').hidden = rol === 'ADMIN';
+    mount(userForm.programa_id, opcionesPrograma(null, rol === 'DOCENTE'));
+  });
   userForm.addEventListener('submit', (e) => {
     e.preventDefault();
     submit(
@@ -213,7 +240,7 @@ export default async function usuariosView({ root, navigate }) {
       () => ({
         correo: userForm.correo.value.trim(),
         rol: userForm.rol.value,
-        programa_id: userForm.rol.value === 'DIRECTOR' ? Number(userForm.programa_id.value) : null,
+        programa_id: userForm.rol.value === 'ADMIN' ? null : Number(userForm.programa_id.value) || null,
       }),
       'Cuenta creada. Le enviamos la invitación a su correo.',
     );

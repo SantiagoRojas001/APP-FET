@@ -41,7 +41,7 @@ export default async function cartasView({ root, refresh, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Cartas de presentación', 'Estudiantes de tu programa que una empresa aceptó después de su cita. Al enviar la carta a la empresa empieza la práctica.')}
+    html`${pageHeader('Cartas de presentación')}
       <section class="panel"><h2>Por enviar</h2></section>
       <section class="panel flush">${pendientes.length ? pendientes.map(row) : emptyState('send', 'No hay cartas por enviar')}</section>
       ${enviadas.length

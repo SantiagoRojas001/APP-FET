@@ -1,10 +1,9 @@
 import { api } from '../api/client.js';
 import { html, mount } from '../lib/html.js';
-import { formatDate, relativeDays, todayIso } from '../lib/format.js';
+import { formatDate, relativeDays } from '../lib/format.js';
 import {
   badge,
   confirmInline,
-  emptyState,
   errorBox,
   hoursMeter,
   icon,
@@ -16,59 +15,34 @@ import {
   withBusy,
 } from '../lib/ui.js';
 import { session } from '../session.js';
+import { documentosTabla, wireDocumentos } from './documentos.js';
 import { evidenciasTabla, wireEvidencias } from './evidencias.js';
 
 /**
  * Seguimiento de una vinculación: horas semanales, documentos, evaluaciones
- * y cierre. El estudiante sube documentos (ARL, bitácora, asistencias e
- * informes) y el docente los revisa. La empresa solo aprueba las horas
- * semanales y, al final, evalúa al practicante: con eso la práctica culmina.
- * El docente puede finalizarla antes si acumula reportes. Los permisos los
- * decide la API (`v.puede`).
+ * y cierre. La empresa aprueba las horas con acceso a todo lo que envió el
+ * estudiante (soportes, documentos y hoja de vida) y, al final, lo evalúa:
+ * con eso la práctica culmina. El docente revisa los documentos y puede
+ * finalizarla antes si acumula reportes. El estudiante sube sus documentos en
+ * Entregas. Los permisos los decide la API (`v.puede`).
  */
 export default async function seguimientoView({ root, params, navigate, refresh }) {
   const id = params[0];
   const role = session.role;
   const esFet = role === 'DOCENTE' || role === 'ADMIN';
-  const [v, cat, evidencias, reportes] = await Promise.all([
+  const [v, evidencias, reportes] = await Promise.all([
     api.get(`/vinculaciones/${id}`),
-    api.get('/catalogos'),
     role === 'ESTUDIANTE' ? [] : api.get(`/vinculaciones/${id}/evidencias`),
     esFet ? api.get(`/vinculaciones/${id}/reportes`) : [],
   ]);
-  const canUpload = role === 'ESTUDIANTE' && v.estado.valor === 'ACTIVA';
-  const canReview = v.puede.revisar_documentos;
   const activa = v.estado.valor === 'ACTIVA';
   const sinArl = activa && !v.documentos.some((d) => d.tipo.valor === 'ARL');
-
-  const reviewForm = (d) =>
-    html`<form class="decide" data-review="${d.id}" novalidate>
-      <div class="field">
-        <label for="obs${d.id}">Observaciones</label
-        ><input
-          class="input"
-          id="obs${d.id}"
-          name="observaciones"
-          placeholder="Obligatorias si hay observaciones"
-        />
-      </div>
-      <button class="btn good sm" type="submit" name="estado_revision" value="APROBADO">
-        ${icon('check')}Aprobar
-      </button>
-      <button class="btn danger sm" type="submit" name="estado_revision" value="OBSERVADO">
-        Con observaciones
-      </button>
-    </form>`;
 
   const cierreEmpresa = () => {
     if (role !== 'EMPRESA' || !activa) return '';
     const faltaHoras = !v.horas.cumplidas_en;
     return html`<section class="panel">
       <h2>Cierre de la práctica</h2>
-      <p class="muted">
-        No hay un paso de aprobación aparte: cuando el practicante complete las horas, responde su evaluación y
-        la práctica culmina. El estudiante recibe el aviso.
-      </p>
       <ul class="fine">
         <li>
           ${faltaHoras ? `Faltan horas: lleva ${v.horas.aprobadas} de ${v.horas.requeridas} aprobadas.` : 'El practicante completó las horas.'}
@@ -165,12 +139,27 @@ export default async function seguimientoView({ root, params, navigate, refresh 
                 </button>`
               : ''
           }
-          <button class="btn sec sm" id="carta">${icon('download')}Carta de bienvenida</button>
+          ${role === 'ESTUDIANTE' ? '' : html`<a class="btn sec sm" href="#/estudiantes/${v.estudiante.id}">${icon('file-cv')}Hoja de vida</a>`}
           ${activa && role !== 'ADMIN' ? html`<button class="btn sec sm" data-go="/reportar?vinculacion=${v.id}">${icon('flag')}Reportar un problema</button>` : ''}
         </div>
       </section>
-      ${sinArl && role !== 'EMPRESA' ? html`<p class="note-box">${icon('alert-circle')} ${role === 'ESTUDIANTE' ? 'Sube tu certificado de ARL: es obligatorio para iniciar la práctica.' : 'El practicante aún no sube su certificado de ARL.'}</p>` : ''}
+      ${sinArl ? html`<p class="note-box">${icon('alert-circle')} ${role === 'ESTUDIANTE' ? 'Sube tu certificado de ARL: es obligatorio para iniciar la práctica.' : 'El practicante aún no sube su certificado de ARL.'}</p>` : ''}
       ${cierreEmpresa()}${cierreDocente()}
+      ${
+        role !== 'ESTUDIANTE'
+          ? html`<section class="panel">
+                <div class="panel-h">
+                  <h2>Horas semanales</h2>
+                  ${v.puede.revisar_evidencias && v.horas.semanas_por_revisar
+                    ? html`<button class="btn good sm" data-evall="${v.id}">${icon('check')}Aprobar las ${v.horas.semanas_por_revisar} pendientes</button>`
+                    : ''}
+                </div>
+              </section>
+              <section class="panel flush">${evidenciasTabla(evidencias, { revisar: v.puede.revisar_evidencias })}</section>`
+          : ''
+      }
+      <section class="panel"><h2>Documentos</h2></section>
+      <section class="panel flush">${documentosTabla(v.documentos, { revisar: v.puede.revisar_documentos })}</section>
       ${
         esFet
           ? html`<section class="panel">
@@ -197,115 +186,16 @@ export default async function seguimientoView({ root, params, navigate, refresh 
               }
             </section>`
           : ''
-      }
-      ${
-        canUpload
-          ? html`<section class="panel">
-              <h2>Subir documento</h2>
-              <form id="upForm" class="form-grid" novalidate>
-                <div class="field">
-                  <label for="tipo">Tipo</label
-                  ><select class="input" id="tipo" name="tipo">
-                    ${cat.tipos_documento.map((t) => html`<option value="${t.valor}">${t.etiqueta}</option>`)}
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="periodo_inicio">Desde (periodo o vigencia)</label
-                  ><input
-                    class="input"
-                    type="date"
-                    id="periodo_inicio"
-                    name="periodo_inicio"
-                    max="${todayIso()}"
-                  />
-                </div>
-                <div class="field">
-                  <label for="periodo_fin">Hasta</label
-                  ><input class="input" type="date" id="periodo_fin" name="periodo_fin" />
-                </div>
-                <div class="field wide">
-                  <label for="archivo">Archivo PDF (máx. 10 MB)</label
-                  ><input class="input" type="file" id="archivo" name="archivo" accept="application/pdf" />
-                </div>
-                <div><button class="btn" type="submit">${icon('upload')}Enviar a revisión docente</button></div>
-              </form>
-              <div id="upError"></div>
-            </section>`
-          : ''
-      }
-      <section class="panel"><h2>Documentos</h2></section>
-      <section class="panel flush">
-        ${
-          v.documentos.length
-            ? html`<div class="tbl">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Documento</th>
-                      <th>Periodo</th>
-                      <th>Entregado</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${v.documentos.map(
-                      (d) =>
-                        html`<tr>
-                          <td>
-                            <b>${d.tipo.etiqueta}</b
-                            ><small
-                              ><button class="link" data-file="${d.url_descarga}">
-                                ${icon('download')}Ver PDF
-                              </button></small
-                            >
-                          </td>
-                          <td class="num">${formatDate(d.periodo_inicio)} a ${formatDate(d.periodo_fin)}</td>
-                          <td class="num">${formatDate(d.cargado_en)}</td>
-                          <td>
-                            ${statusBadge(d.estado_revision)}${d.observaciones ? html`<small>${d.observaciones}</small>` : ''}
-                            ${canReview && d.estado_revision.valor === 'PENDIENTE' ? reviewForm(d) : ''}
-                          </td>
-                        </tr>`,
-                    )}
-                  </tbody>
-                </table>
-              </div>`
-            : emptyState(
-                'file-text',
-                'Aún no hay documentos',
-                canUpload ? 'Empieza por tu certificado de ARL; luego sube tu bitácora y el control de asistencia.' : '',
-              )
-        }
-      </section>
-      ${
-        role !== 'ESTUDIANTE'
-          ? html`<section class="panel">
-                <div class="panel-h">
-                  <h2>Horas semanales</h2>
-                  ${v.puede.revisar_evidencias && v.horas.semanas_por_revisar
-                    ? html`<button class="btn good sm" data-evall="${v.id}">${icon('check')}Aprobar las ${v.horas.semanas_por_revisar} pendientes</button>`
-                    : ''}
-                </div>
-                ${v.puede.revisar_evidencias ? html`<p class="help">Aprueba cada semana o devuélvela con un comentario sobre las horas para que el practicante la corrija.</p>` : ''}
-              </section>
-              <section class="panel flush">${evidenciasTabla(evidencias, { revisar: v.puede.revisar_evidencias })}</section>`
-          : ''
       }`,
   );
 
   root.addEventListener('click', (e) => {
-    const file = e.target.closest('[data-file]');
-    if (file) return api.open(file.dataset.file).catch((err) => toast(err.message));
     const go = e.target.closest('[data-go]');
     if (go) navigate(go.dataset.go);
   });
 
-  root.querySelector('#carta').addEventListener('click', (e) =>
-    withBusy(e.currentTarget, () =>
-      api.download(`/api/vinculaciones/${v.id}/carta-bienvenida.pdf`, 'carta-de-bienvenida.pdf').catch((err) => toast(err.message)),
-    ),
-  );
   wireEvidencias(root, refresh);
+  wireDocumentos(root, refresh);
 
   const finForm = root.querySelector('#finForm');
   finForm?.addEventListener('submit', (e) => {
@@ -325,38 +215,4 @@ export default async function seguimientoView({ root, params, navigate, refresh 
       }),
     );
   });
-
-  root.querySelector('#upForm')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    withBusy(form.querySelector('[type=submit]'), async () => {
-      try {
-        await api.post(`/vinculaciones/${v.id}/documentos`, new FormData(form));
-        toast('Documento enviado a revisión.');
-        refresh();
-      } catch (error) {
-        mount(root.querySelector('#upError'), errorBox(error.message));
-        showFieldErrors(form, error.errors);
-      }
-    });
-  });
-
-  root.querySelectorAll('[data-review]').forEach((form) =>
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const estado = e.submitter?.value;
-      withBusy(e.submitter, async () => {
-        try {
-          await api.patch(`/documentos/${form.dataset.review}/revision`, {
-            estado_revision: estado,
-            observaciones: form.observaciones.value.trim() || null,
-          });
-          toast('Revisión guardada.');
-          refresh();
-        } catch (error) {
-          showFieldErrors(form, error.errors) || toast(error.message);
-        }
-      });
-    }),
-  );
 }

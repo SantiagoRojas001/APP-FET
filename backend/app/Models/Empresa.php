@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\EstadoAcuerdo;
 use App\Enums\EstadoValidacion;
 use App\Enums\Modalidad;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'usuario_id', 'nit', 'razon_social', 'sector', 'contacto_nombre',
     'contacto_telefono', 'modalidad_interes', 'estado_validacion', 'validada_por', 'validada_en',
+    'representante_nombre', 'representante_documento', 'firma_representante_url',
 ])]
 class Empresa extends Model
 {
@@ -66,14 +66,10 @@ class Empresa extends Model
         return $this->hasMany(Acuerdo::class)->orderByDesc('cargado_en');
     }
 
-    /** Solo con un acuerdo aprobado y vigente la empresa puede asignar citas. */
+    /** Solo con un convenio aprobado y vigente la empresa puede asignar citas. */
     public function tieneAcuerdoVigente(): bool
     {
-        return $this->acuerdos()
-            ->where('estado', EstadoAcuerdo::Aprobado)
-            ->whereDate('vigencia_inicio', '<=', today())
-            ->whereDate('vigencia_fin', '>=', today())
-            ->exists();
+        return $this->acuerdos()->vigentes()->exists();
     }
 
     /** @return HasMany<Cita, $this> */

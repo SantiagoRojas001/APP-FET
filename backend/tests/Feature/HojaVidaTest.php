@@ -56,7 +56,7 @@ class HojaVidaTest extends TestCase
 
         $this->putJson('/api/estudiante/perfil', $this->hojaCompleta(Competencia::factory()->create(['nombre' => 'PHP'])))
             ->assertOk()
-            ->assertJsonPath('hoja_vida.porcentaje', 86)
+            ->assertJsonPath('hoja_vida.porcentaje', 75)
             ->assertJsonPath('hoja_vida.datos_personales.rh', 'A+')
             ->assertJsonPath('hoja_vida.formaciones.0.nivel.etiqueta', 'Técnico')
             ->assertJsonPath('hoja_vida.cursos.0.fecha', '2024-11')
@@ -65,9 +65,10 @@ class HojaVidaTest extends TestCase
             ->assertJsonCount(2, 'hoja_vida.referencias')
             ->assertJsonPath('competencias.0.nivel', 'INTERMEDIO');
 
-        // Con la foto queda completa y aparece en el PDF institucional.
+        // Con la foto y la firma queda completa y aparecen en el PDF institucional.
         $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])
             ->assertOk();
+        $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng()])->assertOk();
         $this->getJson('/api/estudiante/perfil')->assertJsonPath('hoja_vida.porcentaje', 100);
         $this->get("/api/estudiantes/{$estudiante->id}/foto")->assertOk();
         $this->get('/api/estudiante/hoja-vida.pdf')->assertOk()->assertHeader('content-type', 'application/pdf');
@@ -146,6 +147,10 @@ class HojaVidaTest extends TestCase
         $this->putJson('/api/estudiante/perfil', $datos)->assertOk();
         $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])->assertOk();
 
+        // Sin la firma no se puede enviar.
+        $this->postJson('/api/estudiante/hoja-vida/envio')->assertUnprocessable();
+        $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng()])->assertOk();
+
         $this->postJson('/api/estudiante/hoja-vida/envio')
             ->assertOk()
             ->assertJsonPath('hoja_vida.estado.valor', 'EN_REVISION');
@@ -187,5 +192,45 @@ class HojaVidaTest extends TestCase
 
         $this->como(Rol::Admin);
         $this->getJson('/api/admin/usuarios')->assertOk()->assertJsonMissingPath('data.0.perfil')->assertJsonMissingPath('0.perfil');
+    }
+
+    public function test_la_firma_se_dibuja_y_solo_se_acepta_un_trazo(): void
+    {
+        Storage::fake('local');
+        $estudiante = $this->estudiante(5);
+        $this->comoEstudiante($estudiante);
+
+        $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng(vacio: true)])->assertUnprocessable()
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'vacía'));
+        $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng(relleno: true)])->assertUnprocessable();
+        $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng('#E53935')])->assertUnprocessable()
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'trazo oscuro'));
+        // Una foto (sin transparencia) tampoco pasa.
+        $this->post('/api/estudiante/firma', ['firma' => UploadedFile::fake()->image('firma.png', 1200, 400)])->assertUnprocessable();
+
+        $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng()])->assertOk()->assertJsonPath('url_firma', "/api/estudiantes/{$estudiante->id}/firma");
+        $this->get("/api/estudiantes/{$estudiante->id}/firma")->assertOk();
+        $this->getJson('/api/estudiante/perfil')->assertJsonPath('hoja_vida.url_firma', "/api/estudiantes/{$estudiante->id}/firma");
+        $this->get('/api/estudiante/hoja-vida.pdf')->assertOk();
+    }
+
+    public function test_la_foto_debe_venir_recortada_en_formato_documento(): void
+    {
+        Storage::fake('local');
+        $this->comoEstudiante($this->estudiante(5));
+
+        $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 800, 600)])->assertUnprocessable()
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'vertical'));
+        $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 480, 600)])->assertOk();
+    }
+
+    public function test_el_recorrido_guiado_se_marca_como_visto(): void
+    {
+        $estudiante = $this->estudiante(5);
+        $this->comoEstudiante($estudiante);
+
+        $this->getJson('/api/auth/yo')->assertJsonPath('tutorial_visto', false);
+        $this->patchJson('/api/auth/preferencias', ['tutorial_visto' => true])->assertOk()->assertJsonPath('tutorial_visto', true);
+        $this->patchJson('/api/auth/preferencias', ['tema' => 'dark'])->assertOk()->assertJsonPath('tema', 'dark')->assertJsonPath('tutorial_visto', true);
     }
 }

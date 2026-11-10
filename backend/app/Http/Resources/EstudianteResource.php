@@ -34,7 +34,7 @@ class EstudianteResource extends Recurso
             'programa' => new ProgramaResource($this->whenLoaded('programa')),
             'habilitado_para_practica' => app(ElegibilidadService::class)->habilitadoParaPractica($this->resource),
             'modalidad_grado' => $this->enum($this->modalidad_grado),
-            'ciclo' => $this->ciclo(),
+            'ciclo' => $this->enum($this->ciclo()),
             // El promedio y su resultado solo los ve la FET y el propio estudiante.
             'promedio' => $this->when($this->puedeVerDatosSensibles($request), $this->promedio),
             'habilitado' => $this->when($this->puedeVerDatosSensibles($request), $this->habilitado),
@@ -97,6 +97,7 @@ class EstudianteResource extends Recurso
             'porcentaje' => $servicio->porcentaje($this->resource),
             'secciones' => $servicio->secciones($this->resource),
             'url_foto' => $hoja?->foto_url ? "/api/estudiantes/{$this->id}/foto" : null,
+            'url_firma' => $hoja?->firma_url ? "/api/estudiantes/{$this->id}/firma" : null,
             'datos_personales' => [
                 'fecha_nacimiento' => $hoja?->fecha_nacimiento?->toDateString(),
                 'lugar_nacimiento' => $hoja?->lugar_nacimiento,

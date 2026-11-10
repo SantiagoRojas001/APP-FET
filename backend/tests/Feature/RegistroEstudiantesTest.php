@@ -65,7 +65,7 @@ class RegistroEstudiantesTest extends TestCase
             ->assertOk()
             ->assertJsonPath('creados', 1)
             ->assertJsonPath('pendientes_de_promedio', 1);
-        $this->getJson('/api/docente/estudiantes')->assertJsonPath('data.0.ciclo', 'Tecnólogo')->assertJsonPath('data.0.promedio', null);
+        $this->getJson('/api/docente/estudiantes')->assertJsonPath('data.0.ciclo.etiqueta', 'Tecnólogo')->assertJsonPath('data.0.promedio', null);
 
         $this->assertDatabaseHas('usuario', ['correo' => 'ana.perez@fet.edu.co', 'rol' => 'ESTUDIANTE']);
         Notification::assertNothingSent();
@@ -114,21 +114,43 @@ class RegistroEstudiantesTest extends TestCase
         $this->assertNotSame($docente->id, $estudiante->usuario_id);
     }
 
-    public function test_con_promedio_bajo_recibe_el_mensaje_y_no_puede_ingresar(): void
+    public function test_con_promedio_bajo_recibe_el_motivo_y_no_queda_registrado(): void
     {
         Parametro::guardar('promedio_minimo', '4.2');
         $this->como(Rol::Docente);
-        $this->registrar()->assertJsonPath('creados', 1);
+        $this->registrar(['codigo' => '20231045'])->assertJsonPath('creados', 1);
         $id = $this->idDe('ana.perez@fet.edu.co');
 
         $this->patchJson("/api/docente/estudiantes/{$id}/promedio", ['promedio' => 4.19])
             ->assertOk()
-            ->assertJsonPath('habilitado', false);
+            ->assertJsonPath('eliminado', true);
 
-        $estudiante = Estudiante::with('usuario')->find($id);
-        $this->assertFalse($estudiante->usuario->activo);
-        Notification::assertSentTo($estudiante->usuario, NoHabilitado::class);
-        Notification::assertNotSentTo($estudiante->usuario, CredencialesAcceso::class);
+        $this->assertDatabaseMissing('usuario', ['correo' => 'ana.perez@fet.edu.co']);
+        $this->assertDatabaseMissing('estudiante', ['id' => $id]);
+        Notification::assertSentOnDemand(NoHabilitado::class, function (NoHabilitado $aviso, array $canales, object $destino) {
+            $correo = implode("\n", $aviso->toMail($destino)->introLines);
+
+            return $destino->routes['mail'] === 'ana.perez@fet.edu.co'
+                && str_contains($correo, 'Ana Pérez · Código: 20231045')
+                && str_contains($correo, 'promedio (4,19) es inferior al mínimo requerido (4,20)');
+        });
+        Notification::assertCount(1);
+    }
+
+    public function test_el_docente_solo_registra_y_ve_estudiantes_de_su_programa(): void
+    {
+        $docente = $this->como(Rol::Docente);
+        $docente->update(['programa_id' => $this->programa()->id]);
+
+        $this->registrar()
+            ->assertJsonPath('creados', 0)
+            ->assertJsonPath('errores.0.error', fn (string $m) => str_contains($m, 'otro programa'));
+        $this->registrar(['programa_id' => $docente->programa_id])->assertJsonPath('creados', 1);
+
+        $otro = $this->estudiante(5);
+        $this->getJson('/api/docente/estudiantes')->assertJsonCount(1, 'data');
+        $this->patchJson("/api/docente/estudiantes/{$otro->id}/promedio", ['promedio' => 4.5])->assertForbidden();
+        $this->getJson("/api/estudiantes/{$otro->id}")->assertForbidden();
     }
 
     public function test_el_promedio_minimo_lo_define_la_administracion(): void

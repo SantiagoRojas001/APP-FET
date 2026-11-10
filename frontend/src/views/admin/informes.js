@@ -1,5 +1,6 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
+import { periodosRecientes } from '../../lib/format.js';
 import { emptyState, icon, pageHeader, toast, withBusy } from '../../lib/ui.js';
 
 const num = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
@@ -8,17 +9,17 @@ const pct = (v) => (v === null ? 'Sin datos' : `${num.format(v)} %`);
 
 /**
  * Cifras de las prácticas para acreditación y registro calificado, por
- * periodo académico, exportables a Excel.
+ * periodo académico (calculado con las fechas), exportables a Excel.
  */
 export default async function informesView({ root }) {
-  const periodos = await api.get('/admin/periodos');
-  const filters = { periodo_id: periodos.find((p) => !p.cerrado_en)?.id ?? '' };
+  const periodos = periodosRecientes();
+  const filters = { periodo: periodos[0] };
 
   mount(
     root,
     html`${pageHeader(
         'Informes',
-        'Prácticas por programa, empresas con más practicantes, tasas de aprobación y aceptación y tiempo promedio de cada etapa.',
+        '',
         html`<button class="btn" id="export">${icon('file-spreadsheet')}Exportar a Excel</button>`,
       )}
       <div class="toolbar">
@@ -26,7 +27,7 @@ export default async function informesView({ root }) {
           <label for="periodo">Periodo</label
           ><select class="input" id="periodo">
             <option value="">Todos los periodos</option>
-            ${periodos.map((p) => html`<option value="${p.id}" ${p.id === filters.periodo_id ? 'selected' : ''}>${p.nombre}</option>`)}
+            ${periodos.map((p) => html`<option value="${p}" ${p === filters.periodo ? 'selected' : ''}>${p}</option>`)}
           </select>
         </div>
       </div>
@@ -174,14 +175,14 @@ export default async function informesView({ root }) {
   }
 
   root.querySelector('#periodo').addEventListener('change', (e) => {
-    filters.periodo_id = e.target.value ? Number(e.target.value) : '';
+    filters.periodo = e.target.value;
     load();
   });
 
   root.querySelector('#export').addEventListener('click', (e) =>
     withBusy(e.currentTarget, async () => {
-      const nombre = periodos.find((p) => p.id === filters.periodo_id)?.nombre ?? 'todos';
-      const query = filters.periodo_id ? `?periodo_id=${filters.periodo_id}` : '';
+      const nombre = filters.periodo || 'todos';
+      const query = filters.periodo ? `?periodo=${filters.periodo}` : '';
       await api
         .download(`/api/admin/informes/exportar${query}`, `informe-practicas-${nombre}.xlsx`)
         .catch((err) => toast(err.message));

@@ -6,7 +6,7 @@ use App\Enums\EstadoAcuerdo;
 use App\Models\Acuerdo;
 
 /**
- * A la empresa: la FET aprobó o rechazó su acuerdo.
+ * A la empresa: la FET aprobó o rechazó su convenio.
  */
 class AcuerdoRevisado extends Aviso
 {
@@ -14,19 +14,19 @@ class AcuerdoRevisado extends Aviso
 
     protected function titulo(): string
     {
-        return $this->aprobado() ? 'Tu acuerdo fue aprobado' : 'Tu acuerdo fue rechazado';
+        return $this->aprobado() ? 'Tu convenio fue aprobado' : 'Tu convenio fue rechazado';
     }
 
     protected function mensaje(): string
     {
         return $this->aprobado()
-            ? 'La FET aprobó tu acuerdo. Ya puedes revisar las hojas de vida publicadas y asignar citas a los estudiantes.'
-            : "La FET rechazó tu acuerdo. Motivo: {$this->acuerdo->observacion}. Puedes subir uno corregido.";
+            ? 'La FET aprobó tu convenio. Ya puedes revisar las hojas de vida publicadas y asignar citas a los estudiantes.'
+            : "La FET rechazó tu convenio. Motivo: {$this->acuerdo->observacion}. Puedes subir uno corregido.";
     }
 
     protected function enlace(): string
     {
-        return '/acuerdo';
+        return '/convenio';
     }
 
     private function aprobado(): bool

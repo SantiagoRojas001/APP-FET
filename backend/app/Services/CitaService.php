@@ -10,7 +10,6 @@ use App\Exceptions\ReglaNegocioException;
 use App\Models\Cita;
 use App\Models\Empresa;
 use App\Models\Estudiante;
-use App\Models\PeriodoAcademico;
 use App\Models\Usuario;
 use App\Models\Vinculacion;
 use App\Notifications\CartaPorEnviar;
@@ -26,16 +25,16 @@ use Illuminate\Support\Facades\Notification;
 /**
  * De la cita a la práctica:
  *
- * 1. Una empresa con acuerdo aprobado y vigente asigna una cita a un
+ * 1. Una empresa con convenio aprobado y vigente asigna una cita a un
  *    estudiante habilitado cuya hoja de vida aprobó un docente. El
  *    estudiante recibe la empresa, la dirección, la fecha y la hora; puede
  *    tener varias citas.
  * 2. Según la cita, la empresa acepta al estudiante (con la fecha de inicio)
  *    o lo rechaza.
- * 3. Si lo acepta, el director del programa envía la carta de presentación:
- *    empieza la práctica con el docente que aprobó la hoja de vida como
- *    tutor, el estudiante recibe la carta de bienvenida, su hoja de vida se
- *    deshabilita y sus demás procesos se cierran.
+ * 3. Si lo acepta, el director del programa envía la carta de presentación
+ *    a la empresa: empieza la práctica con el docente que aprobó la hoja de
+ *    vida como tutor, su hoja de vida se deshabilita y sus demás procesos se
+ *    cierran.
  */
 class CitaService
 {
@@ -47,7 +46,7 @@ class CitaService
     public function asignar(Empresa $empresa, Estudiante $estudiante, array $datos): Cita
     {
         if (! $empresa->tieneAcuerdoVigente()) {
-            throw new ReglaNegocioException('Para asignar citas necesitas un acuerdo aprobado y vigente con la FET.');
+            throw new ReglaNegocioException('Para asignar citas necesitas un convenio aprobado y vigente con la FET.');
         }
 
         $estudiante->loadMissing('hojaVida', 'vinculacionActiva');
@@ -120,7 +119,7 @@ class CitaService
 
         if ($aceptar) {
             $cita->load('empresa', 'estudiante.programa');
-            $directores = $this->usuarios(Rol::Director, $cita->estudiante->programa_id);
+            $directores = Usuario::delPrograma(Rol::Director, $cita->estudiante->programa_id);
             Notification::send($directores->isNotEmpty() ? $directores : $this->usuarios(Rol::Admin), new CartaPorEnviar($cita));
         }
 
@@ -152,7 +151,6 @@ class CitaService
                 'tipo' => $cita->vacante?->modalidad ?? $estudiante->modalidad_grado ?? Modalidad::Pasantia,
                 'semestre_al_vincular' => $estudiante->semestre_actual,
                 'fecha_inicio' => $inicio->toDateString(),
-                'periodo_id' => PeriodoAcademico::abiertoEn($inicio)?->id,
             ]);
 
             $cita->update([
@@ -205,12 +203,8 @@ class CitaService
     }
 
     /** @return Collection<int, Usuario> */
-    private function usuarios(Rol $rol, ?int $programaId = null)
+    private function usuarios(Rol $rol)
     {
-        return Usuario::query()
-            ->where('rol', $rol)
-            ->where('activo', true)
-            ->when($programaId, fn ($q) => $q->where('programa_id', $programaId))
-            ->get();
+        return Usuario::query()->where('rol', $rol)->where('activo', true)->get();
     }
 }

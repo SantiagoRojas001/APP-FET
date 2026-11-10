@@ -3,28 +3,16 @@ import { html, mount } from '../../lib/html.js';
 import { formatDateTime, initials, todayIso } from '../../lib/format.js';
 import { confirmInline, emptyState, icon, pageHeader, showFieldErrors, statusBadge, toast, withBusy } from '../../lib/ui.js';
 
-const TABS = [
-  ['PROGRAMADA', 'Programadas'],
-  ['PROCESO', 'En proceso'],
-  ['', 'Todas'],
-];
-const EN_PROCESO = ['ACEPTADO', 'PRESENTADO'];
-
 /**
- * Citas de la empresa. Una vez realizada la cita, la empresa acepta al
- * estudiante (con la fecha de inicio; el director de programa le envía la
- * carta de presentación) o lo rechaza.
+ * Citas programadas de la empresa. Una vez realizada la cita, la empresa
+ * acepta al estudiante (con la fecha de inicio) o lo rechaza. Si lo acepta,
+ * recibe la carta de presentación del director del programa y el
+ * practicante aparece en Mis practicantes.
  */
-export default async function citasEmpresaView({ root, navigate }) {
-  const citas = await api.get('/empresa/citas');
-  let filtro = 'PROGRAMADA';
+export default async function citasEmpresaView({ root }) {
+  let citas = (await api.get('/empresa/citas')).filter((c) => c.estado.valor === 'PROGRAMADA');
 
   const acciones = (c) => {
-    if (c.estado.valor !== 'PROGRAMADA') {
-      return c.estado.valor === 'PRESENTADO' && c.vinculacion_id
-        ? html`<button class="btn sec sm" data-go="/vinculacion/${c.vinculacion_id}">Ver práctica</button>`
-        : '';
-    }
     if (!c.realizada) {
       return html`<form class="actions" data-cancelar="${c.id}" novalidate>
         <input class="input" name="motivo" placeholder="Motivo (opcional)" aria-label="Motivo de la cancelación" style="width:auto" />
@@ -63,32 +51,17 @@ export default async function citasEmpresaView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Citas', 'Después de cada cita, acepta o rechaza al estudiante. Si lo aceptas, el director de su programa te envía la carta de presentación y empieza la práctica.')}
-      <div class="toolbar"><div class="seg" role="group" aria-label="Filtrar citas">
-        ${TABS.map(([v, l]) => html`<button data-f="${v}" aria-pressed="${filtro === v}">${l}</button>`)}
-      </div></div>
+    html`${pageHeader('Citas')}
       <section class="panel flush" id="list"></section>`,
   );
 
   const list = root.querySelector('#list');
-  const draw = () => {
-    const items = citas.filter((c) => (filtro === 'PROCESO' ? EN_PROCESO.includes(c.estado.valor) : !filtro || c.estado.valor === filtro));
-    mount(list, items.length ? items.map(row) : emptyState('calendar-event', 'No hay citas aquí', 'Asigna citas desde Hojas de vida.'));
-  };
+  const draw = () =>
+    mount(list, citas.length ? citas.map(row) : emptyState('calendar-event', 'No tienes citas programadas', 'Asigna citas desde Hojas de vida.'));
 
-  root.addEventListener('click', (e) => {
-    const f = e.target.closest('[data-f]');
-    if (f) {
-      filtro = f.dataset.f;
-      root.querySelectorAll('[data-f]').forEach((b) => b.setAttribute('aria-pressed', String(b === f)));
-      return draw();
-    }
-    const go = e.target.closest('[data-go]');
-    if (go) navigate(go.dataset.go);
-  });
-
+  // Una cita decidida o cancelada sale de la lista.
   const actualizar = (cita) => {
-    citas.splice(citas.findIndex((c) => c.id === cita.id), 1, { ...citas.find((c) => c.id === cita.id), ...cita });
+    citas = citas.filter((c) => c.id !== cita.id);
     draw();
   };
 
@@ -107,7 +80,7 @@ export default async function citasEmpresaView({ root, navigate }) {
                 fecha_inicio: aceptar ? decidir.fecha_inicio.value || null : null,
               }),
             );
-            toast(aceptar ? 'Estudiante aceptado. El director de su programa te enviará la carta de presentación.' : 'Estudiante rechazado.');
+            toast(aceptar ? 'Estudiante aceptado. Recibirás la carta de presentación del director de su programa.' : 'Estudiante rechazado.');
           } catch (error) {
             showFieldErrors(decidir, error.errors) || toast(error.message);
           }

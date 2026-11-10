@@ -30,7 +30,7 @@ export const authCard = (content, { wide = false } = {}) =>
   html`<div class="login-wrap">
     <div class="auth-page">
       <div class="auth-card panel${wide ? ' wide' : ''}">
-        <div class="brand"><img class="brand-logo" src="/logo-fet-sello.png" alt="APP-FET" /><small>Pasantías y prácticas</small></div>
+        <a class="brand" href="/#/" aria-label="APP-FET, ir al inicio"><img class="brand-logo" src="/logo-fet-sello.png" alt="" /><small>Pasantías y prácticas</small></a>
         ${content}
       </div>
     </div>

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Rol;
 use App\Models\Empresa;
+use App\Models\Parametro;
 use App\Models\Reporte;
 use App\Models\Usuario;
 use App\Models\Vinculacion;
@@ -36,11 +37,11 @@ class PracticaTest extends TestCase
         Storage::fake('local');
     }
 
-    /** Práctica de un programa que exige pocas horas, para no reportar 480. */
+    /** Práctica de un ciclo que exige pocas horas, para no reportar 480. */
     private function practica(int $horasRequeridas = 16): Vinculacion
     {
         $vinculacion = Vinculacion::factory()->create(['fecha_inicio' => now()->subWeeks(4)->toDateString()]);
-        $vinculacion->estudiante->programa->update(['horas_requeridas' => $horasRequeridas]);
+        Parametro::guardar('horas_'.strtolower($vinculacion->ciclo()->value), (string) $horasRequeridas);
 
         return $vinculacion;
     }

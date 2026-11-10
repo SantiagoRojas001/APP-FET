@@ -3,13 +3,10 @@
 namespace App\Notifications;
 
 use App\Models\Vinculacion;
-use App\Services\CartaBienvenida;
-use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Support\Str;
 
 /**
- * Al estudiante, cuando el director envía la carta de presentación: empieza
- * su práctica y recibe la carta de bienvenida (adjunta en el correo).
+ * Al estudiante, cuando el director envía la carta de presentación a la
+ * empresa: empieza su práctica.
  */
 class PracticaAutorizada extends Aviso
 {
@@ -17,7 +14,7 @@ class PracticaAutorizada extends Aviso
 
     protected function titulo(): string
     {
-        return "Te damos la bienvenida a tu {$this->modalidad()}";
+        return "Empieza tu {$this->modalidad()}";
     }
 
     protected function mensaje(): string
@@ -25,21 +22,12 @@ class PracticaAutorizada extends Aviso
         $inicio = $this->vinculacion->fecha_inicio->format('d/m/Y');
 
         return "La FET autorizó tu {$this->modalidad()} en {$this->vinculacion->empresa->razon_social} desde el {$inicio}. "
-            .'Te enviamos la carta de bienvenida. Sube tu ARL y reporta tus horas cada semana en APP FET.';
+            .'El director de tu programa envió la carta de presentación a la empresa. Sube tu ARL y reporta tus horas cada semana en APP FET.';
     }
 
     protected function enlace(): string
     {
         return '/pasantia';
-    }
-
-    public function toMail(object $notifiable): MailMessage
-    {
-        return parent::toMail($notifiable)->attachData(
-            app(CartaBienvenida::class)->pdf($this->vinculacion),
-            'carta-de-bienvenida-'.Str::slug($this->vinculacion->estudiante->nombre_completo).'.pdf',
-            ['mime' => 'application/pdf'],
-        );
     }
 
     private function modalidad(): string

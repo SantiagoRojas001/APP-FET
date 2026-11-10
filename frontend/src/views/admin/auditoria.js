@@ -29,7 +29,7 @@ export default async function auditoriaView({ root }) {
 
   mount(
     root,
-    html`${pageHeader('Auditoría', 'Registro de las acciones relevantes: decisiones sobre postulaciones, revisiones, cierres de prácticas y cambios en cuentas.')}
+    html`${pageHeader('Auditoría')}
       <div class="toolbar">
         <div class="seg sm" role="group" aria-label="Filtrar por tipo">
           ${ENTIDADES.map(([v, l]) => html`<button data-f="${v}" aria-pressed="${filters.entidad === v}">${l}</button>`)}

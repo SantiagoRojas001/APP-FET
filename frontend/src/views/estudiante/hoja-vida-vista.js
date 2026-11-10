@@ -54,7 +54,7 @@ export default async function hojaVidaVistaView({ root, navigate, refresh }) {
         perfil.nombre_completo,
         perfil.hoja_vida_habilitada === false
           ? 'Tu hoja de vida está deshabilitada mientras cursas tu práctica: ya no la ven las empresas y no se puede editar.'
-          : `Vista previa de tu hoja de vida: así la ven las empresas y tus docentes. ${perfil.programa.nombre}, ${perfil.semestre_actual}.º semestre.`,
+          : `${perfil.programa.nombre}, ${perfil.semestre_actual}.º semestre.`,
         html`<div class="actions no-print">
           <button class="btn sec" id="pdf">${icon('download')}Descargar PDF (PA-GTH-F-10)</button>
           ${perfil.hoja_vida_habilitada === false || hv.estado?.valor === 'EN_REVISION' ? '' : html`<button class="btn" id="edit">${icon('file-cv')}Editar</button>`}

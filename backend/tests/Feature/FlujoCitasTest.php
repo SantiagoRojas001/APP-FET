@@ -136,7 +136,7 @@ class FlujoCitasTest extends TestCase
         $estudiante = Estudiante::factory()->hojaAprobada()->create();
         $this->comoEmpresa($empresa);
 
-        $this->citaPara($estudiante)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'acuerdo'));
+        $this->citaPara($estudiante)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'convenio'));
 
         Acuerdo::create([
             'empresa_id' => $empresa->id, 'archivo_url' => 'x.pdf', 'estado' => EstadoAcuerdo::Aprobado,
@@ -219,8 +219,8 @@ class FlujoCitasTest extends TestCase
         Sanctum::actingAs(Usuario::factory()->rol(Rol::Director)->create(['programa_id' => $programa->id]));
 
         $this->getJson('/api/director/estudiantes')->assertOk()->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.ciclo', 'Técnico')
-            ->assertJsonPath('data.1.ciclo', 'Profesional')
+            ->assertJsonPath('data.0.ciclo.etiqueta', 'Técnico')
+            ->assertJsonPath('data.1.ciclo.valor', 'PROFESIONAL')
             ->assertJsonPath('data.1.practica_actual.tipo.valor', fn ($v) => $v !== null);
         $this->getJson('/api/director/estudiantes?practica=NINGUNA')->assertJsonCount(1, 'data');
     }

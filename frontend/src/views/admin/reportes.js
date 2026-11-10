@@ -16,7 +16,7 @@ export default async function reportesAdminView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Reportes', 'Problemas reportados por estudiantes, docentes y empresas. Quien reporta recibe un aviso cuando respondes.')}
+    html`${pageHeader('Reportes')}
       <div class="toolbar">
         <div class="seg" role="group" aria-label="Filtrar por estado">
           ${ESTADOS.map(([v, l]) => html`<button data-f="${v}" aria-pressed="${filters.estado === v}">${l}</button>`)}

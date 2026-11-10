@@ -14,7 +14,9 @@ class EstudiantePolicy
     public function view(Usuario $usuario, Estudiante $estudiante): bool
     {
         return match ($usuario->rol) {
-            Rol::Admin, Rol::Docente => true,
+            Rol::Admin => true,
+            // Sin programa asignado, el docente atiende a todos los programas.
+            Rol::Docente => in_array($usuario->programa_id, [null, $estudiante->programa_id], true),
             Rol::Director => $usuario->programa_id !== null && $usuario->programa_id === $estudiante->programa_id,
             Rol::Estudiante => $usuario->id === $estudiante->usuario_id,
             // La empresa solo ve hojas de vida publicadas o de estudiantes con los que tiene una cita.

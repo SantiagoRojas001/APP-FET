@@ -2,46 +2,35 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\Rol;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegistroEmpresaRequest;
-use App\Models\Usuario;
-use App\Notifications\EmpresaPorValidar;
-use App\Services\Auditoria;
+use App\Services\RegistroEmpresaService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 
 /**
- * Registro público de empresas. La empresa define su contraseña y acepta la
- * política de datos, pero no ingresa hasta que la administración la valide.
- * Los estudiantes y docentes siguen entrando solo por invitación.
+ * Registro público de empresas (/empresasRegistro). Con convenio, la empresa
+ * define su contraseña y espera la validación de la FET; sin convenio, envía
+ * una solicitud de convenio y se registra cuando lo reciba (ver
+ * RegistroEmpresaService).
  */
 class RegistroEmpresaController extends Controller
 {
-    public function __invoke(RegistroEmpresaRequest $request): JsonResponse
+    public function __invoke(RegistroEmpresaRequest $request, RegistroEmpresaService $registro): JsonResponse
     {
-        $empresa = DB::transaction(function () use ($request) {
-            $usuario = Usuario::create([
-                'correo' => $request->validated('correo'),
-                'password_hash' => $request->validated('password'),
-                'rol' => Rol::Empresa,
-            ]);
-            $usuario->consentimientos()->create(['version_politica' => config('fet.version_politica')]);
+        $datos = $request->safe()->except(['firma', 'convenio', 'con_convenio', 'acepta_politica']);
 
-            return $usuario->empresa()->create($request->safe()->only([
-                'nit', 'razon_social', 'sector', 'contacto_nombre', 'contacto_telefono', 'modalidad_interes',
-            ]));
-        });
+        if (! $request->boolean('con_convenio')) {
+            $registro->solicitarConvenio($datos, $request->file('firma'));
 
-        Auditoria::registrar('empresa.registrada', $empresa);
-        Notification::send(
-            Usuario::query()->where('rol', Rol::Admin)->where('activo', true)->get(),
-            new EmpresaPorValidar($empresa),
-        );
+            return response()->json([
+                'message' => 'Recibimos tu solicitud de convenio. La FET te enviará el convenio por correo: cuando lo tengas firmado, vuelve a esta página y registra tu empresa con él.',
+            ], 201);
+        }
+
+        $registro->registrar($datos, $request->file('firma'), $request->file('convenio'));
 
         return response()->json([
-            'message' => 'Registro recibido. La FET validará tu empresa y te avisará por correo para que puedas ingresar.',
+            'message' => 'Registro recibido. La FET validará tu empresa y tu convenio, y te avisará por correo para que puedas ingresar.',
         ], 201);
     }
 }

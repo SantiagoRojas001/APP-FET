@@ -26,6 +26,7 @@ class HojaVidaController extends Controller
 
         $estudiantes = Estudiante::query()
             ->with('usuario', 'programa', 'competencias', 'proyectos', 'hojaVida.referencias')
+            ->delPrograma($request->user()->programaAsignado())
             ->whereHas('hojaVida', fn (Builder $h) => $h->where('estado', $estado))
             ->orderBy(HojaVida::query()->select('enviada_en')->whereColumn('hoja_vida.estudiante_id', 'estudiante.id'))
             ->get();
@@ -39,6 +40,9 @@ class HojaVidaController extends Controller
             'aprobar' => ['required', 'boolean'],
             'observaciones' => ['nullable', 'string', 'max:2000', 'required_if_declined:aprobar'],
         ], ['observaciones.required_if_declined' => 'Escribe las recomendaciones para que el estudiante sepa qué corregir.']);
+
+        $programa = $request->user()->programaAsignado();
+        abort_if($programa && $programa !== $estudiante->programa_id, 403, 'El estudiante es de otro programa.');
 
         $hojaVida->revisar($estudiante, $request->user(), $request->boolean('aprobar'), $datos['observaciones'] ?? null);
 

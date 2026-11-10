@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\Ciclo;
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Modalidad;
 use App\Policies\VinculacionPolicy;
+use App\Support\Periodo;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -23,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'estudiante_id', 'empresa_id', 'vacante_id', 'tutor_id', 'tipo', 'semestre_al_vincular',
     'fecha_inicio', 'fecha_fin', 'estado', 'reconocida_como_practica', 'observacion_final',
-    'periodo_id', 'horas_cumplidas_en', 'finalizada_por',
+    'horas_cumplidas_en', 'finalizada_por',
 ])]
 #[UsePolicy(VinculacionPolicy::class)]
 class Vinculacion extends Model
@@ -34,7 +36,7 @@ class Vinculacion extends Model
         'estado' => 'ACTIVA',
     ];
 
-    private const SEGUIMIENTO = ['estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos', 'periodo', 'evaluaciones'];
+    private const SEGUIMIENTO = ['estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos', 'evaluaciones'];
 
     protected function casts(): array
     {
@@ -74,6 +76,31 @@ class Vinculacion extends Model
             ->withCount(['reportes', 'evidencias as evidencias_por_revisar' => fn ($q) => $q->where('estado', EstadoRevision::Pendiente)]);
     }
 
+    /** Periodo académico de la fecha de inicio (2026-1, 2026-2). */
+    public function periodo(): string
+    {
+        return Periodo::deFecha($this->fecha_inicio);
+    }
+
+    /** Ciclo que cursaba el estudiante al empezar: define las horas que exige la práctica. */
+    public function ciclo(): Ciclo
+    {
+        return Ciclo::deSemestre($this->semestre_al_vincular);
+    }
+
+    public function horasRequeridas(): int
+    {
+        return Parametro::horasRequeridas($this->ciclo());
+    }
+
+    /** @param  Builder<self>  $query */
+    #[Scope]
+    protected function delPeriodo(Builder $query, string $periodo): void
+    {
+        [$inicio, $fin] = Periodo::rango($periodo);
+        $query->whereBetween('vinculacion.fecha_inicio', [$inicio->toDateString(), $fin->toDateString()]);
+    }
+
     public function cumplioHoras(): bool
     {
         return $this->horas_cumplidas_en !== null;
@@ -107,12 +134,6 @@ class Vinculacion extends Model
     public function documentos(): HasMany
     {
         return $this->hasMany(DocumentoSeguimiento::class)->orderByDesc('cargado_en');
-    }
-
-    /** @return BelongsTo<PeriodoAcademico, $this> */
-    public function periodo(): BelongsTo
-    {
-        return $this->belongsTo(PeriodoAcademico::class, 'periodo_id');
     }
 
     /** @return BelongsTo<Usuario, $this> */

@@ -9,18 +9,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Programa académico de la FET.
+ * Programa académico de la FET. Se cursa por ciclos (ver App\Enums\Ciclo).
  */
 #[Table('programa', timestamps: false)]
-#[Fillable(['nombre', 'total_semestres', 'horas_requeridas'])]
+#[Fillable(['nombre', 'total_semestres'])]
 class Programa extends Model
 {
     use HasFactory;
-
-    protected function casts(): array
-    {
-        return ['horas_requeridas' => 'integer'];
-    }
 
     /** @return HasMany<Estudiante, $this> */
     public function estudiantes(): HasMany

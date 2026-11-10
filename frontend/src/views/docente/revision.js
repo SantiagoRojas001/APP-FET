@@ -16,7 +16,7 @@ function row(s) {
     <div class="av lg">${initials(s.nombre_completo)}</div>
     <div class="rowi-main">
       <div class="panel-h">
-        <div><h3>${s.nombre_completo}</h3><div class="sub">${s.programa.nombre}, ${s.semestre_actual}.º semestre (ciclo ${s.ciclo.toLowerCase()})</div></div>
+        <div><h3>${s.nombre_completo}</h3><div class="sub">${s.programa.nombre}, ${s.semestre_actual}.º semestre (ciclo ${s.ciclo.etiqueta.toLowerCase()})</div></div>
         ${statusBadge(hv.estado)}
       </div>
       <div class="req">
@@ -52,7 +52,7 @@ export default async function revisionView({ root }) {
 
   mount(
     root,
-    html`${pageHeader('Hojas de vida', 'Revisa las hojas de vida que envían los estudiantes. Al aprobarla, las empresas pueden asignarles citas; si encuentras algo por mejorar, devuélvela con recomendaciones.')}
+    html`${pageHeader('Hojas de vida')}
       <div class="toolbar"><div class="seg" role="group" aria-label="Filtrar">
         ${TABS.map(([v, l]) => html`<button data-f="${v}" aria-pressed="${estado === v}">${l}</button>`)}
       </div></div>

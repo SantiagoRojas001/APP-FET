@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\PeriodoAcademico;
 use App\Services\InformeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,15 +21,14 @@ class InformeController extends Controller
     public function exportar(Request $request, InformeService $informes): BinaryFileResponse
     {
         $periodo = $this->periodo($request);
-        $nombre = 'informe-practicas-'.($periodo?->nombre ?? 'todos').'.xlsx';
+        $nombre = 'informe-practicas-'.($periodo ?? 'todos').'.xlsx';
 
         return response()->download($informes->exportar($periodo), $nombre)->deleteFileAfterSend();
     }
 
-    private function periodo(Request $request): ?PeriodoAcademico
+    /** Periodo calculado (2026-1, 2026-2); sin periodo, todos. */
+    private function periodo(Request $request): ?string
     {
-        $id = $request->validate(['periodo_id' => ['nullable', 'integer', 'exists:periodo_academico,id']])['periodo_id'] ?? null;
-
-        return $id ? PeriodoAcademico::find($id) : null;
+        return $request->validate(['periodo' => ['nullable', 'string', 'regex:/^20\d{2}-[12]$/']])['periodo'] ?? null;
     }
 }

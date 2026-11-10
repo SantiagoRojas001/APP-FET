@@ -9,7 +9,7 @@ export default async function vacantesEmpresaView({ root, refresh }) {
 
   mount(
     root,
-    html`${pageHeader('Mis vacantes', 'Publica tus ofertas de pasantía o práctica. Las ven los docentes de la FET, que te recomiendan estudiantes: los verás primero en Hojas de vida.')}
+    html`${pageHeader('Mis vacantes')}
       <section class="panel">
         <h2>Publicar vacante</h2>
         <form id="vacForm" class="form-grid" novalidate>

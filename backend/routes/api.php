@@ -12,6 +12,7 @@ use App\Http\Controllers\Director;
 use App\Http\Controllers\Docente;
 use App\Http\Controllers\Empresa;
 use App\Http\Controllers\Estudiante;
+use App\Http\Controllers\FirmaEstudianteController;
 use App\Http\Controllers\FotoEstudianteController;
 use App\Http\Controllers\HojaVidaPdfController;
 use App\Http\Controllers\NotificacionController;
@@ -35,7 +36,7 @@ Route::middleware('throttle:5,1')->group(function () {
     Route::post('auth/olvide-contrasena', [RecuperacionController::class, 'solicitar']);
     Route::post('auth/restablecer-contrasena', [RecuperacionController::class, 'restablecer']);
     // Docentes, directores y administradores entran por invitación; los estudiantes, con las credenciales que
-    // reciben al registrar su promedio; las empresas también pueden registrarse y esperar validación.
+    // reciben al registrar su promedio. Las empresas se registran con su convenio (o lo solicitan) y esperan validación.
     Route::post('auth/activar-cuenta', ActivacionController::class);
     Route::post('registro/empresa', RegistroEmpresaController::class);
 });
@@ -65,7 +66,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('vinculaciones/{vinculacion}/documentos', [DocumentoController::class, 'store']);
         Route::get('documentos/{documento}/archivo', [DocumentoController::class, 'descargar']);
         Route::patch('documentos/{documento}/revision', [DocumentoController::class, 'revisar']);
-        Route::get('vinculaciones/{vinculacion}/carta-bienvenida.pdf', [DocumentoController::class, 'cartaBienvenida']);
         Route::get('vinculaciones/{vinculacion}/evidencias', [EvidenciaController::class, 'index']);
         Route::post('vinculaciones/{vinculacion}/evidencias', [EvidenciaController::class, 'store']);
         Route::post('vinculaciones/{vinculacion}/evidencias/aprobacion', [EvidenciaController::class, 'aprobarPendientes']);
@@ -83,10 +83,11 @@ Route::middleware('auth:sanctum')->group(function () {
         // Vista previa del repositorio de GitHub de un proyecto (permiso: ProyectoPolicy)
         Route::get('proyectos/{proyecto}/repositorio', RepositorioController::class)->middleware('throttle:60,1');
 
-        // Perfil, hoja de vida en PDF y foto de un estudiante (permiso: EstudiantePolicy)
+        // Perfil, hoja de vida en PDF, foto y firma de un estudiante (permiso: EstudiantePolicy)
         Route::get('estudiantes/{estudiante}', [PerfilEstudianteController::class, 'show']);
         Route::get('estudiantes/{estudiante}/hoja-vida.pdf', [HojaVidaPdfController::class, 'deEstudiante']);
         Route::get('estudiantes/{estudiante}/foto', [FotoEstudianteController::class, 'show']);
+        Route::get('estudiantes/{estudiante}/firma', [FirmaEstudianteController::class, 'show']);
         Route::get('estudiantes', [PerfilEstudianteController::class, 'index'])->middleware('rol:DOCENTE,ADMIN,DIRECTOR');
 
         Route::prefix('estudiante')->middleware('rol:ESTUDIANTE')->group(function () {
@@ -95,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('hoja-vida/envio', [Estudiante\PerfilController::class, 'envio']);
             Route::get('hoja-vida.pdf', [HojaVidaPdfController::class, 'propia']);
             Route::post('foto', [FotoEstudianteController::class, 'store'])->middleware('throttle:10,1');
+            Route::post('firma', [FirmaEstudianteController::class, 'store'])->middleware('throttle:10,1');
             Route::get('citas', [Estudiante\CitaController::class, 'index']);
             Route::get('vinculaciones', [Estudiante\VinculacionController::class, 'index']);
         });
@@ -143,17 +145,18 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('usuarios/{usuario}/invitacion', [Admin\UsuarioController::class, 'invitar'])->middleware('throttle:10,1');
             Route::patch('estudiantes/{estudiante}', [Admin\EstudianteController::class, 'update']);
             Route::get('empresas', [Admin\EmpresaController::class, 'index']);
-            Route::post('empresas', [Admin\EmpresaController::class, 'store']);
             Route::patch('empresas/{empresa}', [Admin\EmpresaController::class, 'update']);
             Route::patch('empresas/{empresa}/validacion', [Admin\EmpresaController::class, 'validar']);
+            Route::get('empresas/{empresa}/firma', [Admin\EmpresaController::class, 'firma']);
+            Route::get('solicitudes-convenio', [Admin\SolicitudConvenioController::class, 'index']);
+            Route::post('solicitudes-convenio/{solicitud}/convenio', [Admin\SolicitudConvenioController::class, 'enviar']);
+            Route::post('solicitudes-convenio/{solicitud}/rechazo', [Admin\SolicitudConvenioController::class, 'rechazar']);
+            Route::get('solicitudes-convenio/{solicitud}/firma', [Admin\SolicitudConvenioController::class, 'firma']);
+            Route::get('solicitudes-convenio/{solicitud}/convenio', [Admin\SolicitudConvenioController::class, 'convenio']);
             Route::get('acuerdos', [AcuerdoController::class, 'index']);
             Route::patch('acuerdos/{acuerdo}/revision', [AcuerdoController::class, 'revisar']);
             Route::get('parametros', [Admin\ParametroController::class, 'show']);
             Route::put('parametros', [Admin\ParametroController::class, 'update']);
-            Route::patch('programas/{programa}', [Admin\ProgramaController::class, 'update']);
-            Route::get('periodos', [Admin\PeriodoController::class, 'index']);
-            Route::post('periodos', [Admin\PeriodoController::class, 'store']);
-            Route::post('periodos/{periodo}/cierre', [Admin\PeriodoController::class, 'cerrar']);
             Route::get('reportes', [Admin\ReporteController::class, 'index']);
             Route::patch('reportes/{reporte}', [Admin\ReporteController::class, 'update']);
             Route::get('informes', [Admin\InformeController::class, 'show']);

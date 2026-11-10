@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\Rol;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,13 @@ class EmpresaResource extends Recurso
             'modalidad_interes' => $this->enum($this->modalidad_interes),
             'estado_validacion' => $this->enum($this->estado_validacion),
             'validada_en' => $this->validada_en?->toIso8601String(),
+            'representante_nombre' => $this->representante_nombre,
+            'representante_documento' => $this->representante_documento,
+            // La firma del representante solo la consulta la administración.
+            'url_firma' => $this->when(
+                $request->user()?->rol === Rol::Admin && $this->firma_representante_url !== null,
+                fn () => "/api/admin/empresas/{$this->id}/firma",
+            ),
             'correo' => $this->whenLoaded('usuario', fn () => $this->usuario->correo),
             // Sin política aceptada, la empresa aún no usa su invitación.
             'pendiente_activacion' => $this->whenLoaded('usuario', fn () => isset($this->usuario->consentimientos_count) ? $this->usuario->consentimientos_count === 0 : null),

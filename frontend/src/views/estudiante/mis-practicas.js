@@ -9,7 +9,7 @@ export default async function misPracticasView({ root, navigate }) {
 
   mount(
     root,
-    html`${pageHeader('Mis prácticas', 'Pasantías y prácticas que has realizado.')}
+    html`${pageHeader('Mis prácticas')}
     ${
       items.length
         ? items.map(

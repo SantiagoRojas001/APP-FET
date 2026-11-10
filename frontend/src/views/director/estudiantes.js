@@ -5,9 +5,9 @@ import { session } from '../../session.js';
 
 const CICLOS = [
   ['', 'Todos'],
-  ['Técnico', 'Técnico'],
-  ['Tecnólogo', 'Tecnólogo'],
-  ['Profesional', 'Profesional'],
+  ['TECNICO', 'Técnico'],
+  ['TECNOLOGO', 'Tecnólogo'],
+  ['PROFESIONAL', 'Profesional'],
 ];
 const PRACTICA = [
   ['', 'Todos'],
@@ -19,11 +19,9 @@ const PRACTICA = [
 /** Estudiantes del programa del director, con su ciclo académico y si están en pasantía, práctica o aún no. */
 export default async function estudiantesDirectorView({ root }) {
   const filters = { ciclo: '', practica: '', q: '', page: 1 };
-  const programa = session.user.programa?.nombre ?? 'tu programa';
-
   mount(
     root,
-    html`${pageHeader('Estudiantes', `Estudiantes de ${programa}, con su ciclo académico y si están realizando pasantía, práctica o aún no.`)}
+    html`${pageHeader('Estudiantes', session.user.programa?.nombre ?? '')}
       <div class="toolbar">
         <div class="seg" role="group" aria-label="Filtrar por ciclo">
           ${CICLOS.map(([v, l]) => html`<button data-ciclo="${v}" aria-pressed="${filters.ciclo === v}">${l}</button>`)}
@@ -44,11 +42,9 @@ export default async function estudiantesDirectorView({ root }) {
   const estado = (s) =>
     s.practica_actual
       ? html`${badge('ok', `En ${s.practica_actual.tipo.etiqueta.toLowerCase()}`)}<small>${s.practica_actual.empresa ?? ''}</small>`
-      : s.habilitado === false
-        ? badge('neutral', 'No habilitado')
-        : s.hoja_vida?.estado
-          ? html`${badge('neutral', 'Aún no')}<small>Hoja de vida: ${s.hoja_vida.estado.etiqueta.toLowerCase()}</small>`
-          : badge('neutral', 'Aún no');
+      : s.hoja_vida?.estado
+        ? html`${badge('neutral', 'Aún no')}<small>Hoja de vida: ${s.hoja_vida.estado.etiqueta.toLowerCase()}</small>`
+        : badge('neutral', 'Aún no');
 
   async function load() {
     const res = await api.get('/director/estudiantes', filters);
@@ -61,7 +57,7 @@ export default async function estudiantesDirectorView({ root }) {
               (s) => html`<tr>
                 <td><b><a href="#/estudiantes/${s.id}">${s.nombre_completo}</a></b><small class="mono">${s.correo ?? ''}</small></td>
                 <td class="num">${s.semestre_actual}.º</td>
-                <td>${s.ciclo}</td>
+                <td>${s.ciclo.etiqueta}</td>
                 <td>${s.modalidad_grado ? modalityTag(s.modalidad_grado) : html`<span class="fine">No registra</span>`}</td>
                 <td>${estado(s)}</td>
               </tr>`,

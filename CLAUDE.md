@@ -28,4 +28,6 @@ PHP no está instalado en el equipo: todo comando de PHP o Composer se ejecuta e
 - Colores: solo con los tokens de `frontend/src/styles/main.css`. Fondos y superficies en grises neutros; el verde institucional (`--accent`, verde suave `--accent-soft`) solo en detalles (botones, enlaces, menú activo, etiquetas). Nunca hex sueltos en las vistas.
 - Diseño plano: no envolver secciones en tarjetas ni anidar recuadros. Usa `.panel` (sección con línea superior) y listas con divisores.
 - Sin esquinas redondeadas (solo los avatares son círculos). Los filtros (`.seg`) son pestañas con línea verde bajo la activa; el encabezado de página (`pageHeader`) va pegado arriba con el tono de la barra lateral.
+- Sin textos descriptivos en las páginas: `pageHeader` lleva solo el título (y como subtítulo, un dato como el programa o la empresa). Lo que explica cada sección va en `ayuda` de `src/routes.js`, que muestra el recorrido guiado.
+- En la interfaz y los correos se dice «convenio»; en el código y la base, `acuerdo`.
 - Ver `docs/arquitectura.md` antes de cambiar el modelo de datos o el flujo de citas.

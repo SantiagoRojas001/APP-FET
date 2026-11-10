@@ -23,7 +23,9 @@ class UsuarioResource extends Recurso
             'tema' => $this->tema ?? 'system',
             // Debe cambiar la contraseña inicial antes de usar la app.
             'debe_cambiar_password' => (bool) $this->debe_cambiar_password,
-            'programa' => $this->when($this->rol === Rol::Director, fn () => $this->programa_id ? ['id' => $this->programa_id, 'nombre' => $this->programa()->value('nombre')] : null),
+            // Recorrido guiado de la app: se muestra una vez, en el primer ingreso.
+            'tutorial_visto' => (bool) $this->tutorial_visto,
+            'programa' => $this->when($this->tieneRol(Rol::Docente, Rol::Director), fn () => $this->programa_id ? ['id' => $this->programa_id, 'nombre' => $this->relationLoaded('programa') ? $this->programa->nombre : $this->programa()->value('nombre')] : null),
             'creado_en' => $this->creado_en?->toIso8601String(),
             // Sin política aceptada, la persona aún no usa su invitación.
             'pendiente_activacion' => $this->whenCounted('consentimientos', fn (int $n) => $n === 0),

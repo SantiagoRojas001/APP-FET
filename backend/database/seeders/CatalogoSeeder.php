@@ -15,15 +15,18 @@ class CatalogoSeeder extends Seeder
 {
     public function run(): void
     {
+        // Programas por ciclos propedéuticos: técnico, tecnólogo y profesional en 10 semestres.
         $programas = [
-            // nombre, total de semestres
-            ['Ingeniería de Software', 10],
-            ['Tecnología en Desarrollo de Software', 6],
-            ['Técnica Profesional en Programación de Software', 4],
+            'Ingeniería Ambiental',
+            'Ingeniería de Alimentos',
+            'Ingeniería de Software',
+            'Ingeniería Eléctrica',
+            'Administración de la Seguridad y Salud en el Trabajo',
+            'Administración de Negocios',
         ];
 
-        foreach ($programas as [$nombre, $total]) {
-            Programa::updateOrCreate(['nombre' => $nombre], ['total_semestres' => $total]);
+        foreach ($programas as $nombre) {
+            Programa::updateOrCreate(['nombre' => $nombre], ['total_semestres' => 10]);
         }
 
         $competencias = [

@@ -18,7 +18,7 @@ class EmpresaPorValidar extends Aviso
 
     protected function mensaje(): string
     {
-        return "{$this->empresa->razon_social} (NIT {$this->empresa->nit}) se registró en APP FET. Valídala para que pueda ingresar.";
+        return "{$this->empresa->razon_social} (NIT {$this->empresa->nit}) se registró en APP FET con su convenio. Valídala para que pueda ingresar y aprueba el convenio en Convenios.";
     }
 
     protected function enlace(): string

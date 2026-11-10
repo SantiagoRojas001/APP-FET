@@ -2,18 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Enums\EstadoValidacion;
 use App\Enums\Rol;
 use App\Models\Auditoria;
 use App\Models\Empresa;
 use App\Models\Programa;
 use App\Models\Usuario;
-use App\Notifications\EmpresaPorValidar;
-use App\Notifications\EmpresaValidada;
 use App\Notifications\InvitacionCuenta;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class CuentasTest extends TestCase
@@ -65,42 +61,6 @@ class CuentasTest extends TestCase
         $this->postJson('/api/registro/estudiante', [])->assertNotFound();
     }
 
-    public function test_una_empresa_se_registra_y_espera_la_validacion_de_la_fet(): void
-    {
-        Notification::fake();
-        $admin = Usuario::factory()->rol(Rol::Admin)->create();
-        $datos = [
-            'correo' => 'Talento@Acme.co',
-            'password' => 'clave1234',
-            'password_confirmation' => 'clave1234',
-            'nit' => '900.123.456-7',
-            'razon_social' => 'Acme S.A.S.',
-            'contacto_nombre' => 'Ana Gómez',
-            'contacto_telefono' => '3001234567',
-            'modalidad_interes' => 'PASANTIA',
-            'acepta_politica' => true,
-        ];
-
-        $this->postJson('/api/registro/empresa', [...$datos, 'acepta_politica' => false])->assertJsonValidationErrors('acepta_politica');
-        $this->postJson('/api/registro/empresa', $datos)->assertCreated();
-        $this->postJson('/api/registro/empresa', $datos)->assertJsonValidationErrors(['correo', 'nit']);
-
-        $empresa = Empresa::sole();
-        $this->assertSame(EstadoValidacion::Pendiente, $empresa->estado_validacion);
-        $this->assertDatabaseHas('consentimiento_datos', ['usuario_id' => $empresa->usuario_id]);
-        Notification::assertSentTo($admin, EmpresaPorValidar::class);
-
-        // No ingresa hasta que la administración la valide; al validarla se le avisa.
-        $this->postJson('/api/auth/login', ['correo' => 'talento@acme.co', 'password' => 'clave1234'])
-            ->assertJsonValidationErrors('correo');
-
-        Sanctum::actingAs($admin);
-        $this->patchJson("/api/admin/empresas/{$empresa->id}/validacion", ['estado_validacion' => 'VALIDADA'])->assertOk();
-        Notification::assertSentTo($empresa->usuario, EmpresaValidada::class);
-
-        $this->postJson('/api/auth/login', ['correo' => 'talento@acme.co', 'password' => 'clave1234'])->assertOk();
-    }
-
     public function test_el_admin_crea_un_director_de_programa_que_activa_su_cuenta_con_la_invitacion(): void
     {
         $programa = Programa::factory()->create(['total_semestres' => 10]);
@@ -139,22 +99,22 @@ class CuentasTest extends TestCase
             ->assertJsonValidationErrors('rol');
     }
 
-    public function test_la_empresa_invitada_queda_validada_y_puede_ingresar_al_activarse(): void
+    public function test_el_admin_asigna_el_programa_del_docente_y_ya_no_invita_empresas(): void
     {
         $this->como(Rol::Admin);
+        $programa = $this->programa();
 
-        $this->postJson('/api/admin/empresas', [
-            'correo' => 'rrhh@empresa.co',
-            'nit' => '901.111.222-3',
-            'razon_social' => 'Empresa de Prueba S.A.S.',
-            'contacto_nombre' => 'Laura Díaz',
-            'contacto_telefono' => '3100000000',
-            'modalidad_interes' => 'PASANTIA',
-        ])->assertCreated()->assertJsonPath('estado_validacion.valor', 'VALIDADA')->assertJsonPath('pendiente_activacion', true);
+        $this->postJson('/api/admin/usuarios', ['correo' => 'docente.ambiental@fet.edu.co', 'rol' => 'DOCENTE', 'programa_id' => $programa->id])
+            ->assertCreated()
+            ->assertJsonPath('programa.nombre', $programa->nombre);
+        $docente = Usuario::where('correo', 'docente.ambiental@fet.edu.co')->firstOrFail();
 
-        $usuario = Usuario::where('correo', 'rrhh@empresa.co')->firstOrFail();
-        $this->activar($usuario)->assertOk();
-        $this->postJson('/api/auth/login', ['correo' => 'rrhh@empresa.co', 'password' => 'clave1234'])->assertOk();
+        $this->patchJson("/api/admin/usuarios/{$docente->id}", ['programa_id' => null])->assertOk()->assertJsonPath('programa', null);
+        $this->postJson('/api/admin/usuarios', ['correo' => 'admin.dos@fet.edu.co', 'rol' => 'ADMIN', 'programa_id' => $programa->id])
+            ->assertJsonValidationErrors('programa_id');
+
+        // Las empresas solo se registran en /empresasRegistro y la administración las valida.
+        $this->postJson('/api/admin/empresas', ['correo' => 'rrhh@empresa.co'])->assertMethodNotAllowed();
     }
 
     public function test_una_invitacion_invalida_no_activa_y_se_puede_reenviar_hasta_activar(): void

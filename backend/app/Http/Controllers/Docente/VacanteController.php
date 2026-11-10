@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Vacantes de las empresas, que solo ven los docentes para recomendar
@@ -38,7 +39,10 @@ class VacanteController extends Controller
             'comentario' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $recomendaciones->recomendar($vacante, Estudiante::findOrFail($datos['estudiante_id']), $request->user(), $datos['comentario'] ?? null);
+        $estudiante = Estudiante::findOrFail($datos['estudiante_id']);
+        Gate::authorize('view', $estudiante); // solo estudiantes de su programa
+
+        $recomendaciones->recomendar($vacante, $estudiante, $request->user(), $datos['comentario'] ?? null);
 
         return response()->json(['message' => 'Recomendación enviada a la empresa.'], 201);
     }

@@ -42,7 +42,7 @@ class PracticaService
 
     public function horasRequeridas(Vinculacion $vinculacion): int
     {
-        return $vinculacion->loadMissing('estudiante.programa')->estudiante->programa->horas_requeridas;
+        return $vinculacion->horasRequeridas();
     }
 
     /**

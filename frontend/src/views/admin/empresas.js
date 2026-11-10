@@ -1,23 +1,10 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
-import {
-  badge,
-  confirmInline,
-  emptyState,
-  errorBox,
-  icon,
-  modalityTag,
-  pageHeader,
-  showFieldErrors,
-  statusBadge,
-  toast,
-  withBusy,
-} from '../../lib/ui.js';
-import { empresaData, empresaFields } from './empresa-form.js';
+import { badge, confirmInline, emptyState, icon, modalityTag, pageHeader, statusBadge, toast, withBusy } from '../../lib/ui.js';
 
 /**
- * Las empresas entran por invitación de la FET: quedan validadas y reciben un
- * correo para activar su cuenta. Desde aquí también se editan y se suspenden.
+ * Empresas registradas en /empresasRegistro: la administración las valida
+ * para que puedan ingresar, corrige sus datos y puede suspenderlas.
  */
 export default async function empresasView({ root, navigate, refresh }) {
   const items = await api.get('/admin/empresas');
@@ -37,15 +24,7 @@ export default async function empresasView({ root, navigate, refresh }) {
 
   mount(
     root,
-    html`${pageHeader('Empresas', 'Solo las empresas validadas pueden ingresar y publicar vacantes.')}
-      <section class="panel">
-        <h2>Invitar empresa</h2>
-        <form id="empForm" class="form-grid" novalidate>
-          ${empresaFields({}, { conCorreo: true })}
-          <div><button class="btn" type="submit">${icon('send')}Crear e invitar</button></div>
-        </form>
-        <div id="empError"></div>
-      </section>
+    html`${pageHeader('Empresas')}
       <section class="panel flush">
         ${
           items.length
@@ -118,20 +97,5 @@ export default async function empresasView({ root, navigate, refresh }) {
     } else {
       validar(btn);
     }
-  });
-
-  const form = root.querySelector('#empForm');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    withBusy(form.querySelector('[type=submit]'), async () => {
-      try {
-        await api.post('/admin/empresas', empresaData(form));
-        toast('Empresa creada. Le enviamos la invitación a su correo.');
-        refresh();
-      } catch (error) {
-        mount(root.querySelector('#empError'), errorBox(error.message));
-        showFieldErrors(form, error.errors);
-      }
-    });
   });
 }

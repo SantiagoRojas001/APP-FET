@@ -9,6 +9,7 @@ use App\Http\Resources\EstudianteResource;
 use App\Models\Estudiante;
 use App\Services\RegistroEstudianteService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
@@ -25,20 +26,20 @@ class EstudianteController extends Controller
             'programa_id' => ['nullable', 'integer'],
             'semestre' => ['nullable', 'integer', 'min:1'],
             'modalidad' => ['nullable', Rule::enum(Modalidad::class)],
-            'estado' => ['nullable', Rule::in(['sin_promedio', 'habilitados', 'no_habilitados'])],
+            'estado' => ['nullable', Rule::in(['sin_promedio', 'habilitados'])],
             'q' => ['nullable', 'string', 'max:100'],
         ]);
 
         $estudiantes = Estudiante::query()
             ->with('usuario', 'programa', 'hojaVida.referencias', 'vinculacionActiva.empresa')
             ->whereNotNull('modalidad_grado')
+            ->delPrograma($request->user()->programaAsignado())
             ->when($filtros['programa_id'] ?? null, fn (Builder $q, int $id) => $q->where('programa_id', $id))
             ->when($filtros['semestre'] ?? null, fn (Builder $q, int $s) => $q->where('semestre_actual', $s))
             ->when($filtros['modalidad'] ?? null, fn (Builder $q, string $m) => $q->where('modalidad_grado', $m))
             ->when($filtros['estado'] ?? null, fn (Builder $q, string $estado) => match ($estado) {
                 'sin_promedio' => $q->whereNull('promedio'),
                 'habilitados' => $q->where('habilitado', true),
-                'no_habilitados' => $q->where('habilitado', false),
             })
             ->when($filtros['q'] ?? null, fn (Builder $q, string $t) => $q->where(fn (Builder $w) => $w->whereLike('nombres', "%{$t}%")->orWhereLike('apellidos', "%{$t}%")))
             ->orderByRaw('promedio is not null')
@@ -50,10 +51,23 @@ class EstudianteController extends Controller
     }
 
     /** Registra el promedio y envía el correo con el resultado (y las credenciales si queda habilitado). */
-    public function promedio(RegistrarPromedioRequest $request, Estudiante $estudiante, RegistroEstudianteService $registro): EstudianteResource
+    /**
+     * Registra el promedio y envía el correo con el resultado: las credenciales
+     * si queda habilitado; si no, el motivo, y el registro se elimina.
+     */
+    public function promedio(RegistrarPromedioRequest $request, Estudiante $estudiante, RegistroEstudianteService $registro): JsonResponse
     {
-        $estudiante = $registro->registrarPromedio($estudiante, (float) $request->validated('promedio'), $request->user());
+        $this->delPrograma($request, $estudiante);
+        $habilitado = $registro->registrarPromedio($estudiante, (float) $request->validated('promedio'), $request->user());
 
-        return new EstudianteResource($estudiante->load('usuario', 'programa'));
+        return $habilitado
+            ? (new EstudianteResource($habilitado->load('usuario', 'programa')))->response()
+            : response()->json(['eliminado' => true, 'message' => 'No alcanza el promedio mínimo: le enviamos el correo con el motivo y no queda registrado.']);
+    }
+
+    private function delPrograma(Request $request, Estudiante $estudiante): void
+    {
+        $programa = $request->user()->programaAsignado();
+        abort_if($programa && $programa !== $estudiante->programa_id, 403, 'El estudiante es de otro programa.');
     }
 }

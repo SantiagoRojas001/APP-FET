@@ -26,6 +26,8 @@ const TONES = {
   ABIERTO: 'warn',
   EN_REVISION: 'info',
   RESUELTO: 'ok',
+  ENVIADO: 'info',
+  REGISTRADA: 'ok',
 };
 
 export const badge = (tone, text) => html`<span class="badge b-${tone}">${text}</span>`;
@@ -133,6 +135,36 @@ export function confirmInline(button, accion, onConfirm, aviso = 'Esta acción n
     onConfirm(e.currentTarget);
   });
   box.querySelector('[data-si]').focus();
+}
+
+/**
+ * Agrega a cada campo de contraseña un botón para mostrarla u ocultarla.
+ * Se llama una vez al iniciar: vigila la página y equipa los campos nuevos.
+ */
+export function passwordToggles(container = document.body) {
+  const equipar = () =>
+    container.querySelectorAll('input[type=password]:not([data-ver])').forEach((input) => {
+      input.dataset.ver = '';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pw-toggle';
+      const pintar = (visible) => {
+        btn.innerHTML = String(icon(visible ? 'eye-off' : 'eye'));
+        btn.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        btn.setAttribute('aria-pressed', String(visible));
+      };
+      pintar(false);
+      btn.addEventListener('click', () => {
+        const visible = input.type === 'password';
+        input.type = visible ? 'text' : 'password';
+        pintar(visible);
+        input.focus();
+      });
+      input.classList.add('has-toggle');
+      input.after(btn);
+    });
+  equipar();
+  new MutationObserver(equipar).observe(container, { childList: true, subtree: true });
 }
 
 /** Ejecuta una acción con el botón deshabilitado mientras dura. */
