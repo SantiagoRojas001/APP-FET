@@ -2,6 +2,9 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -9,8 +12,10 @@ use Illuminate\Notifications\Notification;
  * Correo con el enlace para crear una contraseña nueva. El enlace abre la
  * pantalla de restablecimiento del frontend con el token y el correo.
  */
-class RestablecerContrasena extends Notification
+class RestablecerContrasena extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
+    use Queueable;
+
     public function __construct(#[\SensitiveParameter] private readonly string $token) {}
 
     /** @return list<string> */

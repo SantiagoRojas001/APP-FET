@@ -60,9 +60,10 @@ class Usuario extends Authenticatable
         return $this->correo;
     }
 
-    public function routeNotificationForMail(): string
+    /** Sin dirección, el canal de correo no envía: las cuentas de ejemplo no reciben correos reales. */
+    public function routeNotificationForMail(): ?string
     {
-        return $this->correo;
+        return in_array($this->correo, config('fet.correos_de_ejemplo'), true) ? null : $this->correo;
     }
 
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void

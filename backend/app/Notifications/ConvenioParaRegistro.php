@@ -3,17 +3,22 @@
 namespace App\Notifications;
 
 use App\Models\SolicitudConvenio;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
  * A la empresa que pidió el convenio (aún no tiene cuenta): el convenio
  * adjunto y el enlace para registrarse con él.
  */
-class ConvenioParaRegistro extends Notification
+class ConvenioParaRegistro extends Notification implements ShouldQueue
 {
-    public function __construct(private readonly SolicitudConvenio $solicitud, private readonly string $pdf) {}
+    use Queueable;
+
+    public function __construct(private readonly SolicitudConvenio $solicitud) {}
 
     /** @return list<string> */
     public function via(object $notifiable): array
@@ -29,7 +34,7 @@ class ConvenioParaRegistro extends Notification
             ->line("Te enviamos el convenio de pasantías y prácticas entre la FET y {$this->solicitud->razon_social}.")
             ->line('Fírmalo con tu representante legal y registra tu empresa en APP FET adjuntando el convenio firmado.')
             ->action('Registrar mi empresa', rtrim(config('fet.url_frontend'), '/').'/empresasRegistro')
-            ->attachData($this->pdf, 'convenio-fet-'.Str::slug($this->solicitud->razon_social).'.pdf', ['mime' => 'application/pdf'])
+            ->attachData(Storage::disk('local')->get($this->solicitud->convenio_url), 'convenio-fet-'.Str::slug($this->solicitud->razon_social).'.pdf', ['mime' => 'application/pdf'])
             ->salutation('Coordinación de prácticas FET');
     }
 }

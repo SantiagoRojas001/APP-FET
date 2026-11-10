@@ -58,4 +58,16 @@ return [
     */
     'reportes_para_finalizar' => 3,
 
+    /*
+    | Cuentas de ejemplo que crea DemoSeeder. Sus direcciones podrían ser de
+    | personas o empresas reales: reciben los avisos dentro de la app, pero
+    | nunca un correo.
+    */
+    'correos_de_ejemplo' => [
+        'admin@fet.edu.co', 'p.vargas@fet.edu.co', 'direccion.software@fet.edu.co',
+        'talento@nododigital.co', 'practicas@agroandina.coop', 'equipo@huilatech.co', 'ti@clinicasangabriel.co', 'rrhh@agrosur.co',
+        'mateo.suarez@fet.edu.co', 'julian.castro@fet.edu.co', 'sofia.ramirez@fet.edu.co', 'daniel.gomez@fet.edu.co',
+        'paula.ortiz@fet.edu.co', 'andres.rojas@fet.edu.co', 'valentina.torres@fet.edu.co', 'camila.perez@fet.edu.co',
+    ],
+
 ];

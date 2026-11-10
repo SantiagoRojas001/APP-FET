@@ -31,6 +31,21 @@ services:
       db:
         condition: service_healthy
 
+  cola:
+    # Envía los correos y avisos en segundo plano (misma imagen que la API).
+    build:
+      context: .
+      dockerfile: docker/produccion/api.Dockerfile
+    restart: unless-stopped
+    # Sin el entrypoint de la API: las migraciones y cachés las prepara solo la API.
+    entrypoint: ["php", "artisan", "queue:work", "--tries=3", "--backoff=30", "--max-time=3600"]
+    env_file: backend/.env.production
+    volumes:
+      - almacenamiento:/var/www/backend/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+
   web:
     build:
       context: .

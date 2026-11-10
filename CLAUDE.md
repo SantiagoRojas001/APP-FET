@@ -8,7 +8,7 @@ español, igual que las tablas del modelo de datos (`usuario`, `vacante`, `cita`
 
 PHP no está instalado en el equipo: todo comando de PHP o Composer se ejecuta en el contenedor.
 
-- Levantar: `docker compose up -d` (web en :5173, API en :8000, Postgres en :5433). Los correos son reales (SMTP de Google en `backend/.env`; si falla, quedan en `storage/logs/laravel.log`)
+- Levantar: `docker compose up -d` (web en :5173, API en :8000, Postgres en :5433). Los correos son reales (SMTP de Google en `backend/.env`; si falla, quedan en `storage/logs/laravel.log`) y salen en cola: el servicio `cola` los envía, así las peticiones no esperan al servidor de correo. Las cuentas de ejemplo (`fet.correos_de_ejemplo`) nunca reciben correos
 - Pruebas: `docker compose exec api php artisan test` (usa la base `app_fet_test`)
 - Estilo PHP: `docker compose exec api ./vendor/bin/pint`
 - Frontend: `cd frontend && npm run lint && npm run build`

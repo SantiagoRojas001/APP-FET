@@ -2,16 +2,21 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * Aviso que llega dentro de la app (campana de notificaciones) y por correo.
  * Cada aviso concreto define el título, el mensaje y la ruta del frontend
- * que abre al hacer clic.
+ * que abre al hacer clic. Se envía en cola (`queue:work`): la petición no
+ * espera al servidor de correo.
  */
-abstract class Aviso extends Notification
+abstract class Aviso extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     abstract protected function titulo(): string;
 
     abstract protected function mensaje(): string;

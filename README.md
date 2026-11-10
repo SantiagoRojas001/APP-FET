@@ -61,7 +61,10 @@ La IP puede cambiar al reconectarte al Wi-Fi; si deja de abrir, consúltala de n
 En la pantalla de ingreso, **¿Olvidaste tu contraseña?** envía un enlace al correo de la cuenta.
 Los correos son reales: salen por el SMTP de Google Workspace con la cuenta institucional
 configurada en `backend/.env` (`MAIL_USERNAME` y una contraseña de aplicación en `MAIL_PASSWORD`).
-Si el SMTP falla o no está configurado, el correo queda en `backend/storage/logs/laravel.log`. En
+Los correos salen en cola: el servicio `cola` de Docker los envía en segundo plano, así guardar o
+enviar algo no espera al servidor de correo (unos 2 s con Gmail). Las cuentas de ejemplo nunca
+reciben correos (`config/fet.php`, `correos_de_ejemplo`). Si el SMTP falla o no está configurado,
+el correo queda en `backend/storage/logs/laravel.log`. En
 producción, además, `FRONTEND_URL` lleva el dominio público.
 
 ### Vista previa de GitHub

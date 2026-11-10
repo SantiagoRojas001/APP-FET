@@ -3,6 +3,9 @@
 namespace App\Notifications;
 
 use App\Models\Estudiante;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -10,8 +13,10 @@ use Illuminate\Notifications\Notification;
  * Al estudiante habilitado: usuario y contraseña para su primer ingreso.
  * Solo por correo (la contraseña nunca se guarda en los avisos de la app).
  */
-class CredencialesAcceso extends Notification
+class CredencialesAcceso extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
+    use Queueable;
+
     public function __construct(private readonly Estudiante $estudiante, #[\SensitiveParameter] private readonly string $password) {}
 
     /** @return list<string> */

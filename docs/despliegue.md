@@ -3,13 +3,14 @@
 El servidor necesita Docker con Compose y un dominio que apunte a él (por ejemplo,
 `practicas.fet.edu.co`), con los puertos 80 y 443 abiertos.
 
-`docker-compose.prod.yml` levanta cuatro servicios:
+`docker-compose.prod.yml` levanta cinco servicios:
 
 | Servicio | Qué hace |
 | --- | --- |
 | `web` | Caddy: sirve el frontend compilado, obtiene y renueva el certificado HTTPS y reenvía `/api` a PHP-FPM. |
 | `api` | Laravel en PHP-FPM, sin dependencias de desarrollo y con OPcache. Al arrancar aplica las migraciones, carga los catálogos y guarda en caché la configuración y las rutas. |
 | `db` | PostgreSQL 17, sin puertos publicados. |
+| `cola` | Envía los correos y avisos en segundo plano (`queue:work`, misma imagen que la API), para que las peticiones no esperen al servidor de correo. |
 | `respaldo` | Cada 24 horas guarda la base (`pg_dump`) y los documentos privados (`storage/app/private`) en `./respaldos`, y borra los de más de `RETENCION_DIAS` días. |
 
 ## Primera instalación

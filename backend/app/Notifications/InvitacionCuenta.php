@@ -2,6 +2,9 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -9,8 +12,10 @@ use Illuminate\Notifications\Notification;
  * Correo con el enlace para activar una cuenta que creó la administración:
  * la persona define su contraseña y acepta la política de datos.
  */
-class InvitacionCuenta extends Notification
+class InvitacionCuenta extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
+    use Queueable;
+
     public function __construct(#[\SensitiveParameter] private readonly string $token) {}
 
     /** @return list<string> */

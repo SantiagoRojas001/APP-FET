@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Models\Parametro;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -12,8 +14,10 @@ use Illuminate\Notifications\Notification;
  * y un mensaje de ánimo. Se envía a la dirección del listado, porque quien no
  * queda habilitado no se registra en la app.
  */
-class NoHabilitado extends Notification
+class NoHabilitado extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public const POR_SEMESTRE = 'semestre';
 
     public const POR_PROMEDIO = 'promedio';

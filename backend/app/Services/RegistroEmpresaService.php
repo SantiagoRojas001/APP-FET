@@ -15,7 +15,6 @@ use App\Notifications\SolicitudConvenioRecibida;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Registro público de empresas (/empresasRegistro):
@@ -112,7 +111,7 @@ class RegistroEmpresaService
         ]);
         Auditoria::registrar('convenio.enviado', $solicitud);
 
-        Notification::route('mail', $solicitud->correo)->notify(new ConvenioParaRegistro($solicitud, Storage::disk('local')->get($solicitud->convenio_url)));
+        Notification::route('mail', $solicitud->correo)->notify(new ConvenioParaRegistro($solicitud));
 
         return $solicitud;
     }

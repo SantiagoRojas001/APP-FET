@@ -176,6 +176,11 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
 - **Datos personales** (Ley 1581 de 2012): el registro exige aceptar la política y guarda la
   versión aceptada en `consentimiento_datos`. Las empresas no ven el documento de identidad.
 
+- **Correos en cola**: todos los avisos y correos se envían en cola (`ShouldQueue`, conexión
+  `database`); el servicio `cola` los procesa (`queue:listen` en desarrollo, `queue:work` en
+  producción). Los que llevan contraseñas o enlaces de acceso se guardan cifrados en la cola
+  (`ShouldBeEncrypted`). Las cuentas de ejemplo de `fet.correos_de_ejemplo` no reciben correos.
+
 ## Seguridad
 
 - Contraseñas con bcrypt. Tokens de Sanctum con vencimiento de 8 horas, revocados al cerrar sesión

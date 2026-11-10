@@ -3,14 +3,18 @@
 namespace App\Notifications;
 
 use App\Models\SolicitudConvenio;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * A la empresa que pidió el convenio: la FET no puede firmarlo y el motivo.
  */
-class SolicitudConvenioRechazada extends Notification
+class SolicitudConvenioRechazada extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(private readonly SolicitudConvenio $solicitud) {}
 
     /** @return list<string> */

@@ -57,6 +57,9 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        // Los avisos de la demostración se guardan en la app al momento; ningún correo sale.
+        config(['queue.default' => 'sync', 'mail.default' => 'log']);
+
         $this->admin = $this->usuario('admin@fet.edu.co', Rol::Admin);
         $software = Programa::where('nombre', 'Ingeniería de Software')->value('id');
         $docente = $this->usuario('p.vargas@fet.edu.co', Rol::Docente);
