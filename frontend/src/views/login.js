@@ -4,17 +4,10 @@ import { errorBox, icon, withBusy } from '../lib/ui.js';
 import { session } from '../session.js';
 import { publicFooter } from './auth-layout.js';
 
-// Cuentas creadas por DemoSeeder (solo en desarrollo). Contraseña: demo1234.
+// Cuentas creadas por DemoSeeder (solo en desarrollo). Contraseña: demo1234. Los estudiantes
+// no se listan: se registran con el listado de modalidades y su correo real.
 const DEMO = import.meta.env.DEV
   ? [
-      [
-        'Estudiantes',
-        [
-          ['mateo.suarez@fet.edu.co', 'Mateo Suárez', 'Hoja de vida aprobada, con citas'],
-          ['julian.castro@fet.edu.co', 'Julián Castro', 'Primer ingreso'],
-          ['andres.rojas@fet.edu.co', 'Andrés Rojas', 'En pasantía'],
-        ],
-      ],
       [
         'FET y empresa',
         [
