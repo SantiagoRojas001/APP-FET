@@ -37,7 +37,9 @@ class FirmaService
     /** Devuelve el PNG limpio de la firma o lanza la razón del rechazo. */
     public function validar(UploadedFile $archivo): string
     {
-        $imagen = @imagecreatefrompng($archivo->getRealPath());
+        // Se revisa la cabecera antes de decodificar: un archivo que no es PNG no llega a GD.
+        $tipo = getimagesize($archivo->getRealPath())[2] ?? null;
+        $imagen = $tipo === IMAGETYPE_PNG ? imagecreatefrompng($archivo->getRealPath()) : false;
         if ($imagen === false) {
             throw new ReglaNegocioException('La firma no es una imagen válida. Dibújala de nuevo.');
         }
