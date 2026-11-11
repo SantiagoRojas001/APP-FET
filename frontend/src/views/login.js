@@ -25,7 +25,7 @@ export default function loginView({ root, navigate }) {
     root,
     html`<div class="login-wrap"><div class="login">
       <section class="l-art" aria-label="Presentación">
-        <a class="l-logo" href="/#/" aria-label="APP-FET, ir al inicio"><img src="/logo-fet.png" alt="APP-FET, Agencia para Pasantes y Practicantes. Fundación Escuela Tecnológica de Neiva" /></a>
+        <a class="l-logo" href="/#/" aria-label="APP FET, ir al inicio"><img class="logo-claro" src="/logo-app-fet.png" alt="APP FET, Prácticas y Pasantías. Fundación Escuela Tecnológica de Neiva" /><img class="logo-oscuro" src="/logo-app-fet-oscuro.png" alt="APP FET, Prácticas y Pasantías" /></a>
         <div class="l-body">
           <div class="l-copy">
             <h1>Tu pasantía, de la hoja de vida al informe final</h1>

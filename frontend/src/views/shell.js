@@ -19,9 +19,8 @@ export function renderShell(app, path, navigate) {
     app,
     html`<div class="app">
       <aside class="side" aria-label="Navegación">
-        <a class="brand" href="#${items[0].path}" aria-label="APP-FET, ir al inicio">
-          <img class="brand-logo" src="/logo-fet-sello.png" alt="" />
-          <small>Pasantías y prácticas</small>
+        <a class="brand" href="#${items[0].path}" aria-label="APP FET, ir al inicio">
+          <img class="brand-logo logo-claro" src="/logo-app-fet-claro.png" alt="APP FET, Prácticas y Pasantías" /><img class="brand-logo logo-oscuro" src="/logo-app-fet-oscuro.png" alt="APP FET, Prácticas y Pasantías" />
         </a>
         <nav class="nav">
           ${items.filter((r) => !r.hidden).map(
