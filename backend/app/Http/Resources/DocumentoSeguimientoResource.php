@@ -19,6 +19,8 @@ class DocumentoSeguimientoResource extends Recurso
             'cargado_en' => $this->cargado_en?->toIso8601String(),
             'estado_revision' => $this->enum($this->estado_revision),
             'observaciones' => $this->observaciones,
+            'aprobado_empresa_en' => $this->aprobado_empresa_en?->toIso8601String(),
+            'subido_por' => $this->whenLoaded('autor', fn () => $this->enum($this->autor?->rol)),
             // Nunca se expone la ruta interna del archivo: se descarga por la API.
             'url_descarga' => "/api/documentos/{$this->id}/archivo",
         ];

@@ -16,6 +16,7 @@ use App\Http\Controllers\Estudiante;
 use App\Http\Controllers\FirmaEstudianteController;
 use App\Http\Controllers\FotoEstudianteController;
 use App\Http\Controllers\HojaVidaPdfController;
+use App\Http\Controllers\MaterialDocenteController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\PerfilEstudianteController;
 use App\Http\Controllers\ReporteController;
@@ -67,6 +68,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('vinculaciones/{vinculacion}/documentos', [DocumentoController::class, 'store']);
         Route::get('documentos/{documento}/archivo', [DocumentoController::class, 'descargar']);
         Route::patch('documentos/{documento}/revision', [DocumentoController::class, 'revisar']);
+        Route::post('documentos/{documento}/aprobacion-empresa', [DocumentoController::class, 'aprobarEmpresa']);
+        Route::get('materiales/{material}/archivo', [MaterialDocenteController::class, 'archivo']);
         Route::get('vinculaciones/{vinculacion}/evidencias', [EvidenciaController::class, 'index']);
         Route::post('vinculaciones/{vinculacion}/evidencias', [EvidenciaController::class, 'store']);
         Route::post('vinculaciones/{vinculacion}/evidencias/aprobacion', [EvidenciaController::class, 'aprobarPendientes']);
@@ -100,10 +103,14 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('firma', [FirmaEstudianteController::class, 'store'])->middleware('throttle:10,1');
             Route::post('cedula', [CedulaEstudianteController::class, 'store'])->middleware('throttle:10,1');
             Route::get('citas', [Estudiante\CitaController::class, 'index']);
+            Route::get('materiales', [MaterialDocenteController::class, 'deEstudiante']);
             Route::get('vinculaciones', [Estudiante\VinculacionController::class, 'index']);
         });
 
         Route::prefix('docente')->middleware('rol:DOCENTE')->group(function () {
+            Route::get('materiales', [MaterialDocenteController::class, 'deDocente']);
+            Route::post('materiales', [MaterialDocenteController::class, 'store']);
+            Route::delete('materiales/{material}', [MaterialDocenteController::class, 'destroy']);
             Route::get('estudiantes', [Docente\EstudianteController::class, 'index']);
             Route::post('importaciones', [Docente\ImportacionController::class, 'vistaPrevia'])->middleware('throttle:20,1');
             Route::post('importaciones/confirmacion', [Docente\ImportacionController::class, 'confirmar']);

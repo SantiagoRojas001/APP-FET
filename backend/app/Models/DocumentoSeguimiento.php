@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Table('documento_seguimiento', timestamps: false)]
 #[Fillable([
     'vinculacion_id', 'tipo', 'periodo_inicio', 'periodo_fin', 'archivo_url',
-    'cargado_por', 'cargado_en', 'estado_revision', 'observaciones',
+    'cargado_por', 'cargado_en', 'estado_revision', 'observaciones', 'aprobado_empresa_en',
 ])]
 class DocumentoSeguimiento extends Model
 {
@@ -34,6 +34,7 @@ class DocumentoSeguimiento extends Model
             'periodo_inicio' => 'date',
             'periodo_fin' => 'date',
             'cargado_en' => 'datetime',
+            'aprobado_empresa_en' => 'datetime',
         ];
     }
 

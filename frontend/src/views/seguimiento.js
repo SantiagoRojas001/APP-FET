@@ -15,7 +15,7 @@ import {
   withBusy,
 } from '../lib/ui.js';
 import { session } from '../session.js';
-import { documentosTabla, wireDocumentos } from './documentos.js';
+import { documentosTabla, subidaDocumento, wireDocumentos, wireSubidaDocumento } from './documentos.js';
 import { evidenciasTabla, wireEvidencias } from './evidencias.js';
 
 /**
@@ -30,11 +30,13 @@ export default async function seguimientoView({ root, params, navigate, refresh 
   const id = params[0];
   const role = session.role;
   const esFet = role === 'DOCENTE' || role === 'ADMIN';
-  const [v, evidencias, reportes] = await Promise.all([
+  const [v, evidencias, reportes, catalogos] = await Promise.all([
     api.get(`/vinculaciones/${id}`),
     role === 'ESTUDIANTE' ? [] : api.get(`/vinculaciones/${id}/evidencias`),
     esFet ? api.get(`/vinculaciones/${id}/reportes`) : [],
+    api.get('/catalogos'),
   ]);
+  const subirTerceros = role !== 'ESTUDIANTE' && v.puede.subir_documento;
   const activa = v.estado.valor === 'ACTIVA';
   const sinArl = activa && !v.documentos.some((d) => d.tipo.valor === 'ARL');
 
@@ -158,8 +160,11 @@ export default async function seguimientoView({ root, params, navigate, refresh 
               <section class="panel flush">${evidenciasTabla(evidencias, { revisar: v.puede.revisar_evidencias })}</section>`
           : ''
       }
-      <section class="panel"><h2>Documentos</h2></section>
-      <section class="panel flush">${documentosTabla(v.documentos, { revisar: v.puede.revisar_documentos })}</section>
+      ${subirTerceros ? subidaDocumento(v, catalogos.tipos_documento) : ''}
+      <section class="panel">
+        <div class="panel-h"><h2>Documentos</h2>${subirTerceros ? html`<button class="btn sec sm" id="nuevo">${icon('upload')}Subir documento</button>` : ''}</div>
+      </section>
+      <section class="panel flush">${documentosTabla(v.documentos, { revisar: v.puede.revisar_documentos, aprobarEmpresa: role === 'EMPRESA' && v.puede.revisar_evidencias })}</section>
       ${
         esFet
           ? html`<section class="panel">
@@ -196,6 +201,7 @@ export default async function seguimientoView({ root, params, navigate, refresh 
 
   wireEvidencias(root, refresh);
   wireDocumentos(root, refresh);
+  wireSubidaDocumento(root, v.id, refresh);
 
   const finForm = root.querySelector('#finForm');
   finForm?.addEventListener('submit', (e) => {

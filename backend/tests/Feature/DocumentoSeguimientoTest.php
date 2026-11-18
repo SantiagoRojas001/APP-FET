@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Rol;
 use App\Models\Empresa;
+use App\Models\Estudiante;
 use App\Models\Programa;
 use App\Models\Usuario;
 use App\Models\Vinculacion;
@@ -100,5 +101,48 @@ class DocumentoSeguimientoTest extends TestCase
         ]));
 
         $this->patchJson("/api/documentos/{$id}/revision", ['estado_revision' => 'APROBADO'])->assertForbidden();
+    }
+
+    public function test_el_docente_y_la_empresa_tambien_suben_documentos(): void
+    {
+        $vinculacion = Vinculacion::factory()->create();
+
+        $this->como(Rol::Docente);
+        $this->subir($vinculacion, ['tipo' => 'BITACORA'])
+            ->assertCreated()
+            ->assertJsonPath('estado_revision.valor', 'APROBADO')
+            ->assertJsonPath('subido_por.valor', 'DOCENTE');
+
+        $this->comoEmpresa($vinculacion->empresa);
+        $id = $this->subir($vinculacion, ['tipo' => 'OTRO'])
+            ->assertCreated()
+            ->assertJsonPath('estado_revision.valor', 'PENDIENTE')
+            ->json('id');
+
+        $this->postJson("/api/documentos/{$id}/aprobacion-empresa")
+            ->assertOk()
+            ->assertJsonPath('aprobado_empresa_en', fn ($valor) => $valor !== null);
+
+        $this->comoEmpresa(Empresa::factory()->create());
+        $this->subir($vinculacion)->assertForbidden();
+        $this->postJson("/api/documentos/{$id}/aprobacion-empresa")->assertForbidden();
+    }
+
+    public function test_los_materiales_del_docente_solo_los_ve_su_grupo(): void
+    {
+        $docente = $this->como(Rol::Docente);
+        $id = $this->post('/api/docente/materiales', [
+            'titulo' => 'Guía de informes',
+            'archivo' => UploadedFile::fake()->create('guia.pdf', 50, 'application/pdf'),
+        ])->assertCreated()->json('id');
+
+        $suyo = Estudiante::factory()->create(['tutor_id' => $docente->id]);
+        $ajeno = Estudiante::factory()->create();
+
+        $this->comoEstudiante($suyo)->getJson('/api/estudiante/materiales')->assertJsonPath('0.id', $id);
+        $this->get("/api/materiales/{$id}/archivo")->assertOk();
+
+        $this->comoEstudiante($ajeno)->getJson('/api/estudiante/materiales')->assertJsonCount(0);
+        $this->get("/api/materiales/{$id}/archivo")->assertForbidden();
     }
 }

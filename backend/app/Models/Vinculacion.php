@@ -36,7 +36,7 @@ class Vinculacion extends Model
         'estado' => 'ACTIVA',
     ];
 
-    private const SEGUIMIENTO = ['estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos', 'evaluaciones'];
+    private const SEGUIMIENTO = ['estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos.autor', 'evaluaciones'];
 
     protected function casts(): array
     {

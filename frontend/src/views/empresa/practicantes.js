@@ -63,7 +63,7 @@ export default async function practicantesView({ root, navigate }) {
         </div>
         ${evidenciasTabla(evidencias, { revisar: v.puede.revisar_evidencias, vacio: 'El practicante aún no reporta semanas.' })}
         <h3>Entregas</h3>
-        ${documentosTabla(v.documentos, { vacio: 'El practicante aún no sube documentos.' })}`,
+        ${documentosTabla(v.documentos, { aprobarEmpresa: v.puede.revisar_evidencias, vacio: 'El practicante aún no sube documentos.' })}`,
     );
     if (!detalle.dataset.conectado) {
       detalle.dataset.conectado = '';

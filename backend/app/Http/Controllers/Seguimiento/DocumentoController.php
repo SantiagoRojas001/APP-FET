@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Seguimiento;
 
+use App\Enums\EstadoRevision;
+use App\Enums\Rol;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seguimiento\RevisarDocumentoRequest;
 use App\Http\Requests\Seguimiento\SubirDocumentoRequest;
@@ -17,8 +19,8 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * ARL, bitácoras, controles de asistencia e informes de una vinculación.
- * Los archivos se guardan en el disco privado y solo se descargan por aquí.
+ * Documentos de una vinculación: los sube el estudiante, y también pueden
+ * hacerlo el docente (quedan aprobados) y la empresa. Los archivos se guardan en el disco privado y solo se descargan por aquí.
  */
 class DocumentoController extends Controller
 {
@@ -33,7 +35,7 @@ class DocumentoController extends Controller
     {
         Gate::authorize('view', $vinculacion);
 
-        return DocumentoSeguimientoResource::collection($vinculacion->documentos);
+        return DocumentoSeguimientoResource::collection($vinculacion->documentos()->with('autor')->get());
     }
 
     public function store(SubirDocumentoRequest $request, Vinculacion $vinculacion): JsonResponse
@@ -46,9 +48,10 @@ class DocumentoController extends Controller
             ...$request->safe()->except('archivo'),
             'archivo_url' => $ruta,
             'cargado_por' => $request->user()->id,
+            'estado_revision' => $request->user()->rol === Rol::Docente ? EstadoRevision::Aprobado : EstadoRevision::Pendiente,
         ]);
 
-        return (new DocumentoSeguimientoResource($documento->refresh()))->response()->setStatusCode(201);
+        return (new DocumentoSeguimientoResource($documento->refresh()->load('autor')))->response()->setStatusCode(201);
     }
 
     public function revisar(RevisarDocumentoRequest $request, DocumentoSeguimiento $documento): DocumentoSeguimientoResource
@@ -57,6 +60,17 @@ class DocumentoController extends Controller
 
         $documento->update($request->validated());
         Auditoria::registrar('documento.revisado', $documento, ['estado' => $documento->estado_revision->value]);
+
+        return new DocumentoSeguimientoResource($documento);
+    }
+
+    /** La empresa da su visto bueno a un documento, para que el docente lo revise rápido. */
+    public function aprobarEmpresa(DocumentoSeguimiento $documento): DocumentoSeguimientoResource
+    {
+        Gate::authorize('revisarEvidencias', $documento->vinculacion);
+
+        $documento->update(['aprobado_empresa_en' => now()]);
+        Auditoria::registrar('documento.aprobado_por_empresa', $documento);
 
         return new DocumentoSeguimientoResource($documento);
     }

@@ -29,8 +29,8 @@ export const ROUTES = {
   // Estudiante con pasantía activa: reporta sus horas y entrega sus documentos.
   ESTUDIANTE_PASANTIA: [
     { path: '/pasantia', label: 'Mi pasantía', icon: 'building', ayuda: 'El resumen de tu práctica: empresa, tutor, avance de horas y estado de tus documentos.', load: () => import('./views/estudiante/pasantia.js') },
-    { path: '/evidencias', label: 'Horas semanales', icon: 'clock-hour-4', ayuda: 'Cada semana reporta tus horas y actividades. Cuentan cuando la empresa las aprueba.', load: () => import('./views/estudiante/evidencias.js') },
-    { path: '/entregas', label: 'Entregas', icon: 'file-text', ayuda: 'Sube tu ARL, bitácora, control de asistencia e informes, y revisa lo que te observa tu docente.', load: () => import('./views/estudiante/entregas.js') },
+    { path: '/evidencias', label: 'Horas semanales', icon: 'clock-hour-4', ayuda: 'Cada semana reporta tus horas y actividades. Cuentan cuando la empresa las aprueba. Lo ideal son 24 horas por semana.', load: () => import('./views/estudiante/evidencias.js') },
+    { path: '/entregas', label: 'Entregas', icon: 'file-text', ayuda: 'Sube tu ARL y tus demás documentos, revisa lo que te observa tu docente y descarga los materiales que comparte.', load: () => import('./views/estudiante/entregas.js') },
     ...HOJA_VIDA,
     ...COMUNES,
   ],
@@ -40,6 +40,7 @@ export const ROUTES = {
     { path: '/revision', label: 'Hojas de vida', icon: 'clipboard-check', ayuda: 'Aprueba las hojas de vida que envían tus estudiantes o devuélvelas con recomendaciones.', load: () => import('./views/docente/revision.js') },
     { path: '/vacantes', label: 'Vacantes', icon: 'briefcase', ayuda: 'Vacantes de las empresas: recomienda a tus estudiantes y la empresa los verá primero.', load: () => import('./views/docente/vacantes.js') },
     { path: '/convenios', label: 'Convenios', icon: 'file-text', ayuda: 'Los convenios de las empresas con la FET: vigentes y pendientes.', load: () => import('./views/acuerdos.js') },
+    { path: '/materiales', label: 'Materiales', icon: 'upload', ayuda: 'Comparte archivos con los estudiantes que asesoras.', load: () => import('./views/docente/materiales.js') },
     { path: '/en-curso', label: 'Prácticas', icon: 'users', ayuda: 'Sigue las prácticas en curso: horas, documentos por revisar y reportes.', load: () => import('./views/docente/vinculaciones.js') },
     ...COMUNES,
   ],

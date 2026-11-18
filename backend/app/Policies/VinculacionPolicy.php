@@ -23,16 +23,20 @@ class VinculacionPolicy
         };
     }
 
-    /** Solo el estudiante sube sus documentos, y mientras la vinculación siga activa. */
+    /** Mientras la práctica siga activa, suben documentos el estudiante, su docente y la empresa. */
     public function subirDocumento(Usuario $usuario, Vinculacion $vinculacion): bool
     {
-        return $this->esElEstudiante($usuario, $vinculacion) && $vinculacion->estaActiva();
+        return $vinculacion->estaActiva() && (
+            $this->esElEstudiante($usuario, $vinculacion)
+            || $this->esLaEmpresa($usuario, $vinculacion)
+            || $this->revisarDocumentos($usuario, $vinculacion)
+        );
     }
 
     /** Las horas semanales las reporta (y corrige) el estudiante mientras la práctica sigue activa. */
     public function registrarEvidencia(Usuario $usuario, Vinculacion $vinculacion): bool
     {
-        return $this->subirDocumento($usuario, $vinculacion);
+        return $this->esElEstudiante($usuario, $vinculacion) && $vinculacion->estaActiva();
     }
 
     /** La empresa receptora aprueba las horas semanales mientras la práctica sigue activa. */
@@ -62,7 +66,7 @@ class VinculacionPolicy
         return $usuario->tieneRol(Rol::Docente, Rol::Admin);
     }
 
-    /** Los documentos los revisa el docente; la empresa solo los consulta, para aliviar su carga. */
+    /** Los documentos los revisa el docente; la empresa puede dar su visto bueno. */
     public function revisarDocumentos(Usuario $usuario, Vinculacion $vinculacion): bool
     {
         return $usuario->rol === Rol::Docente && $this->view($usuario, $vinculacion);
