@@ -3,9 +3,11 @@
 namespace App\Http\Resources;
 
 use App\Enums\EstadoRevision;
+use App\Enums\ParteCalificacion;
 use App\Enums\Rol;
 use App\Enums\TipoEvaluacion;
 use App\Models\Vinculacion;
+use App\Services\CalificacionService;
 use App\Services\EvaluacionService;
 use Illuminate\Http\Request;
 
@@ -39,6 +41,16 @@ class VinculacionResource extends Recurso
             // Los reportes pueden venir de cualquiera de las partes: solo la FET ve cuántos hay.
             'reportes' => $this->when($usuario?->tieneRol(Rol::Docente, Rol::Admin) && isset($this->reportes_count), fn () => $this->reportes_count),
             'reportes_para_finalizar' => config('fet.reportes_para_finalizar'),
+            'calificaciones' => $this->whenLoaded('calificaciones', fn () => [
+                'completas' => $this->calificaciones->count() === 2 * count(ParteCalificacion::cases()),
+                'momentos' => array_map(fn (int $momento) => [
+                    'momento' => $momento,
+                    'habilitado' => app(CalificacionService::class)->habilitado($this->resource, $momento),
+                    'empresa' => $this->calificaciones->contains(fn ($c) => $c->momento === $momento && $c->parte === ParteCalificacion::Empresa),
+                    'docente' => $this->calificaciones->contains(fn ($c) => $c->momento === $momento && $c->parte === ParteCalificacion::Docente),
+                ], array_keys(config('calificacion.momentos'))),
+            ]),
+            'fecha_fin_prevista' => $this->fecha_inicio->copy()->addWeeks(config('fet.practica.semanas'))->toDateString(),
             'evaluaciones' => $this->whenLoaded('evaluaciones', fn () => [
                 'habilitadas' => app(EvaluacionService::class)->habilitada($this->resource),
                 'respondidas' => $this->evaluaciones->map(fn ($e) => $this->enum($e->tipo))->values(),
@@ -53,6 +65,7 @@ class VinculacionResource extends Recurso
                 'revisar_documentos' => $usuario->can('revisarDocumentos', $this->resource),
                 'finalizar' => $this->estaActiva() && $usuario->can('finalizar', $this->resource),
                 'evaluar' => $usuario->can('evaluar', $this->resource),
+                'calificar' => $usuario->can('calificar', $this->resource),
             ]),
             'estudiante' => new EstudianteResource($this->whenLoaded('estudiante')),
             'empresa' => new EmpresaResource($this->whenLoaded('empresa')),

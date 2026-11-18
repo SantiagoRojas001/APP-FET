@@ -5,8 +5,8 @@ namespace App\Notifications;
 use App\Models\Vinculacion;
 
 /**
- * Al estudiante y a la empresa: el docente finalizó la práctica antes de
- * tiempo, con su justificación.
+ * El docente cerró la práctica: a la empresa siempre y, si terminó antes de
+ * tiempo, también al estudiante, con la justificación.
  */
 class PracticaTerminada extends Aviso
 {

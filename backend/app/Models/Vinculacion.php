@@ -36,7 +36,7 @@ class Vinculacion extends Model
         'estado' => 'ACTIVA',
     ];
 
-    private const SEGUIMIENTO = ['estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos.autor', 'evaluaciones'];
+    private const SEGUIMIENTO = ['estudiante.programa', 'empresa', 'vacante', 'tutor', 'documentos.autor', 'evaluaciones', 'calificaciones'];
 
     protected function casts(): array
     {
@@ -147,6 +147,12 @@ class Vinculacion extends Model
     public function reportes(): HasMany
     {
         return $this->hasMany(Reporte::class)->orderByDesc('creado_en');
+    }
+
+    /** @return HasMany<Calificacion, $this> */
+    public function calificaciones(): HasMany
+    {
+        return $this->hasMany(Calificacion::class);
     }
 
     /** @return HasMany<Evaluacion, $this> */

@@ -5,7 +5,7 @@ namespace App\Notifications;
 use App\Models\Vinculacion;
 
 /**
- * Al estudiante: la empresa lo evaluó con las horas cumplidas y su proceso terminó.
+ * Al estudiante: su docente tutor cerró la práctica, con las horas y las notas completas.
  */
 class PracticaCulminada extends Aviso
 {
@@ -18,8 +18,8 @@ class PracticaCulminada extends Aviso
 
     protected function mensaje(): string
     {
-        return "{$this->vinculacion->empresa->razon_social} evaluó tu {$this->modalidad()}. Tu proceso culminó con éxito. "
-            .'Cuéntanos cómo te fue respondiendo la evaluación de la empresa.';
+        return "Tu docente tutor cerró tu {$this->modalidad()} en {$this->vinculacion->empresa->razon_social}. "
+            .'Si quieres, cuéntanos cómo te fue respondiendo la evaluación de la empresa.';
     }
 
     protected function enlace(): string

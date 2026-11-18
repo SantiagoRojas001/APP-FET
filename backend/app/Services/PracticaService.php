@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoVinculacion;
 use App\Enums\TipoDocumento;
-use App\Enums\TipoEvaluacion;
 use App\Exceptions\ReglaNegocioException;
 use App\Models\EvidenciaSemanal;
 use App\Models\Usuario;
@@ -29,10 +28,10 @@ use Illuminate\Support\Facades\Storage;
  *   o la devuelve con un comentario para que el estudiante la corrija.
  * - Solo las horas aprobadas cuentan. Al alcanzar las del programa se avisa,
  *   pero se pueden seguir reportando semanas.
- * - La práctica culmina sola cuando, con las horas cumplidas, la empresa
- *   responde la evaluación del practicante.
- * - El docente puede finalizarla antes si acumula varios reportes de
- *   problemas; si el estudiante no completó las horas, debe justificarlo.
+ * - Las horas son un mínimo: cumplirlas no cierra la práctica. La cierra el
+ *   docente tutor, con las horas y las calificaciones de los dos momentos.
+ * - También puede finalizarla antes si acumula varios reportes de problemas;
+ *   si el estudiante no completó las horas, debe justificarlo.
  */
 class PracticaService
 {
@@ -145,47 +144,16 @@ class PracticaService
         return $aprobadas;
     }
 
-    /**
-     * Cierra la práctica cuando la empresa ya evaluó al practicante y las
-     * horas están cumplidas: no hace falta un paso de aprobación aparte.
-     */
-    public function culminarSiCorresponde(Vinculacion $vinculacion): void
-    {
-        $culminada = DB::transaction(function () use ($vinculacion) {
-            $actual = Vinculacion::query()->lockForUpdate()->findOrFail($vinculacion->id);
-
-            if (! $actual->estaActiva() || ! $actual->cumplioHoras()
-                || ! $actual->evaluaciones()->where('tipo', TipoEvaluacion::EmpresaAPracticante)->exists()) {
-                return null;
-            }
-
-            $actual->update([
-                'estado' => EstadoVinculacion::Finalizada,
-                'fecha_fin' => today(),
-                'reconocida_como_practica' => true,
-                'finalizada_por' => $actual->empresa()->value('usuario_id'),
-            ]);
-
-            return $actual;
-        });
-
-        if (! $culminada) {
-            return;
-        }
-
-        $culminada->load('estudiante.usuario', 'empresa');
-        Auditoria::registrar('vinculacion.culminada', $culminada);
-        $culminada->estudiante->usuario->notify(new PracticaCulminada($culminada));
-    }
-
     public function finalizarComoDocente(Vinculacion $vinculacion, Usuario $docente, ?string $justificacion): Vinculacion
     {
         $vinculacion = DB::transaction(function () use ($vinculacion, $docente, $justificacion) {
             $vinculacion = $this->bloquearActiva($vinculacion);
             $minimo = config('fet.reportes_para_finalizar');
 
-            if ($vinculacion->reportes()->count() < $minimo) {
-                throw new ReglaNegocioException("Solo puedes finalizar una práctica que acumule al menos {$minimo} reportes de problemas.");
+            $completa = $vinculacion->cumplioHoras() && app(CalificacionService::class)->completas($vinculacion);
+
+            if (! $completa && $vinculacion->reportes()->count() < $minimo) {
+                throw new ReglaNegocioException("Para cerrarla faltan las horas o las calificaciones. Antes de eso, solo puedes finalizar una práctica que acumule al menos {$minimo} reportes de problemas.");
             }
 
             if (! $vinculacion->cumplioHoras() && blank($justificacion)) {
@@ -211,7 +179,7 @@ class PracticaService
         ]);
 
         $aviso = new PracticaTerminada($vinculacion);
-        $vinculacion->estudiante->usuario->notify($aviso);
+        $vinculacion->estudiante->usuario->notify($vinculacion->reconocida_como_practica ? new PracticaCulminada($vinculacion) : $aviso);
         $vinculacion->empresa->usuario->notify($aviso);
 
         return $vinculacion;

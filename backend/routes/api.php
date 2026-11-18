@@ -21,6 +21,7 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\PerfilEstudianteController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\RepositorioController;
+use App\Http\Controllers\Seguimiento\CalificacionController;
 use App\Http\Controllers\Seguimiento\DocumentoController;
 use App\Http\Controllers\Seguimiento\EvaluacionController;
 use App\Http\Controllers\Seguimiento\EvidenciaController;
@@ -78,6 +79,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('evidencias/{evidencia}/archivo', [EvidenciaController::class, 'descargar']);
         Route::get('vinculaciones/{vinculacion}/evaluaciones', [EvaluacionController::class, 'index']);
         Route::post('vinculaciones/{vinculacion}/evaluaciones', [EvaluacionController::class, 'store']);
+        Route::get('vinculaciones/{vinculacion}/calificaciones', [CalificacionController::class, 'index']);
+        Route::post('vinculaciones/{vinculacion}/calificaciones', [CalificacionController::class, 'store']);
         Route::get('vinculaciones/{vinculacion}/reportes', [ReporteController::class, 'deVinculacion']);
 
         // Carta de presentación y acuerdos (permisos en cada controlador)

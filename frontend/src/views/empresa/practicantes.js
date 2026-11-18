@@ -9,7 +9,7 @@ import { evidenciasTabla, wireEvidencias } from '../evidencias.js';
  * Practicantes de la empresa. Cada uno se despliega aquí mismo con sus horas
  * semanales (para aprobarlas o devolverlas, con su soporte) y sus entregas
  * (ARL, bitácora, control de asistencia e informes) con vista previa y
- * descarga. El seguimiento completo (evaluación y cierre) sigue en su página.
+ * descarga. El seguimiento completo (notas y documentos) sigue en su página.
  */
 export default async function practicantesView({ root, navigate }) {
   const items = await api.get('/empresa/vinculaciones');
@@ -22,7 +22,7 @@ export default async function practicantesView({ root, navigate }) {
     </div>
     ${hoursMeter(v.horas)}
     <div class="actions">
-      ${v.estado.valor === 'ACTIVA' && v.horas.cumplidas_en && !v.evaluaciones.mia ? badge('info', 'Lista para evaluar') : ''}
+      ${v.calificaciones.momentos.some((m) => m.habilitado && !m.empresa) ? badge('info', 'Por calificar') : ''}
       ${v.horas.semanas_por_revisar ? badge('warn', `${v.horas.semanas_por_revisar} semanas por aprobar`) : badge('ok', 'Horas al día')}
       <button class="btn sm" data-desplegar="${v.id}" aria-expanded="false" aria-controls="detalle${v.id}">${icon('chevron-down')}Horas y entregas</button>
       <a class="btn sec sm" href="#/estudiantes/${v.estudiante.id}">${icon('file-cv')}Hoja de vida</a>

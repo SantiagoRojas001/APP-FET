@@ -47,7 +47,7 @@ export const ROUTES = {
   EMPRESA: [
     { path: '/hojas-vida', label: 'Hojas de vida', icon: 'file-cv', ayuda: 'Hojas de vida aprobadas por la FET. Asigna una cita al estudiante que te interese.', load: () => import('./views/empresa/hojas-vida.js') },
     { path: '/citas', label: 'Citas', icon: 'calendar-event', ayuda: 'Tus citas programadas. Después de cada una, acepta o rechaza al estudiante.', load: () => import('./views/empresa/citas.js') },
-    { path: '/practicantes', label: 'Mis practicantes', icon: 'users', ayuda: 'Aprueba las horas de tus practicantes con todo lo que te enviaron y evalúalos al terminar.', load: () => import('./views/empresa/practicantes.js') },
+    { path: '/practicantes', label: 'Mis practicantes', icon: 'users', ayuda: 'Aprueba las horas de tus practicantes y califícalos en los dos momentos.', load: () => import('./views/empresa/practicantes.js') },
     { path: '/vacantes', label: 'Mis vacantes', icon: 'briefcase', ayuda: 'Publica tus vacantes. Los docentes de la FET te recomiendan estudiantes.', load: () => import('./views/empresa/vacantes.js') },
     { path: '/convenio', label: 'Convenio con la FET', icon: 'file-text', ayuda: 'Sube tu convenio con la FET. Con el convenio aprobado y vigente puedes asignar citas.', load: () => import('./views/empresa/acuerdo.js') },
     ...COMUNES,
@@ -75,6 +75,7 @@ export const ROUTES = {
 /** Rutas con parámetros, comunes a varios roles. */
 export const SHARED_ROUTES = [
   { pattern: /^\/vinculacion\/(\d+)$/, load: () => import('./views/seguimiento.js') },
+  { pattern: /^\/vinculacion\/(\d+)\/calificacion$/, load: () => import('./views/calificacion.js') },
   { pattern: /^\/vinculacion\/(\d+)\/evaluacion$/, load: () => import('./views/evaluacion.js') },
   { pattern: /^\/usuarios\/estudiante\/(\d+)$/, roles: ['ADMIN'], load: () => import('./views/admin/estudiante.js') },
   { pattern: /^\/empresas\/(\d+)$/, roles: ['ADMIN'], load: () => import('./views/admin/empresa.js') },

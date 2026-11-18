@@ -5,8 +5,8 @@ namespace App\Notifications;
 use App\Models\Vinculacion;
 
 /**
- * Al estudiante: la empresa aprobó las horas que exige su programa. Puede
- * seguir reportando semanas hasta que la empresa lo evalúe.
+ * Al estudiante: la empresa aprobó las horas mínimas. Puede seguir reportando
+ * semanas hasta que su docente tutor cierre la práctica.
  */
 class HorasCumplidas extends Aviso
 {
@@ -20,7 +20,7 @@ class HorasCumplidas extends Aviso
     protected function mensaje(): string
     {
         return "La empresa aprobó las {$this->horasRequeridas} horas requeridas por tu programa. Puedes seguir reportando semanas: "
-            .'tu proceso culmina cuando la empresa responda tu evaluación.';
+            .'tu docente tutor cerrará la práctica cuando estén las notas.';
     }
 
     protected function enlace(): string

@@ -3,7 +3,8 @@
 namespace App\Enums;
 
 /**
- * Quién evalúa a quién al cerrar una práctica (evaluacion.tipo).
+ * Quién evalúa a quién (evaluacion.tipo). Hoy solo el practicante responde,
+ * sobre la empresa; los otros tipos quedan para leer evaluaciones anteriores.
  */
 enum TipoEvaluacion: string
 {
@@ -26,8 +27,6 @@ enum TipoEvaluacion: string
     public static function delRol(Rol $rol): ?self
     {
         return match ($rol) {
-            Rol::Docente => self::DocenteAPracticante,
-            Rol::Empresa => self::EmpresaAPracticante,
             Rol::Estudiante => self::PracticanteAEmpresa,
             default => null,
         };

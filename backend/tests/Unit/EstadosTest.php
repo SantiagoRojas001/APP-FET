@@ -45,10 +45,10 @@ class EstadosTest extends TestCase
         $this->assertSame([EstadoCita::Programada, EstadoCita::Aceptado], EstadoCita::abiertos());
     }
 
-    public function test_cada_rol_que_evalua_tiene_su_cuestionario(): void
+    public function test_solo_el_practicante_responde_cuestionario(): void
     {
-        $this->assertNotNull(TipoEvaluacion::delRol(Rol::Docente));
-        $this->assertNotNull(TipoEvaluacion::delRol(Rol::Empresa));
+        $this->assertNull(TipoEvaluacion::delRol(Rol::Docente));
+        $this->assertNull(TipoEvaluacion::delRol(Rol::Empresa));
         $this->assertNotNull(TipoEvaluacion::delRol(Rol::Estudiante));
         $this->assertNull(TipoEvaluacion::delRol(Rol::Admin));
     }

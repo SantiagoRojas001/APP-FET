@@ -23,8 +23,8 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * Horas semanales aprobadas por la empresa, cierre con la evaluación de la
- * empresa, finalización del docente y evaluaciones de cierre.
+ * Horas semanales aprobadas por la empresa, notas por momento, cierre del
+ * docente y evaluación opcional de la empresa.
  */
 class PracticaTest extends TestCase
 {
@@ -166,33 +166,62 @@ class PracticaTest extends TestCase
         $this->patchJson("/api/evidencias/{$id}/revision", ['estado' => 'APROBADO'])->assertForbidden();
     }
 
-    public function test_la_practica_culmina_cuando_la_empresa_evalua_con_las_horas_cumplidas(): void
+    /** @return array<string, int> Nota 4 en todos los ítems de una categoría. */
+    private function puntajes(string $categoria): array
     {
-        $vinculacion = $this->practica(8);
-
-        $this->comoEmpresa($vinculacion->empresa)
-            ->postJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones", ['respuestas' => $this->respuestas('EMPRESA_A_PRACTICANTE')])
-            ->assertStatus(422);
-
-        $this->semanaAprobada($vinculacion, 1);
-
-        $this->postJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones", ['respuestas' => $this->respuestas('EMPRESA_A_PRACTICANTE')])
-            ->assertCreated();
-
-        $vinculacion->refresh();
-        $this->assertSame(EstadoVinculacion::Finalizada, $vinculacion->estado);
-        $this->assertTrue($vinculacion->reconocida_como_practica);
-        $this->assertSame($vinculacion->empresa->usuario_id, $vinculacion->finalizada_por);
-        Notification::assertSentTo($vinculacion->estudiante->usuario, PracticaCulminada::class);
-        $this->assertDatabaseHas('auditoria', ['accion' => 'vinculacion.culminada', 'entidad_id' => $vinculacion->id]);
+        return array_fill_keys(array_keys(config("calificacion.categorias.{$categoria}.items")), 4);
     }
 
-    public function test_otra_empresa_no_evalua(): void
+    private function calificar(Vinculacion $vinculacion, int $momento, array $puntajes)
+    {
+        return $this->postJson("/api/vinculaciones/{$vinculacion->id}/calificaciones", ['momento' => $momento, 'puntajes' => $puntajes]);
+    }
+
+    public function test_el_docente_cierra_la_practica_con_las_horas_y_las_notas_de_los_dos_momentos(): void
+    {
+        $vinculacion = $this->practica(8);
+        $vinculacion->update(['fecha_inicio' => now()->subWeeks(9)->toDateString()]);
+        $empresa = [...$this->puntajes('ACTITUDINAL'), ...$this->puntajes('PROCEDIMENTAL')];
+        $this->comoEmpresa($vinculacion->empresa);
+
+        // El segundo momento se abre con las horas cumplidas.
+        $this->calificar($vinculacion, 2, $empresa)->assertStatus(422);
+        $this->calificar($vinculacion, 1, ['a1' => 4])->assertJsonValidationErrors('puntajes.a2');
+        $this->calificar($vinculacion, 1, $empresa)->assertCreated();
+        $this->calificar($vinculacion, 1, $empresa)->assertStatus(422);
+        $this->semanaAprobada($vinculacion, 1);
+
+        // Cumplir las horas no cierra la práctica.
+        $this->assertTrue($vinculacion->fresh()->estaActiva());
+        $this->comoEmpresa($vinculacion->empresa);
+        $this->calificar($vinculacion, 2, $empresa)->assertCreated();
+
+        $docente = $this->como(Rol::Docente);
+        $this->calificar($vinculacion, 1, ['a1' => 4])->assertJsonValidationErrors('puntajes');
+        $this->postJson("/api/docente/vinculaciones/{$vinculacion->id}/finalizacion")->assertStatus(422);
+        // El docente solo califica los ítems cognitivos que decide evaluar.
+        $this->calificar($vinculacion, 1, ['c1' => 5])->assertCreated();
+        $this->calificar($vinculacion, 2, ['c2' => 4, 'c4' => 3])->assertCreated();
+
+        $this->postJson("/api/docente/vinculaciones/{$vinculacion->id}/finalizacion")
+            ->assertOk()
+            ->assertJsonPath('estado.valor', 'FINALIZADA')
+            ->assertJsonPath('reconocida_como_practica', true);
+        $this->assertSame($docente->id, $vinculacion->fresh()->finalizada_por);
+        Notification::assertSentTo($vinculacion->estudiante->usuario, PracticaCulminada::class);
+    }
+
+    public function test_el_primer_momento_se_abre_en_la_semana_ocho_y_otra_empresa_no_califica(): void
     {
         $vinculacion = $this->practica();
-        $this->comoEmpresa(Empresa::factory()->create());
+        $empresa = [...$this->puntajes('ACTITUDINAL'), ...$this->puntajes('PROCEDIMENTAL')];
 
-        $this->postJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones", ['respuestas' => $this->respuestas('EMPRESA_A_PRACTICANTE')])->assertForbidden();
+        $this->comoEmpresa($vinculacion->empresa);
+        $this->calificar($vinculacion, 1, $empresa)->assertStatus(422)
+            ->assertJsonPath('message', 'El primer momento se califica desde la semana 8 de la práctica.');
+
+        $this->comoEmpresa(Empresa::factory()->create());
+        $this->calificar($vinculacion, 1, $empresa)->assertForbidden();
     }
 
     public function test_el_docente_finaliza_con_tres_reportes_y_justifica_si_faltan_horas(): void
@@ -252,7 +281,7 @@ class PracticaTest extends TestCase
         $this->assertTrue($vinculacion->fresh()->estaActiva());
     }
 
-    public function test_cada_parte_responde_su_cuestionario_una_vez_y_se_validan_las_opciones(): void
+    public function test_el_practicante_evalua_a_la_empresa_una_vez_y_se_validan_las_opciones(): void
     {
         $vinculacion = $this->practica(8);
         $this->semanaAprobada($vinculacion, 1);
@@ -273,14 +302,14 @@ class PracticaTest extends TestCase
         $this->postJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones", ['respuestas' => $this->respuestas('PRACTICANTE_A_EMPRESA')])
             ->assertStatus(422);
 
-        // La empresa no lee la evaluación que le hizo el practicante.
+        // La empresa no lee la evaluación que le hizo el practicante, ni la responde.
         $this->comoEmpresa($vinculacion->empresa)
             ->getJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones")
             ->assertJsonCount(0, 'evaluaciones');
+        $this->postJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones", ['respuestas' => $this->respuestas('PRACTICANTE_A_EMPRESA')])
+            ->assertForbidden();
 
         $this->como(Rol::Docente);
-        $this->postJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones", ['respuestas' => $this->respuestas('DOCENTE_A_PRACTICANTE')])
-            ->assertCreated()->assertJsonPath('tipo.valor', 'DOCENTE_A_PRACTICANTE');
-        $this->getJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones")->assertJsonCount(2, 'evaluaciones');
+        $this->getJson("/api/vinculaciones/{$vinculacion->id}/evaluaciones")->assertJsonCount(1, 'evaluaciones');
     }
 }

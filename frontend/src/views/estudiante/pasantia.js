@@ -25,11 +25,11 @@ export default async function pasantiaView({ root, navigate }) {
       <section class="panel">
         ${hoursMeter(v.horas)}
         ${v.horas.cumplidas_en
-          ? html`<p class="note-box">${icon('circle-check')} Cumpliste las horas de tu programa. Tu proceso culmina cuando la empresa responda tu evaluación.</p>`
+          ? html`<p class="note-box">${icon('circle-check')} Cumpliste las horas mínimas. Tu docente tutor cerrará la práctica cuando estén las notas.</p>`
           : ''}
         ${docs.some((d) => d.tipo.valor === 'ARL')
           ? ''
-          : html`<p class="note-box">${icon('alert-circle')} Sube tu certificado de ARL en Entregas: es obligatorio para iniciar la práctica.</p>`}
+          : html`<p class="note-box">${icon('alert-circle')} Sube tu certificado de ARL en Entregas: sin él no puedes reportar horas.</p>`}
       </section>
       <section class="kpis">
         <div class="kpi"><b>${docs.length}</b><span>Documentos entregados</span></div>

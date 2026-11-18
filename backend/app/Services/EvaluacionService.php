@@ -11,15 +11,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Cuestionarios de cierre (config/evaluaciones.php). Se habilitan cuando el
- * practicante completa las horas o la práctica se cierra, y cada parte
- * responde el suyo una sola vez. La evaluación de la empresa culmina la
- * práctica.
+ * Cuestionario opcional del practicante sobre la empresa
+ * (config/evaluaciones.php). Se habilita cuando completa las horas o la
+ * práctica se cierra, y se responde una sola vez.
  */
 class EvaluacionService
 {
-    public function __construct(private readonly PracticaService $practica) {}
-
     /**
      * @return list<array{id: string, texto: string, opciones?: list<string>, opcional?: bool}>
      */
@@ -62,10 +59,6 @@ class EvaluacionService
         ]);
 
         Auditoria::registrar('evaluacion.respondida', $vinculacion, ['tipo' => $tipo->value]);
-
-        if ($tipo === TipoEvaluacion::EmpresaAPracticante) {
-            $this->practica->culminarSiCorresponde($vinculacion);
-        }
 
         return $evaluacion;
     }

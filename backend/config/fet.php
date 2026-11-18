@@ -54,6 +54,14 @@ return [
     ],
 
     /*
+    | Práctica profesional: créditos y semanas del plan de estudios.
+    */
+    'practica' => [
+        'creditos' => 12,
+        'semanas' => 16,
+    ],
+
+    /*
     | Reportes de problemas ligados a una práctica a partir de los cuales el
     | docente puede finalizarla anticipadamente.
     */

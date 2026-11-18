@@ -45,19 +45,23 @@ class VinculacionPolicy
         return $this->esLaEmpresa($usuario, $vinculacion) && $vinculacion->estaActiva();
     }
 
-    /** El docente tutor (o cualquier docente si aún no hay tutor) la finaliza anticipadamente. */
+    /** El docente tutor (o cualquier docente del programa si aún no hay tutor) cierra la práctica. */
     public function finalizar(Usuario $usuario, Vinculacion $vinculacion): bool
     {
         return $usuario->rol === Rol::Docente && $this->view($usuario, $vinculacion)
             && in_array($vinculacion->tutor_id, [null, $usuario->id], true);
     }
 
-    /** Evalúan el docente tutor, la empresa receptora y el propio practicante. */
+    /** Califican la empresa receptora y el docente tutor. */
+    public function calificar(Usuario $usuario, Vinculacion $vinculacion): bool
+    {
+        return $this->finalizar($usuario, $vinculacion) || $this->esLaEmpresa($usuario, $vinculacion);
+    }
+
+    /** El practicante puede evaluar a la empresa (es opcional). */
     public function evaluar(Usuario $usuario, Vinculacion $vinculacion): bool
     {
-        return $this->finalizar($usuario, $vinculacion)
-            || $this->esLaEmpresa($usuario, $vinculacion)
-            || $this->esElEstudiante($usuario, $vinculacion);
+        return $this->esElEstudiante($usuario, $vinculacion);
     }
 
     /** Los reportes ligados a la práctica pueden involucrar a cualquiera de las partes: solo los ve la FET. */

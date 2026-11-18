@@ -19,12 +19,11 @@ import { documentosTabla, subidaDocumento, wireDocumentos, wireSubidaDocumento }
 import { evidenciasTabla, wireEvidencias } from './evidencias.js';
 
 /**
- * Seguimiento de una vinculación: horas semanales, documentos, evaluaciones
- * y cierre. La empresa aprueba las horas con acceso a todo lo que envió el
- * estudiante (soportes, documentos y hoja de vida) y, al final, lo evalúa:
- * con eso la práctica culmina. El docente revisa los documentos y puede
- * finalizarla antes si acumula reportes. El estudiante sube sus documentos en
- * Entregas. Los permisos los decide la API (`v.puede`).
+ * Seguimiento de una vinculación: horas semanales, documentos, notas y
+ * cierre. La empresa aprueba las horas y califica lo actitudinal y lo
+ * procedimental; el docente revisa los documentos, califica lo cognitivo y
+ * cierra la práctica. El estudiante sube sus documentos en Entregas. Los
+ * permisos los decide la API (`v.puede`).
  */
 export default async function seguimientoView({ root, params, navigate, refresh }) {
   const id = params[0];
@@ -40,45 +39,41 @@ export default async function seguimientoView({ root, params, navigate, refresh 
   const activa = v.estado.valor === 'ACTIVA';
   const sinArl = activa && !v.documentos.some((d) => d.tipo.valor === 'ARL');
 
-  const cierreEmpresa = () => {
-    if (role !== 'EMPRESA' || !activa) return '';
-    const faltaHoras = !v.horas.cumplidas_en;
+  const notas = () => {
+    const marca = (hecha) => badge(hecha ? 'ok' : 'neutral', hecha ? 'Registrada' : 'Pendiente');
     return html`<section class="panel">
-      <h2>Cierre de la práctica</h2>
-      <ul class="fine">
-        <li>
-          ${faltaHoras ? `Faltan horas: lleva ${v.horas.aprobadas} de ${v.horas.requeridas} aprobadas.` : 'El practicante completó las horas.'}
-        </li>
-      </ul>
-      ${v.evaluaciones.habilitadas && !v.evaluaciones.mia
-        ? html`<div class="actions"><button class="btn" data-go="/vinculacion/${v.id}/evaluacion">${icon('clipboard-check')}Evaluar y culminar la práctica</button></div>`
-        : ''}
+      <div class="panel-h">
+        <h2>Evaluación cuantitativa</h2>
+        <button class="btn sec sm" data-go="/vinculacion/${v.id}/calificacion">${icon('clipboard-check')}${v.puede.calificar ? 'Calificar' : 'Ver notas'}</button>
+      </div>
+      <div class="lines">
+        ${v.calificaciones.momentos.map(
+          (m) => html`<div class="line">
+            <div><b>Momento ${m.momento}</b><span>${m.habilitado ? 'Abierto' : 'Aún no disponible'}</span></div>
+            <div class="tags"><span class="fine">Empresa</span>${marca(m.empresa)}<span class="fine">Docente</span>${marca(m.docente)}</div>
+          </div>`,
+        )}
+      </div>
     </section>`;
   };
 
   const cierreDocente = () => {
     if (!v.puede.finalizar) return '';
-    const habilitado = v.reportes >= v.reportes_para_finalizar;
+    const completa = Boolean(v.horas.cumplidas_en) && v.calificaciones.completas;
+    const habilitado = completa || v.reportes >= v.reportes_para_finalizar;
     return html`<section class="panel">
-      <h2>Finalizar anticipadamente</h2>
-      <p class="muted">
-        Puedes finalizar la práctica cuando acumula ${v.reportes_para_finalizar} o más reportes de problemas
-        (lleva ${v.reportes}).
-        ${v.horas.cumplidas_en ? 'El estudiante ya cumplió las horas.' : 'Como el estudiante no ha completado las horas, debes justificar la decisión.'}
-      </p>
+      <h2>${completa ? 'Cerrar la práctica' : 'Finalizar anticipadamente'}</h2>
+      ${completa
+        ? ''
+        : html`<p class="fine">Reportes: ${v.reportes} de ${v.reportes_para_finalizar}. ${v.horas.cumplidas_en ? 'Faltan calificaciones para el cierre normal.' : 'Faltan horas: debes justificar el cierre.'}</p>`}
       ${
         habilitado
           ? html`<form id="finForm" class="form-grid" novalidate>
                 <div class="field wide">
-                  <label for="justificacion">Justificación</label
-                  ><textarea
-                    class="input"
-                    id="justificacion"
-                    name="justificacion"
-                    maxlength="2000"
-                  ></textarea>
+                  <label for="justificacion">${completa ? 'Observación' : 'Justificación'}</label
+                  ><textarea class="input" id="justificacion" name="justificacion" maxlength="2000"></textarea>
                 </div>
-                <div><button class="btn danger" type="submit">Finalizar práctica</button></div>
+                <div><button class="btn ${completa ? '' : 'danger'}" type="submit">${completa ? 'Cerrar práctica' : 'Finalizar práctica'}</button></div>
               </form>
               <div id="finError"></div>`
           : ''
@@ -137,7 +132,7 @@ export default async function seguimientoView({ root, params, navigate, refresh 
           ${
             v.evaluaciones.habilitadas && (v.puede.evaluar || esFet)
               ? html`<button class="btn sec sm" data-go="/vinculacion/${v.id}/evaluacion">
-                  ${icon('clipboard-check')}${v.puede.evaluar && !v.evaluaciones.mia ? 'Responder evaluación' : 'Ver evaluaciones'}
+                  ${icon('clipboard-check')}${v.puede.evaluar && !v.evaluaciones.mia ? 'Evaluar la empresa' : 'Ver evaluaciones'}
                 </button>`
               : ''
           }
@@ -145,8 +140,8 @@ export default async function seguimientoView({ root, params, navigate, refresh 
           ${activa && role !== 'ADMIN' ? html`<button class="btn sec sm" data-go="/reportar?vinculacion=${v.id}">${icon('flag')}Reportar un problema</button>` : ''}
         </div>
       </section>
-      ${sinArl ? html`<p class="note-box">${icon('alert-circle')} ${role === 'ESTUDIANTE' ? 'Sube tu certificado de ARL: es obligatorio para iniciar la práctica.' : 'El practicante aún no sube su certificado de ARL.'}</p>` : ''}
-      ${cierreEmpresa()}${cierreDocente()}
+      ${sinArl ? html`<p class="note-box">${icon('alert-circle')} ${role === 'ESTUDIANTE' ? 'Sube tu certificado de ARL: sin él no puedes reportar horas.' : 'El practicante aún no sube su certificado de ARL.'}</p>` : ''}
+      ${notas()}${cierreDocente()}
       ${
         role !== 'ESTUDIANTE'
           ? html`<section class="panel">
@@ -212,7 +207,7 @@ export default async function seguimientoView({ root, params, navigate, refresh 
           await api.post(`/docente/vinculaciones/${v.id}/finalizacion`, {
             justificacion: finForm.justificacion.value.trim() || null,
           });
-          toast('Práctica finalizada. Avisamos al estudiante y a la empresa.');
+          toast('Práctica cerrada. Avisamos al estudiante y a la empresa.');
           refresh();
         } catch (error) {
           mount(root.querySelector('#finError'), errorBox(error.message));
