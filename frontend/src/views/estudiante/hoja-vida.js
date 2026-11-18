@@ -3,6 +3,7 @@ import { html, mount } from '../../lib/html.js';
 import { todayIso } from '../../lib/format.js';
 import { badge, emptyState, errorBox, icon, pageHeader, showFieldErrors, toast, withBusy } from '../../lib/ui.js';
 import { session } from '../../session.js';
+import { marcarFirma } from '../../lib/cedula.js';
 import { padDeFirma } from '../../lib/firma.js';
 import { recortarRostro } from '../../lib/rostro.js';
 import { hydrateFoto } from '../hoja-vida-detalle.js';
@@ -198,7 +199,7 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
       ${hv.estado?.valor === 'CON_OBSERVACIONES'
         ? html`<p class="note-box">${icon('alert-circle')} Recomendaciones de tu docente: ${hv.observaciones}</p>`
         : hv.estado?.valor === 'APROBADA'
-          ? html`<p class="note-box">${icon('circle-check')} Tu hoja de vida está aprobada. Si guardas cambios, deberás enviarla de nuevo a revisión y las empresas no la verán hasta que se apruebe.</p>`
+          ? html`<p class="note-box">${icon('circle-check')} Tu hoja de vida está aprobada. Si guardas cambios vuelve a revisión, y las empresas seguirán viendo la versión aprobada.</p>`
           : ''}
       <section class="panel">
         <div class="panel-h"><h2>Completa al ${hv.porcentaje} %</h2>${hv.porcentaje === 100 ? badge('ok', 'Completa') : badge('warn', 'Por completar')}</div>
@@ -212,7 +213,6 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
             <div>
               <dl class="kv">
                 <div><dt>Nombre</dt><dd>${perfil.nombre_completo}</dd></div>
-                <div><dt>Documento de identidad</dt><dd>${perfil.documento}</dd></div>
                 <div><dt>E-mail</dt><dd>${perfil.correo}</dd></div>
                 <div><dt>Programa</dt><dd>${perfil.programa.nombre}, ${perfil.semestre_actual}.º semestre</dd></div>
               </dl>
@@ -242,6 +242,22 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
         <section class="panel">${seccionLista('experiencias')}</section>
         <section class="panel">${seccionLista('investigaciones')}</section>
         <section class="panel">${seccionLista('referencias')}</section>
+        <section class="panel">
+          <h2>Cédula</h2>
+          <div class="form-grid">
+            ${input('documento', 'Número de cédula', perfil.documento, 'text', html`inputmode="numeric"`)}
+            ${input('lugar_expedicion', 'Lugar de expedición', perfil.lugar_expedicion, 'text', html`placeholder="Ciudad, departamento"`)}
+          </div>
+          <div class="cedula-fotos">
+            ${[['frente', 'Frente', hv.cedula?.url_frente], ['reverso', 'Reverso', hv.cedula?.url_reverso]].map(
+              ([lado, nombre, url]) => html`<figure class="cedula-foto">
+                ${url ? html`<img class="cedula-vista" data-foto="${url}" alt="${nombre} de tu cédula" />` : html`<div class="cedula-vista">${nombre}</div>`}
+                <label class="btn sec sm">${icon('upload')}${url ? 'Cambiar' : 'Subir'} ${nombre.toLowerCase()}<input type="file" data-cedula="${lado}" accept="image/jpeg,image/png" hidden /></label>
+              </figure>`,
+            )}
+          </div>
+          <div id="cedulaRecorte" class="firma-editor" hidden></div>
+        </section>
         <section class="panel">
           <h2>Firma</h2>
           <div class="firma-actual">
@@ -337,6 +353,8 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
 
     const payload = {
       telefono: valor('telefono'),
+      documento: valor('documento'),
+      lugar_expedicion: valor('lugar_expedicion'),
       disponibilidad: valor('disponibilidad'),
       perfil_profesional: valor('perfil_profesional'),
       fecha_nacimiento: valor('fecha_nacimiento'),
@@ -358,9 +376,9 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
 
     withBusy(form.querySelector('[type=submit]'), async () => {
       try {
-        await api.put('/estudiante/perfil', payload);
+        const guardado = await api.put('/estudiante/perfil', payload);
         await actualizarPerfil();
-        toast('Hoja de vida guardada.');
+        toast(guardado.hoja_vida.estado.valor === 'EN_REVISION' ? 'Hoja de vida guardada y enviada a revisión.' : 'Hoja de vida guardada.');
         navigate('/hoja-vida/vista');
       } catch (error) {
         mount(root.querySelector('#hvError'), errorBox(error.message));
@@ -368,6 +386,37 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
       }
     });
   });
+
+  // Las fotos de la cédula se muestran sin recargar, para no perder lo que se esté escribiendo.
+  root.querySelectorAll('[data-cedula]').forEach((campo) =>
+    campo.addEventListener('change', async (e) => {
+      const archivo = e.target.files[0];
+      e.target.value = '';
+      if (!archivo) return;
+      const lado = campo.dataset.cedula;
+      const data = new FormData();
+      data.append('lado', lado);
+      data.append('archivo', archivo);
+      if (lado === 'frente') {
+        const recorte = await marcarFirma(root.querySelector('#cedulaRecorte'), archivo);
+        if (!recorte) return;
+        data.append('firma', recorte, 'firma.png');
+      }
+      const boton = campo.closest('label');
+      boton.classList.add('busy');
+      try {
+        const { url } = await api.post('/estudiante/cedula', data);
+        const vista = Object.assign(document.createElement('img'), { className: 'cedula-vista', alt: `Foto de tu cédula, ${lado}`, src: await api.blobUrl(url) });
+        campo.closest('.cedula-foto').querySelector('.cedula-vista').replaceWith(vista);
+        await actualizarPerfil();
+        toast('Foto guardada.');
+      } catch (error) {
+        toast(error.errors?.archivo?.[0] ?? error.message);
+      } finally {
+        boton.classList.remove('busy');
+      }
+    }),
+  );
 
   // La foto debe tener un rostro: se revisa y se recorta en el navegador antes de subirla.
   root.querySelector('#foto').addEventListener('change', async (e) => {

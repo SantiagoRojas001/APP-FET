@@ -22,6 +22,8 @@ class ActualizarPerfilRequest extends FormRequest
 
         return [
             'telefono' => ['nullable', 'string', 'max:20'],
+            'documento' => ['nullable', 'regex:/^\d{5,15}$/', Rule::unique('estudiante', 'documento')->ignore($this->user()->estudiante?->id)],
+            'lugar_expedicion' => ['nullable', 'string', 'max:100'],
             'disponibilidad' => ['nullable', 'string', 'max:100'],
             'perfil_profesional' => ['nullable', 'string', 'max:3000'],
 

@@ -1,19 +1,18 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
 import { icon, pageHeader, toast, withBusy } from '../../lib/ui.js';
-import { session } from '../../session.js';
 import { hojaVidaDetalle, hydrateFoto } from '../hoja-vida-detalle.js';
 import { hydrateRepositories } from '../repositorio.js';
 
 /**
  * Vista previa de la hoja de vida del estudiante, tal como la ven empresas y
- * docentes. Desde aquí se envía a revisión docente: solo aprobada la ven las
- * empresas. Si el docente la devuelve, se ven sus recomendaciones.
+ * docentes. Al guardarla completa se envía sola a revisión docente: solo
+ * aprobada la ven las empresas. Si el docente la devuelve, se ven sus
+ * recomendaciones.
  */
-export default async function hojaVidaVistaView({ root, navigate, refresh }) {
+export default async function hojaVidaVistaView({ root, navigate }) {
   const perfil = await api.get('/estudiante/perfil');
   const hv = perfil.hoja_vida;
-  const completa = hv.porcentaje === 100;
   const faltan = hv.secciones.filter((s) => !s.completa).map((s) => s.seccion).join(', ');
 
   const revision = () => {
@@ -32,18 +31,12 @@ export default async function hojaVidaVistaView({ root, navigate, refresh }) {
       case 'CON_OBSERVACIONES':
         return html`<section class="callout">
           ${icon('alert-circle')}
-          <p><b>Tu docente te dejó recomendaciones:</b> ${hv.observaciones}<br />Corrígela y envíala de nuevo.</p>
-          <button class="btn" data-enviar ${completa ? '' : 'disabled'}>${icon('send')}Enviar de nuevo</button>
+          <p><b>Tu docente te dejó recomendaciones:</b> ${hv.observaciones}<br />Corrígela y guárdala: volverá a revisión.</p>
         </section>`;
       default:
         return html`<section class="callout">
-          ${icon(completa ? 'send' : 'alert-circle')}
-          <p>
-            ${completa
-              ? html`<b>Tu hoja de vida está completa.</b> Envíala a revisión: cuando tu docente la apruebe, las empresas podrán asignarte citas.`
-              : html`<b>Completa tu hoja de vida para enviarla a revisión</b> (va al ${hv.porcentaje} %). Faltan: ${faltan}.`}
-          </p>
-          <button class="btn" data-enviar ${completa ? '' : 'disabled'}>${icon('send')}Enviar a revisión</button>
+          ${icon('alert-circle')}
+          <p><b>Tu hoja de vida va al ${hv.porcentaje} %.</b>${faltan ? ` Faltan: ${faltan}.` : ''} Al guardarla completa se enviará a revisión.</p>
         </section>`;
     }
   };
@@ -65,18 +58,6 @@ export default async function hojaVidaVistaView({ root, navigate, refresh }) {
   );
 
   root.querySelector('#edit')?.addEventListener('click', () => navigate('/hoja-vida'));
-  root.querySelector('[data-enviar]')?.addEventListener('click', (e) =>
-    withBusy(e.currentTarget, async () => {
-      try {
-        await api.post('/estudiante/hoja-vida/envio');
-        session.setUser(await api.get('/auth/yo'));
-        toast('Hoja de vida enviada a revisión. Te avisaremos cuando tu docente responda.');
-        refresh();
-      } catch (error) {
-        toast(error.message);
-      }
-    }),
-  );
   root.querySelector('#pdf').addEventListener('click', (e) =>
     withBusy(e.currentTarget, () => api.download('/api/estudiante/hoja-vida.pdf', 'hoja-de-vida.pdf').catch((err) => toast(err.message))),
   );

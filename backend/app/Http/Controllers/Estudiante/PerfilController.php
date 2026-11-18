@@ -32,7 +32,7 @@ class PerfilController extends Controller
         $hojaVida->antesDeEditar($estudiante);
 
         DB::transaction(function () use ($request, $estudiante) {
-            $estudiante->update($request->safe()->only(['telefono', 'disponibilidad']));
+            $estudiante->update($request->safe()->only(['telefono', 'disponibilidad', 'documento', 'lugar_expedicion']));
 
             $hojaVida = $estudiante->hojaVida()->firstOrCreate();
             $hojaVida->update([
@@ -63,15 +63,7 @@ class PerfilController extends Controller
             $estudiante->proyectos()->createMany($request->validated('proyectos'));
         });
 
-        return new EstudianteResource($this->cargar($estudiante->fresh()));
-    }
-
-    /** Envía la hoja de vida completa a revisión docente (o de nuevo, ya corregida). */
-    public function envio(Request $request, HojaVidaService $hojaVida): EstudianteResource
-    {
-        $estudiante = $request->user()->estudiante()->firstOrFail();
-
-        $hojaVida->enviar($estudiante);
+        $hojaVida->enviarSiCompleta($estudiante->fresh());
 
         return new EstudianteResource($this->cargar($estudiante->fresh()));
     }

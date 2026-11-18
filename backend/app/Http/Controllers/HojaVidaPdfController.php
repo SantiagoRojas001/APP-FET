@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\Rol;
 use App\Models\Estudiante;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\HojaVidaPdf;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Hoja de vida en PDF con el formato institucional PA-GTH-F-10. La descarga el propio
@@ -17,42 +17,35 @@ use Illuminate\Support\Str;
  */
 class HojaVidaPdfController extends Controller
 {
-    public function propia(Request $request): Response
+    public function propia(Request $request, HojaVidaPdf $pdf): Response
     {
-        return $this->pdf($request, $request->user()->estudiante()->firstOrFail());
+        return $this->pdf($request, $request->user()->estudiante()->firstOrFail(), $pdf);
     }
 
-    public function deEstudiante(Request $request, Estudiante $estudiante): Response
+    public function deEstudiante(Request $request, Estudiante $estudiante, HojaVidaPdf $pdf): Response
     {
         Gate::authorize('view', $estudiante);
 
-        return $this->pdf($request, $estudiante);
+        return $this->pdf($request, $estudiante, $pdf);
     }
 
-    private function pdf(Request $request, Estudiante $estudiante): Response
+    private function pdf(Request $request, Estudiante $estudiante, HojaVidaPdf $pdf): Response
     {
-        $estudiante->cargarHojaVida();
         $usuario = $request->user();
+        $nombre = 'hoja-de-vida-'.Str::slug($estudiante->nombre_completo).'.pdf';
 
-        $pdf = Pdf::loadView('pdf.hoja-vida', [
-            'estudiante' => $estudiante,
-            // Las empresas no ven el documento de identidad (igual que en la API).
-            'verDocumento' => $usuario->id === $estudiante->usuario_id || $usuario->tieneRol(Rol::Docente, Rol::Admin, Rol::Director),
-            'logo' => base64_encode(file_get_contents(resource_path('img/logo-fet.png'))),
-            'foto' => $this->imagen($estudiante->hojaVida?->foto_url),
-            'firma' => $this->imagen($estudiante->hojaVida?->firma_url),
-        ])->setPaper('letter');
-
-        return $pdf->download('hoja-de-vida-'.Str::slug($estudiante->nombre_completo).'.pdf');
-    }
-
-    /** Foto o firma como data URI para incrustarla en el PDF, o null si no la hay. */
-    private function imagen(?string $ruta): ?string
-    {
-        if (! $ruta || ! Storage::disk('local')->exists($ruta)) {
-            return null;
+        // Mientras una versión editada está en revisión, la empresa recibe la última aprobada.
+        $aprobada = $usuario->rol === Rol::Empresa ? $estudiante->hojaVida?->version_aprobada['pdf'] ?? null : null;
+        if ($aprobada && Storage::disk('local')->exists($aprobada)) {
+            return Storage::disk('local')->download($aprobada, $nombre);
         }
 
-        return 'data:'.Storage::disk('local')->mimeType($ruta).';base64,'.base64_encode(Storage::disk('local')->get($ruta));
+        // Las empresas no ven el documento de identidad (igual que en la API).
+        $verDocumento = $usuario->id === $estudiante->usuario_id || $usuario->tieneRol(Rol::Docente, Rol::Admin, Rol::Director);
+
+        return response($pdf->contenido($estudiante, $verDocumento), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$nombre}\"",
+        ]);
     }
 }

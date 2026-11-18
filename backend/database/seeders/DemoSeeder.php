@@ -286,7 +286,11 @@ class DemoSeeder extends Seeder
             'contacto_emergencia_telefono' => $avanzado ? '3201234567' : null,
             // Quien ya envió su hoja de vida a revisión la firmó (la firma es obligatoria).
             'firma_url' => $estado === EstadoHojaVida::Borrador ? null : $this->firmaDeEjemplo("firmas/demo-{$estudiante->id}.png", $estudiante->id),
+            'cedula_frente_url' => $estado === EstadoHojaVida::Borrador ? null : $this->firmaDeEjemplo("cedulas/demo-{$estudiante->id}-frente.png", $estudiante->id),
+            'cedula_reverso_url' => $estado === EstadoHojaVida::Borrador ? null : $this->firmaDeEjemplo("cedulas/demo-{$estudiante->id}-reverso.png", $estudiante->id),
         ]);
+
+        $estudiante->update(['lugar_expedicion' => 'Neiva, Huila']);
 
         if (! $avanzado) {
             return;

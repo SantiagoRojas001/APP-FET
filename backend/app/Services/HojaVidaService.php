@@ -6,12 +6,15 @@ use App\Enums\EstadoHojaVida;
 use App\Enums\Rol;
 use App\Enums\TipoReferencia;
 use App\Exceptions\ReglaNegocioException;
+use App\Http\Resources\EstudianteResource;
 use App\Models\Estudiante;
 use App\Models\HojaVida;
 use App\Models\Usuario;
 use App\Notifications\HojaVidaPorRevisar;
 use App\Notifications\HojaVidaRevisada;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Mide qué tan completa está la hoja de vida en el formato institucional.
@@ -33,6 +36,7 @@ class HojaVidaService
 
         return [
             ['seccion' => 'Datos personales', 'completa' => filled($estudiante->telefono) && collect(self::DATOS_PERSONALES)->every(fn ($c) => filled($hoja?->{$c}))],
+            ['seccion' => 'Cédula', 'completa' => filled($estudiante->documento) && filled($estudiante->lugar_expedicion) && filled($hoja?->cedula_frente_url) && filled($hoja?->cedula_reverso_url)],
             ['seccion' => 'Foto', 'completa' => filled($hoja?->foto_url)],
             // La firma es obligatoria: sin ella la hoja de vida no se puede enviar a revisión.
             ['seccion' => 'Firma', 'completa' => filled($hoja?->firma_url)],
@@ -45,28 +49,25 @@ class HojaVidaService
     }
 
     /**
-     * El estudiante envía su hoja de vida a revisión docente. Debe estar
-     * completa, el estudiante habilitado y sin práctica en curso. Si tenía
-     * recomendaciones, se envía de nuevo ya corregida.
+     * Al guardar, la hoja de vida completa se envía sola a revisión docente.
+     * Incompleta queda en borrador.
      */
-    public function enviar(Estudiante $estudiante): HojaVida
+    public function enviarSiCompleta(Estudiante $estudiante): bool
     {
         $hoja = $estudiante->hojaVida()->firstOrCreate();
 
-        if (! app(ElegibilidadService::class)->habilitadoParaPractica($estudiante)) {
-            throw new ReglaNegocioException('Aún no estás habilitado para pasantías o prácticas.');
-        }
-        if (! $estudiante->hojaVidaHabilitada()) {
-            throw new ReglaNegocioException('Tu hoja de vida está deshabilitada mientras cursas tu práctica.');
-        }
-        if (in_array($hoja->estado, [EstadoHojaVida::EnRevision, EstadoHojaVida::Aprobada], true)) {
-            throw new ReglaNegocioException("Tu hoja de vida ya está {$hoja->estado->label()}.");
-        }
-        if ($this->porcentaje($estudiante) < 100) {
-            throw new ReglaNegocioException('Completa todas las secciones de tu hoja de vida antes de enviarla a revisión.');
+        if (! app(ElegibilidadService::class)->habilitadoParaPractica($estudiante)
+            || ! $estudiante->hojaVidaHabilitada()
+            || in_array($hoja->estado, [EstadoHojaVida::EnRevision, EstadoHojaVida::Aprobada], true)
+            || $this->porcentaje($estudiante) < 100) {
+            return false;
         }
 
-        $hoja->update(['estado' => EstadoHojaVida::EnRevision, 'enviada_en' => now()]);
+        $hoja->update([
+            'estado' => EstadoHojaVida::EnRevision,
+            'enviada_en' => now(),
+            'firma_similitud' => $this->similitudDeFirma($hoja),
+        ]);
         Auditoria::registrar('hoja_vida.enviada', $estudiante);
 
         $estudiante->loadMissing('programa');
@@ -75,7 +76,7 @@ class HojaVidaService
             new HojaVidaPorRevisar($estudiante),
         );
 
-        return $hoja;
+        return true;
     }
 
     /**
@@ -99,7 +100,12 @@ class HojaVidaService
             'observaciones' => $aprobar ? null : $observaciones,
             'revisada_por' => $docente->id,
             'revisada_en' => now(),
+            // La versión nueva ya es la aprobada: la copia anterior sobra.
+            'version_aprobada' => $aprobar ? null : $hoja->version_aprobada,
         ]);
+        if ($aprobar) {
+            Storage::disk('local')->deleteDirectory($this->carpetaAprobada($hoja));
+        }
         Auditoria::registrar($aprobar ? 'hoja_vida.aprobada' : 'hoja_vida.observada', $estudiante, array_filter(['observaciones' => $observaciones]));
 
         $estudiante->loadMissing('usuario');
@@ -110,8 +116,8 @@ class HojaVidaService
 
     /**
      * Antes de que el estudiante cambie su hoja de vida: en revisión no se
-     * puede editar y, si ya estaba aprobada, vuelve a borrador y necesita una
-     * nueva aprobación (deja de verse en las empresas hasta entonces).
+     * puede editar. Si estaba aprobada, se conserva una copia que las empresas
+     * siguen viendo hasta que el docente apruebe la versión nueva.
      */
     public function antesDeEditar(Estudiante $estudiante): void
     {
@@ -122,8 +128,57 @@ class HojaVidaService
         }
 
         if ($hoja->estado === EstadoHojaVida::Aprobada) {
-            $hoja->update(['estado' => EstadoHojaVida::Borrador]);
+            $hoja->update(['estado' => EstadoHojaVida::Borrador, 'version_aprobada' => $this->copiaAprobada($estudiante, $hoja)]);
         }
+    }
+
+    /** @return array<string, mixed> Datos, foto, firma y PDF de la hoja de vida tal como se aprobó. */
+    private function copiaAprobada(Estudiante $estudiante, HojaVida $hoja): array
+    {
+        $disco = Storage::disk('local');
+        $carpeta = $this->carpetaAprobada($hoja);
+        $disco->deleteDirectory($carpeta);
+
+        $copiar = function (?string $ruta, string $nombre) use ($disco, $carpeta): ?string {
+            if (! $ruta || ! $disco->exists($ruta)) {
+                return null;
+            }
+            $destino = "{$carpeta}/{$nombre}.".pathinfo($ruta, PATHINFO_EXTENSION);
+            $disco->copy($ruta, $destino);
+
+            return $destino;
+        };
+
+        $pdf = "{$carpeta}/hoja-de-vida.pdf";
+        $disco->put($pdf, app(HojaVidaPdf::class)->contenido($estudiante, false));
+
+        // Sin usuario en la petición, el recurso omite los datos que las empresas no ven.
+        $datos = (new EstudianteResource($estudiante->cargarHojaVida()))->resolve(Request::create('/'));
+
+        return [
+            'perfil' => array_intersect_key($datos, array_flip(['telefono', 'disponibilidad', 'hoja_vida', 'competencias', 'proyectos'])),
+            'foto' => $copiar($hoja->foto_url, 'foto'),
+            'firma' => $copiar($hoja->firma_url, 'firma'),
+            'pdf' => $pdf,
+        ];
+    }
+
+    private function carpetaAprobada(HojaVida $hoja): string
+    {
+        return "hojas-aprobadas/{$hoja->id}";
+    }
+
+    /** Parecido orientativo entre la firma dibujada y la marcada en la cédula. */
+    private function similitudDeFirma(HojaVida $hoja): ?int
+    {
+        $disco = Storage::disk('local');
+
+        if (! $hoja->cedula_firma_url || ! $hoja->firma_url
+            || ! $disco->exists($hoja->firma_url) || ! $disco->exists($hoja->cedula_firma_url)) {
+            return null;
+        }
+
+        return app(FirmaService::class)->similitud($disco->get($hoja->firma_url), $disco->get($hoja->cedula_firma_url));
     }
 
     public function porcentaje(Estudiante $estudiante): int

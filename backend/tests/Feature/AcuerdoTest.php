@@ -69,7 +69,7 @@ class AcuerdoTest extends TestCase
         ]);
         $this->como(Rol::Docente);
 
-        $this->getJson('/api/docente/acuerdos')->assertOk()->assertJsonPath('data.0.id', $acuerdo->id);
+        $this->getJson('/api/docente/acuerdos')->assertOk()->assertJsonPath('0.id', $acuerdo->id);
         $this->patchJson("/api/admin/acuerdos/{$acuerdo->id}/revision", ['aprobar' => true])->assertForbidden();
     }
 }

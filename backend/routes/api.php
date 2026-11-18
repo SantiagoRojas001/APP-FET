@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegistroEmpresaController;
 use App\Http\Controllers\Auth\SesionController;
 use App\Http\Controllers\CartaPresentacionController;
 use App\Http\Controllers\CatalogoController;
+use App\Http\Controllers\CedulaEstudianteController;
 use App\Http\Controllers\Director;
 use App\Http\Controllers\Docente;
 use App\Http\Controllers\Empresa;
@@ -88,15 +89,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('estudiantes/{estudiante}/hoja-vida.pdf', [HojaVidaPdfController::class, 'deEstudiante']);
         Route::get('estudiantes/{estudiante}/foto', [FotoEstudianteController::class, 'show']);
         Route::get('estudiantes/{estudiante}/firma', [FirmaEstudianteController::class, 'show']);
+        Route::get('estudiantes/{estudiante}/cedula/{lado}', [CedulaEstudianteController::class, 'show'])->whereIn('lado', ['frente', 'reverso']);
         Route::get('estudiantes', [PerfilEstudianteController::class, 'index'])->middleware('rol:DOCENTE,ADMIN,DIRECTOR');
 
         Route::prefix('estudiante')->middleware('rol:ESTUDIANTE')->group(function () {
             Route::get('perfil', [Estudiante\PerfilController::class, 'show']);
             Route::put('perfil', [Estudiante\PerfilController::class, 'update']);
-            Route::post('hoja-vida/envio', [Estudiante\PerfilController::class, 'envio']);
             Route::get('hoja-vida.pdf', [HojaVidaPdfController::class, 'propia']);
             Route::post('foto', [FotoEstudianteController::class, 'store'])->middleware('throttle:10,1');
             Route::post('firma', [FirmaEstudianteController::class, 'store'])->middleware('throttle:10,1');
+            Route::post('cedula', [CedulaEstudianteController::class, 'store'])->middleware('throttle:10,1');
             Route::get('citas', [Estudiante\CitaController::class, 'index']);
             Route::get('vinculaciones', [Estudiante\VinculacionController::class, 'index']);
         });

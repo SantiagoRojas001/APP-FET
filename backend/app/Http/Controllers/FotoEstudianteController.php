@@ -55,7 +55,7 @@ class FotoEstudianteController extends Controller
     {
         Gate::authorize('view', $estudiante);
 
-        $ruta = $estudiante->hojaVida()->value('foto_url');
+        $ruta = $estudiante->hojaVida?->rutaPara($request->user(), 'foto');
         abort_unless($ruta && Storage::disk('local')->exists($ruta), 404, 'El estudiante no ha subido su foto.');
 
         return Storage::disk('local')->response($ruta, null, ['Cache-Control' => 'private, max-age=300']);

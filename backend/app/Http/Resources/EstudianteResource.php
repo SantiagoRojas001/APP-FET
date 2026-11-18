@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\Rol;
 use App\Models\Estudiante;
 use App\Services\ElegibilidadService;
 use App\Services\HojaVidaService;
@@ -19,10 +20,11 @@ class EstudianteResource extends Recurso
     {
         $hojaVida = app(HojaVidaService::class);
 
-        return [
+        $datos = [
             'id' => $this->id,
             'codigo' => $this->codigo,
             'documento' => $this->when($this->puedeVerDatosSensibles($request), $this->documento),
+            'lugar_expedicion' => $this->when($this->puedeVerDatosSensibles($request), $this->lugar_expedicion),
             'nombres' => $this->nombres,
             'apellidos' => $this->apellidos,
             'nombre_completo' => $this->nombre_completo,
@@ -57,7 +59,7 @@ class EstudianteResource extends Recurso
                 'docente' => $r->relationLoaded('docente') ? $r->docente?->correo : null,
             ])->values()),
             'hoja_vida_habilitada' => $this->whenLoaded('vinculacionActiva', fn () => $this->vinculacionActiva === null),
-            'hoja_vida' => $this->whenLoaded('hojaVida', fn () => $this->hojaVida($hojaVida)),
+            'hoja_vida' => $this->whenLoaded('hojaVida', fn () => $this->hojaVida($hojaVida, $request)),
             'competencias' => $this->whenLoaded('competencias', fn () => $this->competencias->map(fn ($c) => [
                 'id' => $c->id,
                 'nombre' => $c->nombre,
@@ -71,6 +73,13 @@ class EstudianteResource extends Recurso
                 'semestre' => $p->semestre,
             ])),
         ];
+
+        // Mientras una versión editada está en revisión, la empresa ve la última aprobada.
+        $aprobada = $request->user()?->rol === Rol::Empresa && $this->relationLoaded('hojaVida')
+            ? $this->hojaVida?->version_aprobada
+            : null;
+
+        return $aprobada ? array_merge($datos, $aprobada['perfil']) : $datos;
     }
 
     /**
@@ -79,7 +88,7 @@ class EstudianteResource extends Recurso
      *
      * @return array<string, mixed>
      */
-    private function hojaVida(HojaVidaService $servicio): array
+    private function hojaVida(HojaVidaService $servicio, Request $request): array
     {
         $hoja = $this->hojaVida;
         $lista = fn (string $relacion, callable $fila) => $this->when(
@@ -98,6 +107,12 @@ class EstudianteResource extends Recurso
             'secciones' => $servicio->secciones($this->resource),
             'url_foto' => $hoja?->foto_url ? "/api/estudiantes/{$this->id}/foto" : null,
             'url_firma' => $hoja?->firma_url ? "/api/estudiantes/{$this->id}/firma" : null,
+            'cedula' => $this->when($this->puedeVerDatosSensibles($request), fn () => [
+                'url_frente' => $hoja?->cedula_frente_url ? "/api/estudiantes/{$this->id}/cedula/frente" : null,
+                'url_reverso' => $hoja?->cedula_reverso_url ? "/api/estudiantes/{$this->id}/cedula/reverso" : null,
+                'firma_similitud' => $hoja?->firma_similitud,
+            ]),
+            'version_aprobada_visible' => $hoja?->version_aprobada !== null,
             'datos_personales' => [
                 'fecha_nacimiento' => $hoja?->fecha_nacimiento?->toDateString(),
                 'lugar_nacimiento' => $hoja?->lugar_nacimiento,

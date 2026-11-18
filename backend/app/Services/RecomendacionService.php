@@ -21,7 +21,7 @@ class RecomendacionService
     {
         $estudiante->loadMissing('hojaVida', 'vinculacionActiva');
 
-        if (! $this->elegibilidad->habilitadoParaPractica($estudiante) || ! $estudiante->hojaVida?->aprobada() || $estudiante->vinculacionActiva) {
+        if (! $this->elegibilidad->habilitadoParaPractica($estudiante) || ! $estudiante->hojaVida?->visibleParaEmpresas() || $estudiante->vinculacionActiva) {
             throw new ReglaNegocioException('Solo se recomiendan estudiantes habilitados, con hoja de vida aprobada y sin práctica en curso.');
         }
 

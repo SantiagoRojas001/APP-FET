@@ -50,6 +50,7 @@ return [
         'dedicacion' => ['Tiempo completo', 'Medio tiempo', 'Por horas'],
         'modalidad_estudio' => ['Presencial', 'Virtual', 'A distancia', 'Híbrida'],
         'foto_max_kb' => 2048,
+        'cedula_max_kb' => 5120,
     ],
 
     /*

@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[UsePolicy(EstudiantePolicy::class)]
 #[Fillable([
     'usuario_id', 'programa_id', 'codigo', 'documento', 'nombres', 'apellidos', 'telefono', 'semestre_actual',
-    'es_egresado', 'disponibilidad', 'modalidad_grado', 'promedio', 'habilitado', 'resultado_enviado_en', 'registrado_por',
+    'lugar_expedicion', 'es_egresado', 'disponibilidad', 'modalidad_grado', 'promedio', 'habilitado', 'resultado_enviado_en', 'registrado_por',
 ])]
 class Estudiante extends Model
 {
@@ -74,7 +74,8 @@ class Estudiante extends Model
 
     /**
      * Estudiantes que las empresas pueden encontrar: habilitados, con hoja de
-     * vida aprobada por el docente y sin práctica en curso.
+     * vida aprobada por el docente (aunque una versión editada esté en revisión)
+     * y sin práctica en curso.
      *
      * @param  Builder<self>  $query
      */
@@ -83,7 +84,9 @@ class Estudiante extends Model
     {
         $query->where('habilitado', true)
             ->where('es_egresado', false)
-            ->whereHas('hojaVida', fn (Builder $h) => $h->where('estado', EstadoHojaVida::Aprobada))
+            ->whereHas('hojaVida', fn (Builder $h) => $h->where(
+                fn (Builder $v) => $v->where('estado', EstadoHojaVida::Aprobada)->orWhereNotNull('version_aprobada'),
+            ))
             ->whereDoesntHave('vinculaciones', fn (Builder $v) => $v->where('estado', EstadoVinculacion::Activa));
     }
 

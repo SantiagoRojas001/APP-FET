@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class HojaVidaTest extends TestCase
@@ -25,6 +26,7 @@ class HojaVidaTest extends TestCase
     {
         return [
             'telefono' => '3001234567',
+            'lugar_expedicion' => 'Neiva, Huila',
             'disponibilidad' => 'Tiempo completo',
             'perfil_profesional' => 'Desarrollador en formación.',
             'fecha_nacimiento' => '2004-04-21',
@@ -56,7 +58,7 @@ class HojaVidaTest extends TestCase
 
         $this->putJson('/api/estudiante/perfil', $this->hojaCompleta(Competencia::factory()->create(['nombre' => 'PHP'])))
             ->assertOk()
-            ->assertJsonPath('hoja_vida.porcentaje', 75)
+            ->assertJsonPath('hoja_vida.porcentaje', 67)
             ->assertJsonPath('hoja_vida.datos_personales.rh', 'A+')
             ->assertJsonPath('hoja_vida.formaciones.0.nivel.etiqueta', 'Técnico')
             ->assertJsonPath('hoja_vida.cursos.0.fecha', '2024-11')
@@ -65,7 +67,8 @@ class HojaVidaTest extends TestCase
             ->assertJsonCount(2, 'hoja_vida.referencias')
             ->assertJsonPath('competencias.0.nivel', 'INTERMEDIO');
 
-        // Con la foto y la firma queda completa y aparecen en el PDF institucional.
+        // Con la cédula, la foto y la firma queda completa y aparecen en el PDF institucional.
+        $this->subirCedula();
         $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])
             ->assertOk();
         $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng()])->assertOk();
@@ -131,37 +134,75 @@ class HojaVidaTest extends TestCase
         $this->getJson("/api/estudiantes/{$oculto->id}")->assertForbidden();
     }
 
-    public function test_el_estudiante_envia_su_hoja_de_vida_completa_a_revision_y_no_la_edita_mientras_tanto(): void
+    private function subirCedula(): void
+    {
+        $this->post('/api/estudiante/cedula', [
+            'lado' => 'frente',
+            'archivo' => UploadedFile::fake()->image('frente.png', 800, 500),
+            'firma' => UploadedFile::fake()->image('firma.png', 300, 100),
+        ])->assertOk();
+        $this->post('/api/estudiante/cedula', ['lado' => 'reverso', 'archivo' => UploadedFile::fake()->image('reverso.png', 800, 500)])->assertOk();
+    }
+
+    public function test_al_guardar_completa_se_envia_sola_a_revision_y_no_se_edita_mientras_tanto(): void
     {
         Storage::fake('local');
         Notification::fake();
         $docente = Usuario::factory()->rol(Rol::Docente)->create();
         $estudiante = $this->estudiante(5);
         $this->comoEstudiante($estudiante);
-
-        $this->postJson('/api/estudiante/hoja-vida/envio')
-            ->assertUnprocessable()
-            ->assertJsonPath('message', fn (string $m) => str_contains($m, 'Completa'));
-
         $datos = $this->hojaCompleta(Competencia::factory()->create());
-        $this->putJson('/api/estudiante/perfil', $datos)->assertOk();
+
+        // Incompleta queda en borrador, sin avisar a nadie.
+        $this->putJson('/api/estudiante/perfil', $datos)->assertOk()->assertJsonPath('hoja_vida.estado.valor', 'BORRADOR');
+        Notification::assertNothingSent();
+
         $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])->assertOk();
-
-        // Sin la firma no se puede enviar.
-        $this->postJson('/api/estudiante/hoja-vida/envio')->assertUnprocessable();
         $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng()])->assertOk();
+        $this->subirCedula();
 
-        $this->postJson('/api/estudiante/hoja-vida/envio')
+        $this->putJson('/api/estudiante/perfil', $datos)
             ->assertOk()
-            ->assertJsonPath('hoja_vida.estado.valor', 'EN_REVISION');
+            ->assertJsonPath('hoja_vida.estado.valor', 'EN_REVISION')
+            ->assertJsonPath('hoja_vida.cedula.firma_similitud', fn ($valor) => $valor === null || ($valor >= 0 && $valor <= 100));
         Notification::assertSentTo($docente, HojaVidaPorRevisar::class);
         $this->putJson('/api/estudiante/perfil', $datos)->assertUnprocessable();
+    }
 
-        // Aprobada, la ven las empresas; si el estudiante la edita, vuelve a borrador y necesita otra aprobación.
+    public function test_al_editar_una_hoja_aprobada_las_empresas_siguen_viendo_la_version_aprobada(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+        $docente = Usuario::factory()->rol(Rol::Docente)->create();
+        $estudiante = $this->estudiante(5);
+        $this->comoEstudiante($estudiante);
+        $datos = $this->hojaCompleta(Competencia::factory()->create());
+        $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])->assertOk();
+        $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng()])->assertOk();
+        $this->subirCedula();
+        $this->putJson('/api/estudiante/perfil', $datos)->assertOk();
         $estudiante->hojaVida()->update(['estado' => EstadoHojaVida::Aprobada]);
-        $this->comoEmpresa(Empresa::factory()->create())->getJson('/api/empresa/hojas-vida')->assertJsonPath('data.0.id', $estudiante->id);
-        $this->comoEstudiante($estudiante)->putJson('/api/estudiante/perfil', $datos)->assertJsonPath('hoja_vida.estado.valor', 'BORRADOR');
-        $this->comoEmpresa(Empresa::factory()->create())->getJson('/api/empresa/hojas-vida')->assertJsonCount(0, 'data');
+
+        $this->comoEstudiante($estudiante)
+            ->putJson('/api/estudiante/perfil', [...$datos, 'perfil_profesional' => 'Perfil sin revisar.'])
+            ->assertJsonPath('hoja_vida.estado.valor', 'EN_REVISION');
+
+        $empresa = Empresa::factory()->create();
+        $this->comoEmpresa($empresa)->getJson('/api/empresa/hojas-vida')
+            ->assertJsonPath('data.0.id', $estudiante->id)
+            ->assertJsonPath('data.0.hoja_vida.perfil_profesional', 'Desarrollador en formación.')
+            ->assertJsonPath('data.0.hoja_vida.estado.valor', 'APROBADA');
+        $this->getJson("/api/estudiantes/{$estudiante->id}")->assertJsonPath('hoja_vida.perfil_profesional', 'Desarrollador en formación.');
+        $this->get("/api/estudiantes/{$estudiante->id}/foto")->assertOk();
+        $this->get("/api/estudiantes/{$estudiante->id}/hoja-vida.pdf")->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->get("/api/estudiantes/{$estudiante->id}/cedula/frente")->assertForbidden();
+
+        // Aprobada la versión nueva, es la que ven las empresas.
+        Sanctum::actingAs($docente);
+        $this->patchJson("/api/docente/hojas-vida/{$estudiante->id}", ['aprobar' => true])->assertOk();
+        $this->assertNull($estudiante->hojaVida()->value('version_aprobada'));
+        $this->get("/api/estudiantes/{$estudiante->id}/cedula/frente")->assertOk();
+        $this->comoEmpresa($empresa)->getJson("/api/estudiantes/{$estudiante->id}")->assertJsonPath('hoja_vida.perfil_profesional', 'Perfil sin revisar.');
     }
 
     public function test_los_listados_de_estudiantes_y_citas_cargan_sin_consultas_n_mas_1(): void

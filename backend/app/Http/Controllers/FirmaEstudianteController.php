@@ -42,11 +42,11 @@ class FirmaEstudianteController extends Controller
         return response()->json(['url_firma' => "/api/estudiantes/{$estudiante->id}/firma"]);
     }
 
-    public function show(Estudiante $estudiante): StreamedResponse
+    public function show(Request $request, Estudiante $estudiante): StreamedResponse
     {
         Gate::authorize('view', $estudiante);
 
-        $ruta = $estudiante->hojaVida()->value('firma_url');
+        $ruta = $estudiante->hojaVida?->rutaPara($request->user(), 'firma');
         abort_unless($ruta && Storage::disk('local')->exists($ruta), 404, 'El estudiante no ha registrado su firma.');
 
         return Storage::disk('local')->response($ruta, null, ['Cache-Control' => 'private, max-age=300']);

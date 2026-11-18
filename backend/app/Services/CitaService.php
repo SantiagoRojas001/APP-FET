@@ -51,7 +51,7 @@ class CitaService
 
         $estudiante->loadMissing('hojaVida', 'vinculacionActiva');
 
-        if (! $this->elegibilidad->habilitadoParaPractica($estudiante) || ! $estudiante->hojaVida?->aprobada() || $estudiante->vinculacionActiva) {
+        if (! $this->elegibilidad->habilitadoParaPractica($estudiante) || ! $estudiante->hojaVida?->visibleParaEmpresas() || $estudiante->vinculacionActiva) {
             throw new ReglaNegocioException('La hoja de vida de este estudiante no está disponible.');
         }
 

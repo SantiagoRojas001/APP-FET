@@ -7,7 +7,7 @@ const NOTIFICACIONES = { path: '/notificaciones', hidden: true, load: () => impo
 const COMUNES = [NOTIFICACIONES, { path: '/reportar', hidden: true, load: () => import('./views/reportar.js') }];
 
 const HOJA_VIDA = [
-  { path: '/hoja-vida', label: 'Hoja de vida', icon: 'file-cv', ayuda: 'Completa tu hoja de vida en el formato de la FET, con tu foto y tu firma, y envíala a revisión. Cuando tu docente la apruebe, las empresas podrán verla.', load: () => import('./views/estudiante/hoja-vida.js') },
+  { path: '/hoja-vida', label: 'Hoja de vida', icon: 'file-cv', ayuda: 'Completa tu hoja de vida en el formato de la FET, con tu foto, tu cédula y tu firma. Al guardarla completa se envía a revisión. Cuando tu docente la apruebe, las empresas podrán verla.', load: () => import('./views/estudiante/hoja-vida.js') },
   { path: '/hoja-vida/vista', hidden: true, load: () => import('./views/estudiante/hoja-vida-vista.js') },
 ];
 
