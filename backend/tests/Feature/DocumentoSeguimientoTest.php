@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Rol;
 use App\Models\Empresa;
+use App\Models\Programa;
+use App\Models\Usuario;
 use App\Models\Vinculacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -84,5 +86,19 @@ class DocumentoSeguimientoTest extends TestCase
             ->assertOk()
             ->assertJsonPath('estado_revision.valor', 'APROBADO');
         $this->get("/api/documentos/{$id}/archivo")->assertOk()->assertDownload();
+    }
+
+    public function test_un_docente_de_otro_programa_no_revisa_documentos(): void
+    {
+        $vinculacion = Vinculacion::factory()->create();
+        Sanctum::actingAs($vinculacion->estudiante->usuario);
+        $id = $this->subir($vinculacion)->json('id');
+
+        Sanctum::actingAs(Usuario::factory()->create([
+            'rol' => Rol::Docente,
+            'programa_id' => Programa::factory()->create()->id,
+        ]));
+
+        $this->patchJson("/api/documentos/{$id}/revision", ['estado_revision' => 'APROBADO'])->assertForbidden();
     }
 }

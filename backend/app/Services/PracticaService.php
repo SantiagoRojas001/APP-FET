@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\EstadoRevision;
 use App\Enums\EstadoVinculacion;
+use App\Enums\TipoDocumento;
 use App\Enums\TipoEvaluacion;
 use App\Exceptions\ReglaNegocioException;
 use App\Models\EvidenciaSemanal;
@@ -50,6 +51,10 @@ class PracticaService
      */
     public function registrarEvidencia(Vinculacion $vinculacion, array $datos, ?UploadedFile $archivo): EvidenciaSemanal
     {
+        if (! $vinculacion->documentos()->where('tipo', TipoDocumento::Arl)->exists()) {
+            throw new ReglaNegocioException('Sube tu certificado de ARL en Entregas antes de reportar horas.');
+        }
+
         $semana = Carbon::parse($datos['semana_inicio'])->startOfWeek();
 
         if ($semana->lt($vinculacion->fecha_inicio->copy()->startOfWeek())) {

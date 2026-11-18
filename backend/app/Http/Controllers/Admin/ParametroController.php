@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 /**
  * Parámetros generales, iguales para todos los programas: promedio mínimo,
  * semestres en los que se registran los estudiantes para pasantía o práctica
- * y horas que exige la práctica en cada ciclo.
+ * y horas mínimas de la práctica.
  */
 class ParametroController extends Controller
 {
@@ -28,35 +28,29 @@ class ParametroController extends Controller
             'promedio_minimo' => ['required', 'numeric', 'min:0', 'max:5', 'decimal:0,2'],
             'semestres_habilitados' => ['required', 'array', 'min:1'],
             'semestres_habilitados.*' => ['integer', 'min:1', 'max:10', 'distinct'],
-            'horas' => ['required', 'array:'.implode(',', Ciclo::values())],
-            ...array_combine(
-                array_map(fn (string $c) => "horas.{$c}", Ciclo::values()),
-                array_fill(0, count(Ciclo::cases()), ['required', 'integer', 'min:40', 'max:2000']),
-            ),
+            'horas' => ['required', 'integer', 'min:40', 'max:2000'],
         ]);
 
         $semestres = collect($datos['semestres_habilitados'])->map(fn ($s) => (int) $s)->sort()->values();
         Parametro::guardar('promedio_minimo', (string) round((float) $datos['promedio_minimo'], 2));
         Parametro::guardar('semestres_habilitados', $semestres->implode(','));
-        foreach (Ciclo::cases() as $ciclo) {
-            Parametro::guardar('horas_'.strtolower($ciclo->value), (string) $datos['horas'][$ciclo->value]);
-        }
+        Parametro::guardar('horas_practica', (string) $datos['horas']);
         Auditoria::registrar('parametros.actualizados', $request->user(), $this->valores());
 
         return response()->json($this->valores());
     }
 
-    /** @return array{promedio_minimo: float, semestres_habilitados: list<int>, ciclos: list<array<string, mixed>>} */
+    /** @return array{promedio_minimo: float, semestres_habilitados: list<int>, horas: int, ciclos: list<array<string, mixed>>} */
     private function valores(): array
     {
         return [
             'promedio_minimo' => Parametro::promedioMinimo(),
             'semestres_habilitados' => Parametro::semestresHabilitados(),
+            'horas' => Parametro::horasRequeridas(),
             'ciclos' => array_map(fn (Ciclo $c) => [
                 'valor' => $c->value,
                 'etiqueta' => $c->label(),
                 'semestres' => range(...$c->semestres()),
-                'horas' => Parametro::horasRequeridas($c),
             ], Ciclo::cases()),
         ];
     }

@@ -36,8 +36,4 @@ class SolicitudConvenio extends Model
     }
 
     /** @return BelongsTo<Usuario, $this> */
-    public function atendidaPor(): BelongsTo
-    {
-        return $this->belongsTo(Usuario::class, 'atendida_por');
-    }
 }

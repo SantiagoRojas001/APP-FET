@@ -53,7 +53,7 @@
         <tr><td class="k">Cargo o vacante</td><td>{{ $cita->vacante->titulo }}</td></tr>
     @endif
     <tr><td class="k">Fecha de inicio</td><td>{{ $inicio->format('d/m/Y') }}</td></tr>
-    <tr><td class="k">Horas requeridas</td><td>{{ \App\Models\Parametro::horasRequeridas($e->ciclo()) }}</td></tr>
+    <tr><td class="k">Horas requeridas</td><td>{{ \App\Models\Parametro::horasRequeridas() }}</td></tr>
     <tr><td class="k">Docente tutor</td><td>{{ $e->hojaVida?->revisor?->correo ?? 'Por asignar' }}</td></tr>
 </table>
 

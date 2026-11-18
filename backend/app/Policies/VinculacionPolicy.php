@@ -43,7 +43,8 @@ class VinculacionPolicy
     /** El docente tutor (o cualquier docente si aún no hay tutor) la finaliza anticipadamente. */
     public function finalizar(Usuario $usuario, Vinculacion $vinculacion): bool
     {
-        return $usuario->rol === Rol::Docente && in_array($vinculacion->tutor_id, [null, $usuario->id], true);
+        return $usuario->rol === Rol::Docente && $this->view($usuario, $vinculacion)
+            && in_array($vinculacion->tutor_id, [null, $usuario->id], true);
     }
 
     /** Evalúan el docente tutor, la empresa receptora y el propio practicante. */
@@ -63,13 +64,13 @@ class VinculacionPolicy
     /** Los documentos los revisa el docente; la empresa solo los consulta, para aliviar su carga. */
     public function revisarDocumentos(Usuario $usuario, Vinculacion $vinculacion): bool
     {
-        return $usuario->rol === Rol::Docente;
+        return $usuario->rol === Rol::Docente && $this->view($usuario, $vinculacion);
     }
 
     /** El docente se asigna como tutor. */
     public function update(Usuario $usuario, Vinculacion $vinculacion): bool
     {
-        return $usuario->rol === Rol::Docente;
+        return $usuario->rol === Rol::Docente && $this->view($usuario, $vinculacion);
     }
 
     private function esElEstudiante(Usuario $usuario, Vinculacion $vinculacion): bool

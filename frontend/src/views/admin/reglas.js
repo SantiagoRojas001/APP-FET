@@ -4,8 +4,8 @@ import { errorBox, pageHeader, showFieldErrors, toast, withBusy } from '../../li
 
 /**
  * Parámetros generales, iguales para todos los programas: promedio mínimo
- * para quedar habilitado y, por ciclo, los semestres en los que se registran
- * los estudiantes y las horas que exige la práctica.
+ * para quedar habilitado, horas mínimas de la práctica y, por ciclo, los
+ * semestres en los que se registran los estudiantes.
  */
 export default async function reglasView({ root, refresh }) {
   const param = await api.get('/admin/parametros');
@@ -24,7 +24,16 @@ export default async function reglasView({ root, refresh }) {
           </div>
         </section>
         <section class="panel">
-          <h2>Por ciclo</h2>
+          <h2>Horas de práctica</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="horas">Horas mínimas, iguales para todos</label>
+              <input class="input" id="horas" name="horas" type="number" min="40" max="2000" step="1" value="${param.horas}" />
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Semestres habilitados por ciclo</h2>
           <div class="lines" id="semestres_habilitados">
             ${param.ciclos.map(
               (c) => html`<div class="line" role="group" aria-label="Ciclo ${c.etiqueta.toLowerCase()}">
@@ -35,10 +44,6 @@ export default async function reglasView({ root, refresh }) {
                       (n) => html`<label class="check"><input type="checkbox" name="semestres" value="${n}" ${param.semestres_habilitados.includes(n) ? 'checked' : ''} />${n}.º</label>`,
                     )}
                   </div>
-                  <label class="field">
-                    <span class="fine">Horas de práctica</span>
-                    <input class="input narrow" type="number" name="horas.${c.valor}" min="40" max="2000" step="1" value="${c.horas}" aria-label="Horas de práctica del ciclo ${c.etiqueta.toLowerCase()}" />
-                  </label>
                 </div>
               </div>`,
             )}
@@ -57,7 +62,7 @@ export default async function reglasView({ root, refresh }) {
         await api.put('/admin/parametros', {
           promedio_minimo: form.promedio_minimo.value.trim(),
           semestres_habilitados: [...form.querySelectorAll('[name=semestres]:checked')].map((c) => Number(c.value)),
-          horas: Object.fromEntries(param.ciclos.map((c) => [c.valor, Number(form.elements.namedItem(`horas.${c.valor}`).value)])),
+          horas: Number(form.horas.value),
         });
         toast('Parámetros guardados.');
         refresh();

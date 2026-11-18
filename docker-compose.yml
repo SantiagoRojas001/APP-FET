@@ -32,7 +32,8 @@ services:
     # Envía los correos y avisos en segundo plano: las peticiones no esperan al servidor de correo.
     # queue:listen relee el código en cada trabajo, así los cambios aplican sin reiniciarlo.
     build: ./docker/php
-    command: php artisan queue:listen --tries=3 --backoff=30 --sleep=1
+    command: php artisan queue:listen --tries=3 --backoff=30 --sleep=1 --timeout=120
+    restart: unless-stopped
     volumes:
       - ./backend:/var/www/backend
     depends_on:

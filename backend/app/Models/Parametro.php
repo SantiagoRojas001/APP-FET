@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Ciclo;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Parámetro del aplicativo que define la administración, igual para todos
  * los programas: promedio mínimo, semestres habilitados para pasantía o
- * práctica y horas que exige la práctica en cada ciclo.
+ * práctica y horas mínimas de la práctica.
  */
 #[Table('parametro', timestamps: false)]
 #[Fillable(['clave', 'valor'])]
@@ -34,9 +33,9 @@ class Parametro extends Model
         return array_values(array_map('intval', array_filter(explode(',', self::valor('semestres_habilitados', '3,5,9')))));
     }
 
-    public static function horasRequeridas(Ciclo $ciclo): int
+    public static function horasRequeridas(): int
     {
-        return (int) self::valor('horas_'.strtolower($ciclo->value), '480');
+        return (int) self::valor('horas_practica', '384');
     }
 
     public static function guardar(string $clave, string $valor): void

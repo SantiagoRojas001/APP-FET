@@ -37,11 +37,18 @@ class PracticaTest extends TestCase
         Storage::fake('local');
     }
 
-    /** Práctica de un ciclo que exige pocas horas, para no reportar 480. */
+    /** Práctica que exige pocas horas, para no reportar 384, y con su ARL entregada. */
     private function practica(int $horasRequeridas = 16): Vinculacion
     {
         $vinculacion = Vinculacion::factory()->create(['fecha_inicio' => now()->subWeeks(4)->toDateString()]);
-        Parametro::guardar('horas_'.strtolower($vinculacion->ciclo()->value), (string) $horasRequeridas);
+        Parametro::guardar('horas_practica', (string) $horasRequeridas);
+        $vinculacion->documentos()->create([
+            'tipo' => 'ARL',
+            'periodo_inicio' => now()->subWeeks(4)->toDateString(),
+            'periodo_fin' => now()->toDateString(),
+            'archivo_url' => 'documentos/arl.pdf',
+            'cargado_por' => $vinculacion->estudiante->usuario_id,
+        ]);
 
         return $vinculacion;
     }
@@ -125,6 +132,15 @@ class PracticaTest extends TestCase
             ->assertJsonPath('horas', 32);
         $this->postJson("/api/evidencias/{$id}/correccion", ['horas' => 30, 'actividades' => 'Otra vez'])
             ->assertStatus(422);
+    }
+
+    public function test_sin_arl_no_se_reportan_horas(): void
+    {
+        $vinculacion = Vinculacion::factory()->create(['fecha_inicio' => now()->subWeeks(4)->toDateString()]);
+
+        $this->reportarSemana($vinculacion, 1)
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Sube tu certificado de ARL en Entregas antes de reportar horas.');
     }
 
     public function test_valida_las_evidencias(): void

@@ -26,10 +26,4 @@ enum NivelFormacion: string
             self::Tecnico => 'Técnico',
         };
     }
-
-    /** Educación superior (2.1) o técnica y tecnológica (2.2). */
-    public function esSuperior(): bool
-    {
-        return in_array($this, [self::Maestria, self::Especializacion, self::Pregrado], true);
-    }
 }

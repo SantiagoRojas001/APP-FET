@@ -178,8 +178,6 @@ export async function withBusy(button, fn) {
   }
 }
 
-export const formData = (form) => Object.fromEntries(new FormData(form));
-
 /** Barra de avance de horas aprobadas por la empresa (`v.horas` de la API). */
 export function hoursMeter(horas) {
   if (!horas) return '';

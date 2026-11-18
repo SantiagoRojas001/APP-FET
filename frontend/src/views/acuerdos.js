@@ -16,11 +16,11 @@ const TABS = [
  * Convenios de las empresas. La administración los aprueba o rechaza y
  * atiende las solicitudes de convenio de las empresas que aún no lo tienen
  * (les envía el convenio para que se registren, o las rechaza); el director
- * de programa los consulta, sin aprobarlos.
+ * de programa y los docentes los consultan, sin aprobarlos.
  */
 export default async function acuerdosView({ root }) {
   const esAdmin = session.role === 'ADMIN';
-  const base = esAdmin ? '/admin/acuerdos' : '/director/acuerdos';
+  const base = esAdmin ? '/admin/acuerdos' : session.role === 'DOCENTE' ? '/docente/acuerdos' : '/director/acuerdos';
   let estado = esAdmin ? 'PENDIENTE' : '';
 
   mount(

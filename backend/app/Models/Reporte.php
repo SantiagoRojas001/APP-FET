@@ -46,8 +46,4 @@ class Reporte extends Model
     }
 
     /** @return BelongsTo<Usuario, $this> */
-    public function atendidoPor(): BelongsTo
-    {
-        return $this->belongsTo(Usuario::class, 'atendido_por');
-    }
 }

@@ -80,7 +80,7 @@ class AutorizacionTest extends TestCase
         $this->assertSame(0, $estudiante->usuario->tokens()->count());
     }
 
-    public function test_el_admin_configura_el_promedio_los_semestres_y_las_horas_por_ciclo(): void
+    public function test_el_admin_configura_el_promedio_los_semestres_y_las_horas(): void
     {
         $this->como(Rol::Admin);
 
@@ -89,19 +89,19 @@ class AutorizacionTest extends TestCase
             ->assertJsonPath('promedio_minimo', 4.2)
             ->assertJsonPath('semestres_habilitados', [3, 5, 9]);
 
-        $horas = ['TECNICO' => 300, 'TECNOLOGO' => 450, 'PROFESIONAL' => 640];
-        $this->putJson('/api/admin/parametros', ['promedio_minimo' => '4,0', 'semestres_habilitados' => [9, 4], 'horas' => $horas])
+        $this->putJson('/api/admin/parametros', ['promedio_minimo' => '4,0', 'semestres_habilitados' => [9, 4], 'horas' => 400])
             ->assertOk()
             ->assertJsonPath('promedio_minimo', 4)
             ->assertJsonPath('semestres_habilitados', [4, 9])
-            ->assertJsonPath('ciclos.1.horas', 450)
+            ->assertJsonPath('horas', 400)
             ->assertJsonPath('ciclos.1.semestres', [5, 6]);
 
-        // Las horas que exige la práctica dependen del ciclo del estudiante al empezarla.
-        $this->assertSame(450, Vinculacion::factory()->create(['semestre_al_vincular' => 6])->horasRequeridas());
+        // Las horas son las mismas en todos los ciclos.
+        $this->assertSame(400, Vinculacion::factory()->create(['semestre_al_vincular' => 3])->horasRequeridas());
+        $this->assertSame(400, Vinculacion::factory()->create(['semestre_al_vincular' => 9])->horasRequeridas());
 
-        $this->putJson('/api/admin/parametros', ['promedio_minimo' => 6, 'semestres_habilitados' => [], 'horas' => [...$horas, 'TECNICO' => 10]])
-            ->assertJsonValidationErrors(['promedio_minimo', 'semestres_habilitados', 'horas.TECNICO']);
+        $this->putJson('/api/admin/parametros', ['promedio_minimo' => 6, 'semestres_habilitados' => [], 'horas' => 10])
+            ->assertJsonValidationErrors(['promedio_minimo', 'semestres_habilitados', 'horas']);
     }
 
     public function test_el_admin_lista_usuarios_con_estudiantes_en_pasantia(): void

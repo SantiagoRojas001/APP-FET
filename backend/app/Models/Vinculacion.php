@@ -82,7 +82,7 @@ class Vinculacion extends Model
         return Periodo::deFecha($this->fecha_inicio);
     }
 
-    /** Ciclo que cursaba el estudiante al empezar: define las horas que exige la práctica. */
+    /** Ciclo que cursaba el estudiante al empezar. */
     public function ciclo(): Ciclo
     {
         return Ciclo::deSemestre($this->semestre_al_vincular);
@@ -90,7 +90,7 @@ class Vinculacion extends Model
 
     public function horasRequeridas(): int
     {
-        return Parametro::horasRequeridas($this->ciclo());
+        return Parametro::horasRequeridas();
     }
 
     /** @param  Builder<self>  $query */
@@ -137,11 +137,6 @@ class Vinculacion extends Model
     }
 
     /** @return BelongsTo<Usuario, $this> */
-    public function finalizador(): BelongsTo
-    {
-        return $this->belongsTo(Usuario::class, 'finalizada_por');
-    }
-
     /** @return HasMany<EvidenciaSemanal, $this> */
     public function evidencias(): HasMany
     {

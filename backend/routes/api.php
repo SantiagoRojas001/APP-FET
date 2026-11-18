@@ -110,6 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('vacantes', [Docente\VacanteController::class, 'index']);
             Route::post('vacantes/{vacante}/recomendaciones', [Docente\VacanteController::class, 'recomendar']);
             Route::delete('vacantes/{vacante}/recomendaciones/{recomendacion}', [Docente\VacanteController::class, 'quitar']);
+            Route::get('acuerdos', [AcuerdoController::class, 'index']);
             Route::get('vinculaciones', [Docente\VinculacionController::class, 'index']);
             Route::patch('vinculaciones/{vinculacion}', [Docente\VinculacionController::class, 'update']);
             Route::post('vinculaciones/{vinculacion}/finalizacion', [Docente\VinculacionController::class, 'finalizar']);

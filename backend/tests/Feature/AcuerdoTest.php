@@ -59,4 +59,17 @@ class AcuerdoTest extends TestCase
         // Otra empresa no descarga el acuerdo
         $this->comoEmpresa(Empresa::factory()->create())->get("/api/acuerdos/{$id}/archivo")->assertForbidden();
     }
+
+    public function test_el_docente_consulta_los_convenios_sin_aprobarlos(): void
+    {
+        $acuerdo = Empresa::factory()->create()->acuerdos()->create([
+            'archivo_url' => 'acuerdos/convenio.pdf',
+            'vigencia_inicio' => now()->toDateString(),
+            'vigencia_fin' => now()->addYear()->toDateString(),
+        ]);
+        $this->como(Rol::Docente);
+
+        $this->getJson('/api/docente/acuerdos')->assertOk()->assertJsonPath('data.0.id', $acuerdo->id);
+        $this->patchJson("/api/admin/acuerdos/{$acuerdo->id}/revision", ['aprobar' => true])->assertForbidden();
+    }
 }

@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Acuerdos de todas las empresas: la administración los aprueba o rechaza y
- * el director de programa los consulta (sin aprobarlos).
+ * el director de programa y los docentes los consultan (sin aprobarlos).
  */
 class AcuerdoController extends Controller
 {
@@ -41,12 +41,12 @@ class AcuerdoController extends Controller
         return new AcuerdoResource($acuerdo->load('empresa'));
     }
 
-    /** El PDF lo descargan la administración, los directores y la propia empresa. */
+    /** El PDF lo descargan la administración, los directores, los docentes y la propia empresa. */
     public function archivo(Request $request, Acuerdo $acuerdo): StreamedResponse
     {
         $usuario = $request->user();
         abort_unless(
-            $usuario->tieneRol(Rol::Admin, Rol::Director) || $usuario->loadMissing('empresa')->empresa?->id === $acuerdo->empresa_id,
+            $usuario->tieneRol(Rol::Admin, Rol::Director, Rol::Docente) || $usuario->loadMissing('empresa')->empresa?->id === $acuerdo->empresa_id,
             403,
         );
         abort_unless(Storage::disk('local')->exists($acuerdo->archivo_url), 404, 'El archivo ya no está disponible.');
