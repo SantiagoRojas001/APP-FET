@@ -21,7 +21,8 @@ const ESTADO_FILA = {
  * y corrige lo que haga falta. Al confirmar, quien alcanza el promedio mínimo
  * queda registrado y recibe su usuario y contraseña; a quien cursa un
  * semestre no habilitado o no lo alcanza no se le registra: recibe un correo
- * con el motivo.
+ * con el motivo. Los pasantes de los ciclos técnico y tecnólogo tienen cupos
+ * por programa: el docente los elige, sin pasarse del límite.
  */
 export default async function registroView({ root }) {
   const cat = await api.get('/catalogos');
@@ -47,6 +48,15 @@ export default async function registroView({ root }) {
 
   const preview = root.querySelector('#preview');
   let filas = [];
+  let cupos = {};
+
+  const cicloDe = (semestre) => (semestre >= 1 && semestre <= 4 ? 'TECNICO' : semestre >= 5 && semestre <= 6 ? 'TECNOLOGO' : null);
+  const ETIQUETA_CICLO = { TECNICO: 'Técnico', TECNOLOGO: 'Tecnólogo' };
+  const filaConCupo = (f) => f.modalidad_grado === 'PASANTIA' && Boolean(cicloDe(f.semestre_actual));
+  const datosFila = (tr) => ({
+    programa: Number(tr.querySelector('[name=programa_id]').value),
+    ciclo: tr.querySelector('[name=modalidad_grado]').value === 'PASANTIA' ? cicloDe(Number(tr.querySelector('[name=semestre_actual]').value)) : null,
+  });
 
   const opcionesSemestre = (actual) => [
     html`<option value="" ${actual ? '' : 'selected'}>Semestre</option>`,
@@ -59,7 +69,7 @@ export default async function registroView({ root }) {
   const nombre = (f) => [f.nombres, f.apellidos].filter(Boolean).join(' ') || f.correo;
 
   const editable = (f, i) => html`<tr data-fila="${i}">
-    <td><input type="checkbox" name="incluir" ${f.estado === 'nuevo' ? 'checked' : ''} aria-label="Incluir fila ${f.fila}" /></td>
+    <td><input type="checkbox" name="incluir" ${f.estado === 'nuevo' && !filaConCupo(f) ? 'checked' : ''} aria-label="Incluir fila ${f.fila}" /></td>
     <td>
       <input class="input" name="nombres" value="${f.nombres ?? ''}" aria-label="Nombres" placeholder="Nombres" />
       <input class="input" name="apellidos" value="${f.apellidos ?? ''}" aria-label="Apellidos" placeholder="Apellidos" />
@@ -71,6 +81,29 @@ export default async function registroView({ root }) {
     <td class="field"><input class="input narrow" name="promedio" inputmode="decimal" placeholder="4,25" value="${f.promedio !== null ? decimal.format(f.promedio) : ''}" aria-label="Promedio" /></td>
     <td>${badge(...ESTADO_FILA[f.estado])}${f.motivo ? html`<small>${f.motivo}</small>` : ''}</td>
   </tr>`;
+
+  /** Cuenta los pasantes elegidos por ciclo y bloquea los demás al llegar al límite. */
+  function actualizarCupos() {
+    const caja = preview.querySelector('#cupos');
+    if (!caja) return;
+    const filasTabla = [...preview.querySelectorAll('#candidatas tr')].map((tr) => ({ tr, ...datosFila(tr), marcada: tr.querySelector('[name=incluir]').checked }));
+    const grupos = new Map();
+    filasTabla.filter((f) => f.ciclo && f.programa).forEach((f) => {
+      const clave = `${f.programa}|${f.ciclo}`;
+      grupos.set(clave, [...(grupos.get(clave) ?? []), f]);
+    });
+    filasTabla.forEach((f) => (f.tr.querySelector('[name=incluir]').disabled = false));
+    mount(
+      caja,
+      [...grupos.entries()].map(([clave, lista]) => {
+        const [programa, ciclo] = clave.split('|');
+        const libres = cupos[programa]?.[ciclo]?.disponibles ?? 0;
+        const elegidos = lista.filter((f) => f.marcada).length;
+        if (elegidos >= libres) lista.filter((f) => !f.marcada).forEach((f) => (f.tr.querySelector('[name=incluir]').disabled = true));
+        return badge(elegidos > libres ? 'bad' : 'info', `${ETIQUETA_CICLO[ciclo]}: ${elegidos} de ${libres} cupos`);
+      }),
+    );
+  }
 
   function drawPreview(resultado = null) {
     const candidatas = filas.map((f, i) => [f, i]).filter(([f]) => ['nuevo', 'revisar'].includes(f.estado));
@@ -89,6 +122,7 @@ export default async function registroView({ root }) {
               ${fuera.length ? badge('neutral', `${fuera.length} fuera del registro`) : ''}
             </div>
           </div>
+          <div class="tags" id="cupos"></div>
           ${resultado
             ? html`<p class="note-box">
                 ${icon('circle-check')} Se registraron ${resultado.creados} estudiantes y recibieron su usuario y contraseña.
@@ -115,7 +149,7 @@ export default async function registroView({ root }) {
             </section>`
           : ''}
         ${candidatas.length || noHabilitados.length
-          ? html`<div class="actions"><button class="btn" id="confirmar">${icon('user-plus')}Confirmar registro</button><button class="btn sec" id="descartar">Descartar listado</button></div>`
+          ? html`<div class="actions"><label class="check"><input type="checkbox" id="avisarCupo" checked />Avisar por correo a los pasantes sin cupo</label><button class="btn" id="confirmar">${icon('user-plus')}Confirmar registro</button><button class="btn sec" id="descartar">Descartar listado</button></div>`
           : ''}
         ${fuera.length
           ? html`<section class="panel"><h2>Fuera del registro</h2>
@@ -123,7 +157,12 @@ export default async function registroView({ root }) {
             </section>`
           : ''}`,
     );
+    actualizarCupos();
   }
+
+  preview.addEventListener('change', (e) => {
+    if (e.target.closest('#candidatas')) actualizarCupos();
+  });
 
   const impForm = root.querySelector('#impForm');
   impForm.addEventListener('submit', (e) => {
@@ -133,7 +172,7 @@ export default async function registroView({ root }) {
       try {
         const data = new FormData();
         data.append('archivo', impForm.archivo.files[0]);
-        ({ filas } = await api.post('/docente/importaciones', data));
+        ({ filas, cupos } = await api.post('/docente/importaciones', data));
         mount(root.querySelector('#impError'), '');
         showFieldErrors(impForm, {});
         drawPreview();
@@ -179,6 +218,11 @@ export default async function registroView({ root }) {
     const avisos = [...preview.querySelectorAll('#noHabilitados [data-fila]')]
       .filter((l) => l.querySelector('[name=avisar]').checked)
       .map((l) => filas[Number(l.dataset.fila)]);
+    if (preview.querySelector('#avisarCupo')?.checked) {
+      [...preview.querySelectorAll('#candidatas tr')]
+        .filter((tr) => !tr.querySelector('[name=incluir]').checked && datosFila(tr).ciclo && filas[Number(tr.dataset.fila)].estado === 'nuevo')
+        .forEach((tr) => avisos.push({ ...filas[Number(tr.dataset.fila)], motivo_no_habilitado: 'cupo' }));
+    }
     if (!elegidas.length && !avisos.length) return toast('Marca al menos un estudiante.');
 
     withBusy(confirmar, async () => {

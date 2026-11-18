@@ -7,6 +7,7 @@ use App\Enums\Rol;
 use App\Exceptions\ReglaNegocioException;
 use App\Models\Estudiante;
 use App\Models\Parametro;
+use App\Models\Programa;
 use App\Models\Usuario;
 use App\Notifications\CredencialesAcceso;
 use App\Notifications\NoHabilitado;
@@ -28,7 +29,10 @@ use Illuminate\Support\Str;
  */
 class RegistroEstudianteService
 {
-    public function __construct(private readonly ElegibilidadService $elegibilidad) {}
+    public function __construct(
+        private readonly ElegibilidadService $elegibilidad,
+        private readonly CupoService $cupos,
+    ) {}
 
     /**
      * @param  array{correo: string, nombres: string, apellidos: string, programa_id: int, semestre_actual: int, modalidad_grado: string, codigo?: string|null, documento?: string|null}  $datos
@@ -46,6 +50,10 @@ class RegistroEstudianteService
         }
 
         $estudiante = DB::transaction(function () use ($datos, $docente) {
+            // El bloqueo evita que dos docentes del programa tomen el último cupo a la vez.
+            Programa::query()->lockForUpdate()->findOrFail($datos['programa_id']);
+            $this->cupos->exigirDisponible((int) $datos['programa_id'], Modalidad::from($datos['modalidad_grado']), (int) $datos['semestre_actual']);
+
             $usuario = Usuario::create([
                 'correo' => $datos['correo'],
                 'password_hash' => Str::password(40),

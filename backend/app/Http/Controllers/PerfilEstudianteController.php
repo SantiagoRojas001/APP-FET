@@ -31,6 +31,7 @@ class PerfilEstudianteController extends Controller
             ->with('programa', 'competencias', 'proyectos', 'hojaVida.referencias', 'vinculacionActiva')
             ->when($request->boolean('disponibles'), fn (Builder $q) => $q->disponibles())
             ->delPrograma($request->user()->programaAsignado())
+            ->delGrupo($request->user())
             ->when($filtros['programa_id'] ?? null, fn (Builder $q, int $id) => $q->where('programa_id', $id))
             ->when($filtros['semestre'] ?? null, fn (Builder $q, int $s) => $q->where('semestre_actual', $s))
             ->when($filtros['competencia_id'] ?? null, fn (Builder $q, int $id) => $q->whereHas('competencias', fn (Builder $c) => $c->where('competencia.id', $id)))

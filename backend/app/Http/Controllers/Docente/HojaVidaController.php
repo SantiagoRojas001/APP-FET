@@ -11,6 +11,7 @@ use App\Services\HojaVidaService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 /**
@@ -27,6 +28,7 @@ class HojaVidaController extends Controller
         $estudiantes = Estudiante::query()
             ->with('usuario', 'programa', 'competencias', 'proyectos', 'hojaVida.referencias')
             ->delPrograma($request->user()->programaAsignado())
+            ->delGrupo($request->user())
             ->whereHas('hojaVida', fn (Builder $h) => $h->where('estado', $estado))
             ->orderBy(HojaVida::query()->select('enviada_en')->whereColumn('hoja_vida.estudiante_id', 'estudiante.id'))
             ->get();
@@ -41,8 +43,7 @@ class HojaVidaController extends Controller
             'observaciones' => ['nullable', 'string', 'max:2000', 'required_if_declined:aprobar'],
         ], ['observaciones.required_if_declined' => 'Escribe las recomendaciones para que el estudiante sepa qué corregir.']);
 
-        $programa = $request->user()->programaAsignado();
-        abort_if($programa && $programa !== $estudiante->programa_id, 403, 'El estudiante es de otro programa.');
+        Gate::authorize('view', $estudiante);
 
         $hojaVida->revisar($estudiante, $request->user(), $request->boolean('aprobar'), $datos['observaciones'] ?? null);
 

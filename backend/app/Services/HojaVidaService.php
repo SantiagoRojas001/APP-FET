@@ -72,7 +72,7 @@ class HojaVidaService
 
         $estudiante->loadMissing('programa');
         Notification::send(
-            Usuario::delPrograma(Rol::Docente, $estudiante->programa_id),
+            $estudiante->tutor_id ? [$estudiante->tutor] : Usuario::delPrograma(Rol::Docente, $estudiante->programa_id),
             new HojaVidaPorRevisar($estudiante),
         );
 

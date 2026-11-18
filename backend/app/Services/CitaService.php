@@ -150,8 +150,8 @@ class CitaService
                 'estudiante_id' => $estudiante->id,
                 'empresa_id' => $cita->empresa_id,
                 'vacante_id' => $cita->vacante_id,
-                // Tutor: el docente que aprobó la hoja de vida.
-                'tutor_id' => $estudiante->hojaVida?->revisada_por,
+                // Tutor: el que asignó el director o, si no hay, quien aprobó la hoja de vida.
+                'tutor_id' => $estudiante->tutor_id ?? $estudiante->hojaVida?->revisada_por,
                 'tipo' => $cita->vacante?->modalidad ?? $estudiante->modalidad_grado ?? Modalidad::Pasantia,
                 'semestre_al_vincular' => $estudiante->semestre_actual,
                 'fecha_inicio' => $inicio->toDateString(),

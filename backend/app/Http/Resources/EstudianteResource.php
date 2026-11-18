@@ -47,6 +47,7 @@ class EstudianteResource extends Recurso
                 'tipo' => $this->enum($this->vinculacionActiva->tipo),
                 'empresa' => $this->vinculacionActiva->relationLoaded('empresa') ? $this->vinculacionActiva->empresa?->razon_social : null,
             ] : null),
+            'tutor' => $this->whenLoaded('tutor', fn () => $this->tutor ? ['id' => $this->tutor->id, 'nombre' => $this->tutor->nombre ?? $this->tutor->correo] : null),
             'recomendado' => $this->whenHas('recomendado', fn () => (bool) $this->recomendado),
             'citas' => $this->whenLoaded('citas', fn () => $this->citas->map(fn ($c) => [
                 'id' => $c->id,

@@ -15,7 +15,8 @@ class VinculacionPolicy
     {
         return match ($usuario->rol) {
             Rol::Admin => true,
-            Rol::Docente => $usuario->programa_id === null || $usuario->programa_id === $vinculacion->estudiante()->value('programa_id'),
+            Rol::Docente => in_array($vinculacion->tutor_id, [null, $usuario->id], true)
+                && ($usuario->programa_id === null || $usuario->programa_id === $vinculacion->estudiante()->value('programa_id')),
             Rol::Director => $usuario->programa_id !== null && $usuario->programa_id === $vinculacion->estudiante()->value('programa_id'),
             Rol::Estudiante => $usuario->loadMissing('estudiante')->estudiante?->id === $vinculacion->estudiante_id,
             Rol::Empresa => $usuario->loadMissing('empresa')->empresa?->id === $vinculacion->empresa_id,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Docente;
 
 use App\Enums\EstadoVinculacion;
+use App\Enums\Rol;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Docente\ActualizarVinculacionRequest;
 use App\Http\Requests\Docente\FinalizarVinculacionRequest;
@@ -31,6 +32,9 @@ class VinculacionController extends Controller
         $vinculaciones = Vinculacion::query()
             ->conSeguimiento()
             ->whereHas('estudiante', fn ($q) => $q->delPrograma($request->user()->programaAsignado()))
+            ->when($request->user()->rol === Rol::Docente, fn ($q) => $q->where(
+                fn ($t) => $t->whereNull('tutor_id')->orWhere('tutor_id', $request->user()->id),
+            ))
             ->when($filtros['estado'] ?? null, fn ($q, string $estado) => $q->where('estado', $estado))
             ->when($filtros['periodo'] ?? null, fn ($q, string $periodo) => $q->delPeriodo($periodo))
             ->when($request->boolean('mias'), fn ($q) => $q->where('tutor_id', $request->user()->id))

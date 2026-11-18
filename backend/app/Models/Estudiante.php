@@ -6,6 +6,7 @@ use App\Enums\Ciclo;
 use App\Enums\EstadoHojaVida;
 use App\Enums\EstadoVinculacion;
 use App\Enums\Modalidad;
+use App\Enums\Rol;
 use App\Policies\EstudiantePolicy;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[UsePolicy(EstudiantePolicy::class)]
 #[Fillable([
     'usuario_id', 'programa_id', 'codigo', 'documento', 'nombres', 'apellidos', 'telefono', 'semestre_actual',
-    'lugar_expedicion', 'es_egresado', 'disponibilidad', 'modalidad_grado', 'promedio', 'habilitado', 'resultado_enviado_en', 'registrado_por',
+    'lugar_expedicion', 'tutor_id', 'es_egresado', 'disponibilidad', 'modalidad_grado', 'promedio', 'habilitado', 'resultado_enviado_en', 'registrado_por',
 ])]
 class Estudiante extends Model
 {
@@ -96,6 +97,12 @@ class Estudiante extends Model
         return $this->belongsTo(Usuario::class);
     }
 
+    /** Docente tutor que le asignó el director. @return BelongsTo<Usuario, $this> */
+    public function tutor(): BelongsTo
+    {
+        return $this->belongsTo(Usuario::class, 'tutor_id');
+    }
+
     /** @return BelongsTo<Programa, $this> */
     public function programa(): BelongsTo
     {
@@ -124,6 +131,19 @@ class Estudiante extends Model
     public function ciclo(): Ciclo
     {
         return Ciclo::deSemestre($this->semestre_actual);
+    }
+
+    /**
+     * Grupo de un docente: los suyos y los que aún no tienen tutor.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function delGrupo(Builder $query, Usuario $usuario): void
+    {
+        $query->when($usuario->rol === Rol::Docente, fn (Builder $q) => $q->where(
+            fn (Builder $g) => $g->whereNull('estudiante.tutor_id')->orWhere('estudiante.tutor_id', $usuario->id),
+        ));
     }
 
     /**

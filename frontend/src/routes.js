@@ -52,7 +52,8 @@ export const ROUTES = {
     ...COMUNES,
   ],
   DIRECTOR: [
-    { path: '/programa', label: 'Estudiantes', icon: 'school', ayuda: 'Los estudiantes de tu programa, con su ciclo y si están en pasantía, práctica o aún no.', load: () => import('./views/director/estudiantes.js') },
+    { path: '/programa', label: 'Estudiantes', icon: 'school', ayuda: 'Los estudiantes de tu programa, con su ciclo y su práctica. Marca varios para asignarles su docente tutor.', load: () => import('./views/director/estudiantes.js') },
+    { path: '/cupos', label: 'Cupos de pasantía', icon: 'users', ayuda: 'Define cuántos pasantes de los ciclos técnico y tecnólogo se registran en tu programa este periodo.', load: () => import('./views/director/cupos.js') },
     { path: '/cartas', label: 'Cartas de presentación', icon: 'send', ayuda: 'Estudiantes aceptados por una empresa. Al enviar la carta de presentación empieza su práctica.', load: () => import('./views/director/cartas.js') },
     { path: '/convenios', label: 'Convenios', icon: 'file-text', ayuda: 'Los convenios de las empresas con la FET: vigentes y pendientes.', load: () => import('./views/acuerdos.js') },
     ...COMUNES,

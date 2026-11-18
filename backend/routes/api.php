@@ -134,6 +134,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::prefix('director')->middleware('rol:DIRECTOR')->group(function () {
             Route::get('estudiantes', [Director\EstudianteController::class, 'index']);
+            Route::post('estudiantes/tutor', [Director\EstudianteController::class, 'asignarTutor']);
+            Route::get('docentes', [Director\EstudianteController::class, 'docentes']);
+            Route::get('cupos', [Director\CupoController::class, 'show']);
+            Route::put('cupos', [Director\CupoController::class, 'update']);
             Route::get('cartas', [Director\CitaController::class, 'index']);
             Route::post('cartas/{cita}', [Director\CitaController::class, 'presentar'])->whereNumber('cita');
             Route::get('firma', [Director\FirmaController::class, 'show']);

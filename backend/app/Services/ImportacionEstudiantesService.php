@@ -71,13 +71,16 @@ class ImportacionEstudiantesService
     /** @var Collection<int, Programa>|null */
     private ?Collection $programas = null;
 
-    public function __construct(private readonly ElegibilidadService $elegibilidad) {}
+    public function __construct(
+        private readonly ElegibilidadService $elegibilidad,
+        private readonly CupoService $cupos,
+    ) {}
 
     /**
      * Lee el archivo y devuelve la vista previa: cada fila con sus datos, si
      * se puede registrar y, si no, por qué.
      *
-     * @return array{filas: list<array<string, mixed>>, resumen: array<string, int>}
+     * @return array{filas: list<array<string, mixed>>, resumen: array<string, int>, cupos: array<int, array<string, mixed>>}
      */
     public function leer(UploadedFile $archivo, Usuario $docente): array
     {
@@ -102,7 +105,13 @@ class ImportacionEstudiantesService
             array_keys($registros),
         );
 
-        return ['filas' => $filas, 'resumen' => array_count_values(array_column($filas, 'estado')) + ['nuevo' => 0, 'no_habilitado' => 0, 'registrado' => 0, 'omitido' => 0, 'revisar' => 0]];
+        $programas = array_unique(array_filter(array_column($filas, 'programa_id')));
+
+        return [
+            'filas' => $filas,
+            'resumen' => array_count_values(array_column($filas, 'estado')) + ['nuevo' => 0, 'no_habilitado' => 0, 'registrado' => 0, 'omitido' => 0, 'revisar' => 0],
+            'cupos' => collect($programas)->mapWithKeys(fn (int $id) => [$id => $this->cupos->resumen($id)])->all(),
+        ];
     }
 
     /**
@@ -184,7 +193,7 @@ class ImportacionEstudiantesService
             'nombres' => ['required', 'string', 'max:80'],
             'apellidos' => ['required', 'string', 'max:80'],
             'codigo' => ['nullable', 'string', 'max:20'],
-            'motivo_no_habilitado' => ['required', 'in:'.NoHabilitado::POR_SEMESTRE.','.NoHabilitado::POR_PROMEDIO],
+            'motivo_no_habilitado' => ['required', 'in:'.NoHabilitado::POR_SEMESTRE.','.NoHabilitado::POR_PROMEDIO.','.NoHabilitado::POR_CUPO],
             'semestre_actual' => ['required_if:motivo_no_habilitado,'.NoHabilitado::POR_SEMESTRE, 'nullable', 'integer', 'min:1', 'max:12'],
             'promedio' => ['required_if:motivo_no_habilitado,'.NoHabilitado::POR_PROMEDIO, 'nullable', 'numeric', 'min:0', 'max:5'],
         ], ['correo.unique' => 'Ya hay una cuenta con este correo.']);
@@ -195,7 +204,7 @@ class ImportacionEstudiantesService
 
         $datos = $validador->validated();
         $porSemestre = $datos['motivo_no_habilitado'] === NoHabilitado::POR_SEMESTRE;
-        if ($porSemestre ? $this->elegibilidad->semestreHabilitado((int) $datos['semestre_actual']) : $this->elegibilidad->promedioSuficiente((float) $datos['promedio'])) {
+        if ($datos['motivo_no_habilitado'] !== NoHabilitado::POR_CUPO && ($porSemestre ? $this->elegibilidad->semestreHabilitado((int) $datos['semestre_actual']) : $this->elegibilidad->promedioSuficiente((float) $datos['promedio']))) {
             return 'El estudiante sí está habilitado: regístralo.';
         }
 

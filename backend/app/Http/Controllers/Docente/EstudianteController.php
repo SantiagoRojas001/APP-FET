@@ -31,6 +31,7 @@ class EstudianteController extends Controller
             ->with('usuario', 'programa', 'hojaVida.referencias', 'vinculacionActiva.empresa')
             ->whereNotNull('modalidad_grado')
             ->delPrograma($request->user()->programaAsignado())
+            ->delGrupo($request->user())
             ->when($filtros['programa_id'] ?? null, fn (Builder $q, int $id) => $q->where('programa_id', $id))
             ->when($filtros['semestre'] ?? null, fn (Builder $q, int $s) => $q->where('semestre_actual', $s))
             ->when($filtros['modalidad'] ?? null, fn (Builder $q, string $m) => $q->where('modalidad_grado', $m))

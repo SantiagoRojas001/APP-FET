@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Al estudiante que no puede formar parte del programa de pasantías y
- * prácticas (por su semestre o su promedio): su nombre, su código, el motivo
+ * prácticas (por su semestre, su promedio o la falta de cupos): su nombre, su código, el motivo
  * y un mensaje de ánimo. Se envía a la dirección del listado, porque quien no
  * queda habilitado no se registra en la app.
  */
@@ -21,6 +21,8 @@ class NoHabilitado extends Notification implements ShouldQueue
     public const POR_SEMESTRE = 'semestre';
 
     public const POR_PROMEDIO = 'promedio';
+
+    public const POR_CUPO = 'cupo';
 
     /**
      * @param  array{nombres: string, apellidos: string, codigo?: string|null, semestre?: int|null, promedio?: float|null}  $estudiante
@@ -50,6 +52,10 @@ class NoHabilitado extends Notification implements ShouldQueue
 
     private function razon(): string
     {
+        if ($this->motivo === self::POR_CUPO) {
+            return 'porque los cupos de pasantía de tu ciclo para este periodo ya fueron asignados.';
+        }
+
         $formato = fn (float $n) => number_format($n, 2, ',', '');
 
         if ($this->motivo === self::POR_PROMEDIO) {

@@ -1,6 +1,6 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
-import { badge, emptyState, icon, modalityTag, pageHeader } from '../../lib/ui.js';
+import { badge, emptyState, icon, modalityTag, pageHeader, toast, withBusy } from '../../lib/ui.js';
 import { session } from '../../session.js';
 
 const CICLOS = [
@@ -16,9 +16,10 @@ const PRACTICA = [
   ['NINGUNA', 'Aún no'],
 ];
 
-/** Estudiantes del programa del director, con su ciclo académico y si están en pasantía, práctica o aún no. */
+/** Estudiantes del programa del director, con su ciclo, su práctica y su docente tutor, que él asigna. */
 export default async function estudiantesDirectorView({ root }) {
   const filters = { ciclo: '', practica: '', q: '', page: 1 };
+  const docentes = await api.get('/director/docentes');
   mount(
     root,
     html`${pageHeader('Estudiantes', session.user.programa?.nombre ?? '')}
@@ -32,6 +33,13 @@ export default async function estudiantesDirectorView({ root }) {
         <div class="seg" role="group" aria-label="Filtrar por práctica">
           ${PRACTICA.map(([v, l]) => html`<button data-practica="${v}" aria-pressed="${filters.practica === v}">${l}</button>`)}
         </div>
+      </div>
+      <div class="toolbar">
+        <select class="input" id="tutor" aria-label="Docente tutor">
+          <option value="">Sin tutor</option>
+          ${docentes.map((d) => html`<option value="${d.id}">${d.nombre}</option>`)}
+        </select>
+        <button class="btn sm" id="asignar">${icon('users')}Asignar a los marcados</button>
       </div>
       <section class="panel flush" id="list"></section>
       <div class="actions" id="pager"></div>`,
@@ -52,10 +60,12 @@ export default async function estudiantesDirectorView({ root }) {
       list,
       res.data.length
         ? html`<div class="tbl"><table>
-            <thead><tr><th>Estudiante</th><th>Semestre</th><th>Ciclo</th><th>Modalidad de grado</th><th>Práctica</th></tr></thead>
+            <thead><tr><th><span class="fine">Marcar</span></th><th>Estudiante</th><th>Tutor</th><th>Semestre</th><th>Ciclo</th><th>Modalidad de grado</th><th>Práctica</th></tr></thead>
             <tbody>${res.data.map(
               (s) => html`<tr>
+                <td><input type="checkbox" data-estudiante="${s.id}" aria-label="Marcar a ${s.nombre_completo}" /></td>
                 <td><b><a href="#/estudiantes/${s.id}">${s.nombre_completo}</a></b><small class="mono">${s.correo ?? ''}</small></td>
+                <td>${s.tutor?.nombre ?? html`<span class="fine">Sin asignar</span>`}</td>
                 <td class="num">${s.semestre_actual}.º</td>
                 <td>${s.ciclo.etiqueta}</td>
                 <td>${s.modalidad_grado ? modalityTag(s.modalidad_grado) : html`<span class="fine">No registra</span>`}</td>
@@ -74,6 +84,21 @@ export default async function estudiantesDirectorView({ root }) {
         : '',
     );
   }
+
+  root.querySelector('#asignar').addEventListener('click', (e) => {
+    const estudiante_ids = [...list.querySelectorAll('[data-estudiante]:checked')].map((c) => Number(c.dataset.estudiante));
+    if (!estudiante_ids.length) return toast('Marca al menos un estudiante.');
+    const tutor_id = Number(root.querySelector('#tutor').value) || null;
+    withBusy(e.currentTarget, async () => {
+      try {
+        await api.post('/director/estudiantes/tutor', { estudiante_ids, tutor_id });
+        toast('Tutor actualizado.');
+        load();
+      } catch (error) {
+        toast(error.message);
+      }
+    });
+  });
 
   root.addEventListener('click', (e) => {
     const boton = e.target.closest('[data-ciclo], [data-practica], [data-page]');
