@@ -231,6 +231,17 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
             ${select('rh', 'R-H', dp.rh, opciones(cat.hoja_vida.rh))}
             ${input('contacto_emergencia_nombre', 'Contacto de emergencia', dp.contacto_emergencia_nombre)}
             ${input('contacto_emergencia_telefono', 'Teléfono del contacto de emergencia', dp.contacto_emergencia_telefono, 'tel')}
+            ${input('documento', 'Tu número de cédula', perfil.documento, 'text', html`inputmode="numeric"`)}
+            ${input('lugar_expedicion', 'Lugar de expedición de tu cédula', perfil.lugar_expedicion, 'text', html`placeholder="Ciudad, departamento"`)}
+          </div>
+          <p class="hv-sub">Fotos de tu cédula</p>
+          <div class="cedula-fotos">
+            ${[['frente', 'Frente de tu cédula', perfil.cedula?.url_frente], ['reverso', 'Reverso de tu cédula', perfil.cedula?.url_reverso]].map(
+              ([lado, nombre, url]) => html`<figure class="cedula-foto">
+                ${url ? html`<img class="cedula-vista" data-foto="${url}" alt="${nombre}" />` : html`<div class="cedula-vista">${nombre}</div>`}
+                <label class="btn sec sm">${icon('upload')}${url ? 'Cambiar' : 'Subir'} ${nombre.toLowerCase()}<input type="file" data-cedula="${lado}" accept="image/jpeg,image/png" hidden /></label>
+              </figure>`,
+            )}
           </div>
         </section>
         <section class="panel">
@@ -241,21 +252,6 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
         <section class="panel">${seccionLista('experiencias')}</section>
         <section class="panel">${seccionLista('investigaciones')}</section>
         <section class="panel">${seccionLista('referencias')}</section>
-        <section class="panel">
-          <h2>Cédula</h2>
-          <div class="form-grid">
-            ${input('documento', 'Número de cédula', perfil.documento, 'text', html`inputmode="numeric"`)}
-            ${input('lugar_expedicion', 'Lugar de expedición', perfil.lugar_expedicion, 'text', html`placeholder="Ciudad, departamento"`)}
-          </div>
-          <div class="cedula-fotos">
-            ${[['frente', 'Frente', perfil.cedula?.url_frente], ['reverso', 'Reverso', perfil.cedula?.url_reverso]].map(
-              ([lado, nombre, url]) => html`<figure class="cedula-foto">
-                ${url ? html`<img class="cedula-vista" data-foto="${url}" alt="${nombre} de tu cédula" />` : html`<div class="cedula-vista">${nombre}</div>`}
-                <label class="btn sec sm">${icon('upload')}${url ? 'Cambiar' : 'Subir'} ${nombre.toLowerCase()}<input type="file" data-cedula="${lado}" accept="image/jpeg,image/png" hidden /></label>
-              </figure>`,
-            )}
-          </div>
-        </section>
         <section class="panel">
           <h2>Firma</h2>
           <div class="firma-actual">
