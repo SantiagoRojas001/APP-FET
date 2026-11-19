@@ -29,9 +29,9 @@ class EstudiantePolicy
         };
     }
 
-    /** La cédula la ven el propio estudiante y la FET, nunca las empresas. */
+    /** La cédula la ven el propio estudiante y las empresas que pueden ver su hoja de vida; la FET no. */
     public function verCedula(Usuario $usuario, Estudiante $estudiante): bool
     {
-        return $usuario->rol !== Rol::Empresa && $this->view($usuario, $estudiante);
+        return in_array($usuario->rol, [Rol::Estudiante, Rol::Empresa], true) && $this->view($usuario, $estudiante);
     }
 }

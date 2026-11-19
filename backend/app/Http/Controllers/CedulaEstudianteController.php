@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Fotos de la cédula del estudiante. Las ven él mismo y la FET; las empresas
- * no. Con el frente llega el recorte de la firma que marcó el estudiante.
+ * Fotos de la cédula del estudiante. Solo él las sube, y solo él y las
+ * empresas que pueden ver su hoja de vida las consultan.
  */
 class CedulaEstudianteController extends Controller
 {
@@ -24,7 +24,6 @@ class CedulaEstudianteController extends Controller
         $datos = $request->validate([
             'lado' => ['required', 'in:frente,reverso'],
             'archivo' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:'.config('fet.hoja_vida.cedula_max_kb'), 'dimensions:min_width=400,min_height=250'],
-            'firma' => ['required_if:lado,frente', 'file', 'mimes:png', 'max:1024'],
         ], ['archivo.dimensions' => 'La foto debe medir al menos 400 × 250 píxeles.']);
 
         $estudiante = $request->user()->estudiante()->firstOrFail();
@@ -40,13 +39,8 @@ class CedulaEstudianteController extends Controller
             Storage::disk('local')->delete($hoja->{$columna});
         }
 
-        if ($datos['lado'] === 'frente' && $hoja->cedula_firma_url) {
-            Storage::disk('local')->delete($hoja->cedula_firma_url);
-        }
-
         $hoja->update([
             $columna => $request->file('archivo')->store('cedulas', 'local'),
-            ...($datos['lado'] === 'frente' ? ['cedula_firma_url' => $request->file('firma')->store('cedulas', 'local')] : []),
             'actualizado_en' => now(),
         ]);
 

@@ -23,7 +23,6 @@ function row(s) {
         ${s.modalidad_grado ? modalityTag(s.modalidad_grado, true) : ''}
         ${badge(hv.porcentaje === 100 ? 'ok' : 'warn', `Completa al ${hv.porcentaje} %`)}
         ${badge(s.proyectos?.length ? 'ok' : 'warn', `${s.proyectos?.length ?? 0} ${s.proyectos?.length === 1 ? 'proyecto' : 'proyectos'}`)}
-        ${(hv.cedula?.firma_similitud ?? null) === null ? '' : badge('neutral', `Firma: ${hv.cedula.firma_similitud} % de parecido (orientativo)`)}
         ${hv.enviada_en ? html`<span class="fine">Enviada ${relativeDays(hv.enviada_en).toLowerCase()}</span>` : ''}
       </div>
       <div class="actions">

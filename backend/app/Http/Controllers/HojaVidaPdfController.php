@@ -40,8 +40,8 @@ class HojaVidaPdfController extends Controller
             return Storage::disk('local')->download($aprobada, $nombre);
         }
 
-        // Las empresas no ven el documento de identidad (igual que en la API).
-        $verDocumento = $usuario->id === $estudiante->usuario_id || $usuario->tieneRol(Rol::Docente, Rol::Admin, Rol::Director);
+        // El documento de identidad lo ven el propio estudiante y las empresas (igual que la cédula en la API).
+        $verDocumento = $usuario->id === $estudiante->usuario_id || $usuario->rol === Rol::Empresa;
 
         return response($pdf->contenido($estudiante, $verDocumento), 200, [
             'Content-Type' => 'application/pdf',

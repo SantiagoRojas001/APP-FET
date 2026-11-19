@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'estudiante_id', 'perfil_profesional', 'actualizado_en', 'foto_url', 'firma_url', 'fecha_nacimiento', 'lugar_nacimiento',
     'estado_civil', 'lugar_residencia', 'direccion', 'rh', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
     'estado', 'observaciones', 'enviada_en', 'revisada_por', 'revisada_en',
-    'cedula_frente_url', 'cedula_reverso_url', 'cedula_firma_url', 'firma_similitud', 'version_aprobada',
+    'cedula_frente_url', 'cedula_reverso_url', 'version_aprobada',
 ])]
 class HojaVida extends Model
 {

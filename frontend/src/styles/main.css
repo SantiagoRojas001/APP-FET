@@ -355,9 +355,6 @@ textarea.input{min-height:96px;resize:vertical}
 .cedula-fotos{display:flex;flex-wrap:wrap;gap:16px}
 .cedula-foto{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin:0}
 .cedula-vista{width:240px;max-width:100%;aspect-ratio:8 / 5;object-fit:cover;background:var(--papel);border:1px solid var(--line);display:grid;place-items:center;font-size:13px;color:var(--ink-3)}
-.recorte-foto{position:relative;width:min(600px,100%);cursor:crosshair;touch-action:none;user-select:none}
-.recorte-foto img{display:block;width:100%}
-.recorte-marca{position:absolute;border:2px solid var(--accent);background:var(--accent-soft);opacity:.6;pointer-events:none}
 .firma-editor{display:flex;flex-direction:column;gap:10px}
 .firma-pad{width:min(600px,100%);aspect-ratio:3 / 1;background:var(--papel);border:1px dashed var(--line-strong);touch-action:none;cursor:crosshair}
 label.btn.busy{opacity:.6;pointer-events:none}

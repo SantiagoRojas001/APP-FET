@@ -23,8 +23,13 @@ class EstudianteResource extends Recurso
         $datos = [
             'id' => $this->id,
             'codigo' => $this->codigo,
-            'documento' => $this->when($this->puedeVerDatosSensibles($request), $this->documento),
-            'lugar_expedicion' => $this->when($this->puedeVerDatosSensibles($request), $this->lugar_expedicion),
+            'documento' => $this->when($this->puedeVerDatosSensibles($request) || $this->puedeVerCedula($request), $this->documento),
+            'lugar_expedicion' => $this->when($this->puedeVerCedula($request), $this->lugar_expedicion),
+            // La cédula va aparte de la hoja de vida: la empresa la ve aunque consulte la versión aprobada.
+            'cedula' => $this->when($this->puedeVerCedula($request) && $this->relationLoaded('hojaVida'), fn () => [
+                'url_frente' => $this->hojaVida?->cedula_frente_url ? "/api/estudiantes/{$this->id}/cedula/frente" : null,
+                'url_reverso' => $this->hojaVida?->cedula_reverso_url ? "/api/estudiantes/{$this->id}/cedula/reverso" : null,
+            ]),
             'nombres' => $this->nombres,
             'apellidos' => $this->apellidos,
             'nombre_completo' => $this->nombre_completo,
@@ -108,11 +113,6 @@ class EstudianteResource extends Recurso
             'secciones' => $servicio->secciones($this->resource),
             'url_foto' => $hoja?->foto_url ? "/api/estudiantes/{$this->id}/foto" : null,
             'url_firma' => $hoja?->firma_url ? "/api/estudiantes/{$this->id}/firma" : null,
-            'cedula' => $this->when($this->puedeVerDatosSensibles($request), fn () => [
-                'url_frente' => $hoja?->cedula_frente_url ? "/api/estudiantes/{$this->id}/cedula/frente" : null,
-                'url_reverso' => $hoja?->cedula_reverso_url ? "/api/estudiantes/{$this->id}/cedula/reverso" : null,
-                'firma_similitud' => $hoja?->firma_similitud,
-            ]),
             'version_aprobada_visible' => $hoja?->version_aprobada !== null,
             'datos_personales' => [
                 'fecha_nacimiento' => $hoja?->fecha_nacimiento?->toDateString(),
@@ -171,5 +171,13 @@ class EstudianteResource extends Recurso
         $usuario = $request->user();
 
         return $usuario && ($usuario->id === $this->usuario_id || in_array($usuario->rol->value, ['DOCENTE', 'ADMIN', 'DIRECTOR'], true));
+    }
+
+    /** El propio estudiante y las empresas (que solo reciben estudiantes que pueden ver). */
+    private function puedeVerCedula(Request $request): bool
+    {
+        $usuario = $request->user();
+
+        return $usuario && ($usuario->id === $this->usuario_id || $usuario->rol === Rol::Empresa);
     }
 }

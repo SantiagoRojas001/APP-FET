@@ -3,7 +3,6 @@ import { html, mount } from '../../lib/html.js';
 import { todayIso } from '../../lib/format.js';
 import { badge, emptyState, errorBox, icon, pageHeader, showFieldErrors, toast, withBusy } from '../../lib/ui.js';
 import { session } from '../../session.js';
-import { marcarFirma } from '../../lib/cedula.js';
 import { padDeFirma } from '../../lib/firma.js';
 import { recortarRostro } from '../../lib/rostro.js';
 import { hydrateFoto } from '../hoja-vida-detalle.js';
@@ -249,14 +248,13 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
             ${input('lugar_expedicion', 'Lugar de expedición', perfil.lugar_expedicion, 'text', html`placeholder="Ciudad, departamento"`)}
           </div>
           <div class="cedula-fotos">
-            ${[['frente', 'Frente', hv.cedula?.url_frente], ['reverso', 'Reverso', hv.cedula?.url_reverso]].map(
+            ${[['frente', 'Frente', perfil.cedula?.url_frente], ['reverso', 'Reverso', perfil.cedula?.url_reverso]].map(
               ([lado, nombre, url]) => html`<figure class="cedula-foto">
                 ${url ? html`<img class="cedula-vista" data-foto="${url}" alt="${nombre} de tu cédula" />` : html`<div class="cedula-vista">${nombre}</div>`}
                 <label class="btn sec sm">${icon('upload')}${url ? 'Cambiar' : 'Subir'} ${nombre.toLowerCase()}<input type="file" data-cedula="${lado}" accept="image/jpeg,image/png" hidden /></label>
               </figure>`,
             )}
           </div>
-          <div id="cedulaRecorte" class="firma-editor" hidden></div>
         </section>
         <section class="panel">
           <h2>Firma</h2>
@@ -397,11 +395,6 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
       const data = new FormData();
       data.append('lado', lado);
       data.append('archivo', archivo);
-      if (lado === 'frente') {
-        const recorte = await marcarFirma(root.querySelector('#cedulaRecorte'), archivo);
-        if (!recorte) return;
-        data.append('firma', recorte, 'firma.png');
-      }
       const boton = campo.closest('label');
       boton.classList.add('busy');
       try {

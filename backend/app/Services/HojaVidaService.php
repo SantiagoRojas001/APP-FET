@@ -66,7 +66,6 @@ class HojaVidaService
         $hoja->update([
             'estado' => EstadoHojaVida::EnRevision,
             'enviada_en' => now(),
-            'firma_similitud' => $this->similitudDeFirma($hoja),
         ]);
         Auditoria::registrar('hoja_vida.enviada', $estudiante);
 
@@ -166,19 +165,6 @@ class HojaVidaService
     private function carpetaAprobada(HojaVida $hoja): string
     {
         return "hojas-aprobadas/{$hoja->id}";
-    }
-
-    /** Parecido orientativo entre la firma dibujada y la marcada en la cédula. */
-    private function similitudDeFirma(HojaVida $hoja): ?int
-    {
-        $disco = Storage::disk('local');
-
-        if (! $hoja->cedula_firma_url || ! $hoja->firma_url
-            || ! $disco->exists($hoja->firma_url) || ! $disco->exists($hoja->cedula_firma_url)) {
-            return null;
-        }
-
-        return app(FirmaService::class)->similitud($disco->get($hoja->firma_url), $disco->get($hoja->cedula_firma_url));
     }
 
     public function porcentaje(Estudiante $estudiante): int

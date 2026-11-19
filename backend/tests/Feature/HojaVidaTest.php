@@ -120,7 +120,7 @@ class HojaVidaTest extends TestCase
         ])->assertJsonValidationErrors('proyectos.0.url_repositorio');
     }
 
-    public function test_las_empresas_solo_ven_hojas_de_vida_aprobadas_y_sin_el_documento(): void
+    public function test_las_empresas_solo_ven_hojas_de_vida_aprobadas_con_el_documento_y_sin_el_promedio(): void
     {
         $publicado = Estudiante::factory()->hojaAprobada()->create();
         $oculto = $this->estudiante(5);
@@ -129,7 +129,7 @@ class HojaVidaTest extends TestCase
         $this->getJson("/api/estudiantes/{$publicado->id}")
             ->assertOk()
             ->assertJsonPath('nombre_completo', $publicado->nombre_completo)
-            ->assertJsonMissingPath('documento')
+            ->assertJsonPath('documento', $publicado->documento)
             ->assertJsonMissingPath('promedio');
         $this->getJson("/api/estudiantes/{$oculto->id}")->assertForbidden();
     }
@@ -139,7 +139,6 @@ class HojaVidaTest extends TestCase
         $this->post('/api/estudiante/cedula', [
             'lado' => 'frente',
             'archivo' => UploadedFile::fake()->image('frente.png', 800, 500),
-            'firma' => UploadedFile::fake()->image('firma.png', 300, 100),
         ])->assertOk();
         $this->post('/api/estudiante/cedula', ['lado' => 'reverso', 'archivo' => UploadedFile::fake()->image('reverso.png', 800, 500)])->assertOk();
     }
@@ -164,7 +163,7 @@ class HojaVidaTest extends TestCase
         $this->putJson('/api/estudiante/perfil', $datos)
             ->assertOk()
             ->assertJsonPath('hoja_vida.estado.valor', 'EN_REVISION')
-            ->assertJsonPath('hoja_vida.cedula.firma_similitud', fn ($valor) => $valor === null || ($valor >= 0 && $valor <= 100));
+            ->assertJsonPath('cedula.url_frente', "/api/estudiantes/{$estudiante->id}/cedula/frente");
         Notification::assertSentTo($docente, HojaVidaPorRevisar::class);
         $this->putJson('/api/estudiante/perfil', $datos)->assertUnprocessable();
     }
@@ -195,13 +194,16 @@ class HojaVidaTest extends TestCase
         $this->getJson("/api/estudiantes/{$estudiante->id}")->assertJsonPath('hoja_vida.perfil_profesional', 'Desarrollador en formación.');
         $this->get("/api/estudiantes/{$estudiante->id}/foto")->assertOk();
         $this->get("/api/estudiantes/{$estudiante->id}/hoja-vida.pdf")->assertOk()->assertHeader('content-type', 'application/pdf');
-        $this->get("/api/estudiantes/{$estudiante->id}/cedula/frente")->assertForbidden();
+        // La empresa ve la cédula; la FET no.
+        $this->get("/api/estudiantes/{$estudiante->id}/cedula/frente")->assertOk();
+        $this->getJson("/api/estudiantes/{$estudiante->id}")->assertJsonPath('cedula.url_reverso', "/api/estudiantes/{$estudiante->id}/cedula/reverso");
 
         // Aprobada la versión nueva, es la que ven las empresas.
         Sanctum::actingAs($docente);
         $this->patchJson("/api/docente/hojas-vida/{$estudiante->id}", ['aprobar' => true])->assertOk();
         $this->assertNull($estudiante->hojaVida()->value('version_aprobada'));
-        $this->get("/api/estudiantes/{$estudiante->id}/cedula/frente")->assertOk();
+        $this->get("/api/estudiantes/{$estudiante->id}/cedula/frente")->assertForbidden();
+        $this->getJson("/api/estudiantes/{$estudiante->id}")->assertJsonMissingPath('cedula');
         $this->comoEmpresa($empresa)->getJson("/api/estudiantes/{$estudiante->id}")->assertJsonPath('hoja_vida.perfil_profesional', 'Perfil sin revisar.');
     }
 

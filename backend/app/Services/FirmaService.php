@@ -25,8 +25,6 @@ class FirmaService
 
     private const TINTA_MAXIMA = 0.25;
 
-    private const REJILLA = [60, 20];
-
     /** Valida la firma y la guarda en el disco privado; devuelve su ruta. */
     public function guardar(UploadedFile $archivo, string $carpeta): string
     {
@@ -97,106 +95,5 @@ class FirmaService
         imagepng($imagen, null, 9);
 
         return (string) ob_get_clean();
-    }
-
-    /**
-     * Parecido aproximado (0 a 100) entre la firma dibujada y el recorte de la
-     * cédula que marcó el estudiante. Compara la forma general de los trazos:
-     * es solo una ayuda para el docente, no una verificación.
-     */
-    public function similitud(string $firma, string $recorte): ?int
-    {
-        $dibujo = @imagecreatefromstring($firma);
-        $zona = @imagecreatefromstring($recorte);
-        if ($dibujo === false || $zona === false) {
-            return null;
-        }
-
-        imagepalettetotruecolor($dibujo);
-        imagepalettetotruecolor($zona);
-
-        $a = $this->rejilla($dibujo, fn (int $color) => ($color >> 24 & 0x7F) <= 60);
-        $umbral = $this->luminanciaMedia($zona) * 0.7;
-        $b = $this->rejilla($zona, fn (int $color) => $this->luminancia($color) < $umbral);
-        if ($a === [] || $b === []) {
-            return null;
-        }
-
-        return (int) round(($this->cobertura($a, $b) + $this->cobertura($b, $a)) * 50);
-    }
-
-    /**
-     * Celdas con tinta, con la firma ajustada a su propio recuadro.
-     *
-     * @return array<string, true>
-     */
-    private function rejilla(\GdImage $imagen, callable $esTinta): array
-    {
-        $puntos = [];
-        for ($y = 0; $y < imagesy($imagen); $y++) {
-            for ($x = 0; $x < imagesx($imagen); $x++) {
-                if ($esTinta(imagecolorat($imagen, $x, $y))) {
-                    $puntos[] = [$x, $y];
-                }
-            }
-        }
-        if ($puntos === []) {
-            return [];
-        }
-
-        [$xs, $ys] = [array_column($puntos, 0), array_column($puntos, 1)];
-        [$minX, $minY] = [min($xs), min($ys)];
-        $anchoTinta = max(1, max($xs) - $minX);
-        $altoTinta = max(1, max($ys) - $minY);
-        [$columnas, $filas] = self::REJILLA;
-
-        $celdas = [];
-        foreach ($puntos as [$x, $y]) {
-            $celdas[(int) (($x - $minX) / $anchoTinta * ($columnas - 1)).':'.(int) (($y - $minY) / $altoTinta * ($filas - 1))] = true;
-        }
-
-        return $celdas;
-    }
-
-    /**
-     * Parte de las celdas de $a con una celda de $b a su lado.
-     *
-     * @param  array<string, true>  $a
-     * @param  array<string, true>  $b
-     */
-    private function cobertura(array $a, array $b): float
-    {
-        $cerca = 0;
-        foreach (array_keys($a) as $celda) {
-            [$x, $y] = array_map('intval', explode(':', $celda));
-            foreach ([-1, 0, 1] as $dx) {
-                foreach ([-1, 0, 1] as $dy) {
-                    if (isset($b[($x + $dx).':'.($y + $dy)])) {
-                        $cerca++;
-
-                        continue 3;
-                    }
-                }
-            }
-        }
-
-        return $cerca / count($a);
-    }
-
-    private function luminancia(int $color): float
-    {
-        return 0.299 * ($color >> 16 & 0xFF) + 0.587 * ($color >> 8 & 0xFF) + 0.114 * ($color & 0xFF);
-    }
-
-    private function luminanciaMedia(\GdImage $imagen): float
-    {
-        $suma = 0;
-        for ($y = 0; $y < imagesy($imagen); $y++) {
-            for ($x = 0; $x < imagesx($imagen); $x++) {
-                $suma += $this->luminancia(imagecolorat($imagen, $x, $y));
-            }
-        }
-
-        return $suma / max(1, imagesx($imagen) * imagesy($imagen));
     }
 }

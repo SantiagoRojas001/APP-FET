@@ -44,7 +44,7 @@ export function hojaVidaDetalle(s) {
         ${hv.url_foto ? html`<img class="hv-foto" data-foto="${hv.url_foto}" alt="Foto de ${s.nombre_completo}" />` : html`<div class="hv-foto">Sin foto</div>`}
         <div>
           <dl class="kv">
-            ${s.documento ? html`<div><dt>Documento</dt><dd>${s.documento}${s.lugar_expedicion ? ` de ${s.lugar_expedicion}` : ''}</dd></div>` : ''}
+            ${s.documento && s.lugar_expedicion !== undefined ? html`<div><dt>Documento</dt><dd>${s.documento}${s.lugar_expedicion ? ` de ${s.lugar_expedicion}` : ''}</dd></div>` : ''}
             <div><dt>Fecha de nacimiento</dt><dd>${dp.fecha_nacimiento ? formatDate(dp.fecha_nacimiento) : 'No registra'}</dd></div>
             <div><dt>Lugar de nacimiento</dt><dd>${dato(dp.lugar_nacimiento)}</dd></div>
             <div><dt>Estado civil</dt><dd>${dato(dp.estado_civil)}</dd></div>
@@ -60,16 +60,12 @@ export function hojaVidaDetalle(s) {
         </div>
       </div>
     </section>
-    ${hv.cedula?.url_frente || hv.cedula?.url_reverso
+    ${s.cedula?.url_frente || s.cedula?.url_reverso
       ? html`<section class="panel">
-          <div class="panel-h">
-            <h2>Cédula y firma</h2>
-            ${hv.cedula.firma_similitud === null ? '' : badge('neutral', `Parecido de la firma: ${hv.cedula.firma_similitud} % (orientativo)`)}
-          </div>
+          <h2>Cédula</h2>
           <div class="cedula-fotos">
-            ${hv.cedula.url_frente ? html`<img class="cedula-vista" data-foto="${hv.cedula.url_frente}" alt="Frente de la cédula" />` : ''}
-            ${hv.cedula.url_reverso ? html`<img class="cedula-vista" data-foto="${hv.cedula.url_reverso}" alt="Reverso de la cédula" />` : ''}
-            ${hv.url_firma ? html`<img class="firma-img" data-foto="${hv.url_firma}" alt="Firma dibujada" />` : ''}
+            ${s.cedula.url_frente ? html`<img class="cedula-vista" data-foto="${s.cedula.url_frente}" alt="Frente de la cédula" />` : ''}
+            ${s.cedula.url_reverso ? html`<img class="cedula-vista" data-foto="${s.cedula.url_reverso}" alt="Reverso de la cédula" />` : ''}
           </div>
         </section>`
       : ''}

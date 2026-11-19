@@ -110,9 +110,8 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
   docente la aprueba o la devuelve con recomendaciones (obligatorias). En revisión no se edita. Si
   el estudiante edita una aprobada, `version_aprobada` conserva sus datos, foto, firma y PDF: las
   empresas siguen viendo esa copia hasta que se apruebe la versión nueva.
-- **Cédula** (`CedulaEstudianteController`): número, lugar de expedición y fotos de ambas caras;
-  no las ven las empresas. El estudiante marca su firma en el frente y `FirmaService::similitud`
-  calcula un parecido orientativo con la firma dibujada. No es una verificación: decide el docente.
+- **Cédula** (`CedulaEstudianteController`): número, lugar de expedición y fotos de ambas caras, en
+  la hoja de vida. Solo el estudiante las sube; las ven él y las empresas, no la FET.
 - **Tutores y cupos** (`CupoService`, tabla `cupo_pasantia`): el director asigna `estudiante.tutor_id`
   y define los cupos por programa y periodo (5 técnico y 5 tecnólogo por defecto). Solo cuentan los
   pasantes de esos ciclos; la práctica y el ciclo profesional no tienen límite.
@@ -308,8 +307,8 @@ llaves. Se agregaron:
     texto libre se reemplazó); `empresa` suma el representante legal y su firma; `experiencia` suma dirección, teléfono, jefe inmediato y dedicación; tablas
     `formacion_academica`, `curso`, `actividad_investigativa` y `referencia`.
 
-11. **Formatos oficiales**: `estudiante.lugar_expedicion` y `tutor_id`; `hoja_vida.cedula_*`,
-    `firma_similitud` y `version_aprobada`; `vinculacion.tutor_empresa`; `programa.snies` y
+11. **Formatos oficiales**: `estudiante.lugar_expedicion` y `tutor_id`; `hoja_vida.cedula_*` y
+    `version_aprobada`; `vinculacion.tutor_empresa`; `programa.snies` y
     `resolucion`; `documento_seguimiento.aprobado_empresa_en`; tablas `cupo_pasantia`,
     `material_docente`, `calificacion` y `formato_practica`.
 
