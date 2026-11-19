@@ -13,7 +13,7 @@ PHP no está instalado en el equipo: todo comando de PHP o Composer se ejecuta e
 - Estilo PHP: `docker compose exec api ./vendor/bin/pint`
 - Frontend: `cd frontend && npm run lint && npm run build`
 - Reiniciar datos: `docker compose exec api php artisan migrate:fresh --seed`
-- Túnel (acceso desde otra red): `./scripts/tunel.sh`. Con `NGROK_AUTHTOKEN` y `NGROK_DOMAIN` en `backend/.env` usa ngrok con dirección fija; si no, un túnel temporal de Cloudflare. Pone el enlace en `FRONTEND_URL`, que usan los botones de los correos
+- Túnel (acceso desde otra red): `./scripts/tunel.sh`. Con `NGROK_AUTHTOKEN` en `backend/.env` usa ngrok con la dirección fija de la cuenta (`NGROK_DOMAIN` es opcional); si no, un túnel temporal de Cloudflare. Pone el enlace en `FRONTEND_URL`, que usan los botones de los correos
 - Producción: `docker-compose.prod.yml` (Caddy con HTTPS, PHP-FPM, respaldos), ver `docs/despliegue.md`
 
 ## Convenciones
