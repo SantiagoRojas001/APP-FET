@@ -46,5 +46,7 @@ else
   printf '\nFRONTEND_URL=%s\n' "$url" >> backend/.env
 fi
 docker compose exec -T api php artisan config:clear >/dev/null 2>&1 || true
+# La cola conserva los valores de .env con los que arrancó: se reinicia para que los correos usen el enlace nuevo.
+docker compose restart cola >/dev/null 2>&1 || true
 
 echo "$url"
