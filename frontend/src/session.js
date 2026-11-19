@@ -1,11 +1,22 @@
 const TOKEN_KEY = 'appfet.token';
 
+/**
+ * El token vive en sessionStorage: sobrevive a recargar la página, pero se
+ * borra al cerrar la pestaña, así la sesión no queda abierta.
+ */
 function storage() {
   try {
-    return window.localStorage;
+    return window.sessionStorage;
   } catch {
     return null;
   }
+}
+
+// Antes el token se guardaba en localStorage y no se borraba al cerrar.
+try {
+  window.localStorage.removeItem(TOKEN_KEY);
+} catch {
+  // Sin acceso al almacenamiento: no hay nada que borrar.
 }
 
 /**
