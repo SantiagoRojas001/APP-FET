@@ -15,7 +15,7 @@ import { hydrateFoto } from '../hoja-vida-detalle.js';
  * se editan en el navegador y se guardan juntas con PUT /estudiante/perfil.
  * Cuando el docente autoriza la práctica, la hoja de vida se deshabilita.
  */
-export default async function hojaVidaView({ root, navigate, refresh }) {
+export default async function hojaVidaView({ root, navigate }) {
   const [perfil, cat] = await Promise.all([api.get('/estudiante/perfil'), api.get('/catalogos')]);
   const hv = perfil.hoja_vida;
   const dp = hv.datos_personales;
@@ -381,6 +381,15 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     });
   });
 
+  /**
+   * Muestra la imagen recién subida sin recargar el formulario, para no perder
+   * lo que el estudiante lleva escrito. El parámetro evita la copia en caché.
+   */
+  const mostrarImagen = async (actual, url, clase, alt) => {
+    const img = Object.assign(document.createElement('img'), { className: clase, alt, src: await api.blobUrl(`${url}?v=${Date.now()}`) });
+    actual.replaceWith(img);
+  };
+
   // Las fotos de la cédula se muestran sin recargar, para no perder lo que se esté escribiendo.
   root.querySelectorAll('[data-cedula]').forEach((campo) =>
     campo.addEventListener('change', async (e) => {
@@ -395,8 +404,7 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
       boton.classList.add('busy');
       try {
         const { url } = await api.post('/estudiante/cedula', data);
-        const vista = Object.assign(document.createElement('img'), { className: 'cedula-vista', alt: `Foto de tu cédula, ${lado}`, src: await api.blobUrl(url) });
-        campo.closest('.cedula-foto').querySelector('.cedula-vista').replaceWith(vista);
+        await mostrarImagen(campo.closest('.cedula-foto').querySelector('.cedula-vista'), url, 'cedula-vista', `Foto de tu cédula, ${lado}`);
         await actualizarPerfil();
         toast('Foto guardada.');
       } catch (error) {
@@ -417,10 +425,10 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
     const data = new FormData();
     try {
       data.append('foto', await recortarRostro(archivo), 'foto.jpg');
-      await api.post('/estudiante/foto', data);
+      const { url_foto: url } = await api.post('/estudiante/foto', data);
+      await mostrarImagen(boton.parentElement.querySelector('.hv-foto'), url, 'hv-foto', 'Tu foto');
       await actualizarPerfil();
       toast('Foto actualizada.');
-      refresh();
     } catch (error) {
       toast(error.errors?.foto?.[0] ?? error.message);
     } finally {
@@ -446,9 +454,12 @@ export default async function hojaVidaView({ root, navigate, refresh }) {
       const data = new FormData();
       data.append('firma', await pad.png(), 'firma.png');
       try {
-        await api.post('/estudiante/firma', data);
+        const { url_firma: url } = await api.post('/estudiante/firma', data);
+        await mostrarImagen(root.querySelector('.firma-actual > :first-child'), url, 'firma-img', 'Tu firma');
+        pad.limpiar();
+        editor.hidden = true;
+        await actualizarPerfil();
         toast('Firma guardada.');
-        refresh();
       } catch (error) {
         toast(error.errors?.firma?.[0] ?? error.message);
       }
