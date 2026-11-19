@@ -358,6 +358,7 @@ textarea.input{min-height:96px;resize:vertical}
 .firma-editor{display:flex;flex-direction:column;gap:10px}
 .firma-pad{width:min(600px,100%);aspect-ratio:3 / 1;background:var(--papel);border:1px dashed var(--line-strong);touch-action:none;cursor:crosshair}
 label.btn.busy{opacity:.6;pointer-events:none}
+.hv-foto.pendiente{opacity:.4;transition:opacity .2s}
 .hv-foto{width:96px;height:120px;object-fit:cover;border-radius:0;border:1px solid var(--line-strong);background:var(--surface-2);display:grid;place-items:center;color:var(--ink-3);font-size:12px}
 .hv-id{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
 .hv-id > div{flex:1 1 260px;min-width:0}

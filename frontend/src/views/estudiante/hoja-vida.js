@@ -416,20 +416,33 @@ export default async function hojaVidaView({ root, navigate }) {
   );
 
   // La foto debe tener un rostro: se revisa y se recorta en el navegador antes de subirla.
+  // Mientras tanto se ve semitransparente; si se rechaza, vuelve la anterior.
   root.querySelector('#foto').addEventListener('change', async (e) => {
     const archivo = e.target.files[0];
     e.target.value = '';
     if (!archivo) return;
     const boton = e.target.closest('label');
     boton.classList.add('busy');
+    const anterior = boton.parentElement.querySelector('.hv-foto');
+    const vista = Object.assign(document.createElement('img'), { className: 'hv-foto pendiente', alt: 'Tu foto, en revisión' });
+    let url = URL.createObjectURL(archivo);
+    vista.src = url;
+    anterior.replaceWith(vista);
     const data = new FormData();
     try {
-      data.append('foto', await recortarRostro(archivo), 'foto.jpg');
-      const { url_foto: url } = await api.post('/estudiante/foto', data);
-      await mostrarImagen(boton.parentElement.querySelector('.hv-foto'), url, 'hv-foto', 'Tu foto');
+      const recorte = await recortarRostro(archivo);
+      URL.revokeObjectURL(url);
+      url = URL.createObjectURL(recorte);
+      vista.src = url;
+      data.append('foto', recorte, 'foto.jpg');
+      await api.post('/estudiante/foto', data);
+      vista.classList.remove('pendiente');
+      vista.alt = 'Tu foto';
       await actualizarPerfil();
       toast('Foto actualizada.');
     } catch (error) {
+      URL.revokeObjectURL(url);
+      vista.replaceWith(anterior);
       toast(error.errors?.foto?.[0] ?? error.message);
     } finally {
       boton.classList.remove('busy');
