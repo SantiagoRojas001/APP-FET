@@ -1,22 +1,39 @@
 #!/bin/sh
-# Túnel temporal de Cloudflare hacia la web de desarrollo (puerto 5173).
-# Lo reinicia y deja su enlace en FRONTEND_URL de backend/.env, para que los
-# botones de los correos abran la app por el túnel. El enlace cambia en cada
-# reinicio. Uso: ./scripts/tunel.sh
+# Túnel hacia la web de desarrollo (puerto 5173) para entrar desde otra red.
+# Con NGROK_AUTHTOKEN y NGROK_DOMAIN en backend/.env usa ngrok, con dirección
+# fija; si faltan, usa un túnel temporal de Cloudflare, cuyo enlace cambia en
+# cada reinicio. Deja el enlace en FRONTEND_URL, que usan los botones de los
+# correos. Uso: ./scripts/tunel.sh
 set -e
 cd "$(dirname "$0")/.."
 
-docker rm -f appfet-tunel >/dev/null 2>&1 || true
-docker run -d --name appfet-tunel --restart unless-stopped cloudflare/cloudflared:latest \
-  tunnel --no-autoupdate --url http://host.docker.internal:5173 >/dev/null
+valor() { grep -E "^$1=" backend/.env | tail -1 | cut -d= -f2- | tr -d '"' | tr -d "'"; }
+token=$(valor NGROK_AUTHTOKEN)
+dominio=$(valor NGROK_DOMAIN)
 
-url=""
-for _ in $(seq 1 30); do
-  url=$(docker logs appfet-tunel 2>&1 | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1)
-  [ -n "$url" ] && break
-  sleep 2
-done
-[ -n "$url" ] || { echo "No se obtuvo el enlace del túnel." >&2; exit 1; }
+docker rm -f appfet-tunel >/dev/null 2>&1 || true
+
+if [ -n "$token" ] && [ -n "$dominio" ]; then
+  docker run -d --name appfet-tunel --restart unless-stopped -e NGROK_AUTHTOKEN="$token" \
+    ngrok/ngrok:latest http --url="$dominio" host.docker.internal:5173 >/dev/null
+  url="https://$dominio"
+  sleep 3
+  if ! docker ps --filter name=appfet-tunel --filter status=running -q | grep -q .; then
+    docker logs appfet-tunel 2>&1 | tail -5 >&2
+    echo "ngrok no arrancó: revisa NGROK_AUTHTOKEN y NGROK_DOMAIN en backend/.env." >&2
+    exit 1
+  fi
+else
+  docker run -d --name appfet-tunel --restart unless-stopped cloudflare/cloudflared:latest \
+    tunnel --no-autoupdate --url http://host.docker.internal:5173 >/dev/null
+  url=""
+  for _ in $(seq 1 30); do
+    url=$(docker logs appfet-tunel 2>&1 | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1)
+    [ -n "$url" ] && break
+    sleep 2
+  done
+  [ -n "$url" ] || { echo "No se obtuvo el enlace del túnel." >&2; exit 1; }
+fi
 
 if grep -q '^FRONTEND_URL=' backend/.env; then
   sed -i.bak "s#^FRONTEND_URL=.*#FRONTEND_URL=$url#" backend/.env && rm -f backend/.env.bak

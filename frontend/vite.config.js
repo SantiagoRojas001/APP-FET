@@ -35,8 +35,8 @@ export default defineConfig({
   plugins: [mediapipeWasm()],
   server: {
     port: 5173,
-    // Acceso desde otra red con el túnel temporal de Cloudflare.
-    allowedHosts: ['.trycloudflare.com'],
+    // Acceso desde otra red por el túnel (scripts/tunel.sh): ngrok con dirección fija o Cloudflare temporal.
+    allowedHosts: ['.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.trycloudflare.com'],
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY ?? 'http://localhost:8000',
