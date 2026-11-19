@@ -58,7 +58,7 @@ class HojaVidaTest extends TestCase
 
         $this->putJson('/api/estudiante/perfil', $this->hojaCompleta(Competencia::factory()->create(['nombre' => 'PHP'])))
             ->assertOk()
-            ->assertJsonPath('hoja_vida.porcentaje', 67)
+            ->assertJsonPath('hoja_vida.porcentaje', 78)
             ->assertJsonPath('hoja_vida.datos_personales.rh', 'A+')
             ->assertJsonPath('hoja_vida.formaciones.0.nivel.etiqueta', 'Técnico')
             ->assertJsonPath('hoja_vida.cursos.0.fecha', '2024-11')
@@ -67,8 +67,7 @@ class HojaVidaTest extends TestCase
             ->assertJsonCount(2, 'hoja_vida.referencias')
             ->assertJsonPath('competencias.0.nivel', 'INTERMEDIO');
 
-        // Con la cédula, la foto y la firma queda completa y aparecen en el PDF institucional.
-        $this->subirCedula();
+        // Con la foto y la firma queda completa (las fotos de la cédula son opcionales) y aparecen en el PDF institucional.
         $this->post('/api/estudiante/foto', ['foto' => UploadedFile::fake()->image('foto.png', 300, 400)])
             ->assertOk();
         $this->post('/api/estudiante/firma', ['firma' => $this->firmaPng()])->assertOk();

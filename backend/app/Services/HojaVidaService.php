@@ -36,7 +36,8 @@ class HojaVidaService
 
         return [
             ['seccion' => 'Datos personales', 'completa' => filled($estudiante->telefono) && collect(self::DATOS_PERSONALES)->every(fn ($c) => filled($hoja?->{$c}))],
-            ['seccion' => 'Cédula', 'completa' => filled($estudiante->documento) && filled($estudiante->lugar_expedicion) && filled($hoja?->cedula_frente_url) && filled($hoja?->cedula_reverso_url)],
+            // Basta el número de cédula; las fotos son opcionales.
+            ['seccion' => 'Cédula', 'completa' => filled($estudiante->documento)],
             ['seccion' => 'Foto', 'completa' => filled($hoja?->foto_url)],
             // La firma es obligatoria: sin ella la hoja de vida no se puede enviar a revisión.
             ['seccion' => 'Firma', 'completa' => filled($hoja?->firma_url)],
