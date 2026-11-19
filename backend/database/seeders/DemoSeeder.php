@@ -322,11 +322,11 @@ class DemoSeeder extends Seeder
     private function vinculaciones(array $estudiantes, array $empresas, array $vacantes, Usuario $docente): array
     {
         $creadas = [];
-        // A Andrés (tecnólogo, 480 horas) solo le falta que la empresa apruebe su última semana
-        // para completarlas; Valentina (profesional, 640) ya las completó y espera su evaluación.
+        // A Andrés solo le falta que la empresa apruebe su última semana para completar las 384
+        // horas; Valentina ya las completó y espera las notas y el cierre de su tutor.
         $datos = [
-            ['andres', 'nodo', 1, '2026-07-21', 472],
-            ['valentina', 'csg', 4, '2026-07-14', 648],
+            ['andres', 'nodo', 1, '2026-07-21', 376],
+            ['valentina', 'csg', 4, '2026-07-14', 392],
         ];
 
         foreach ($datos as [$alias, $empresa, $vacante, $inicio, $horas]) {

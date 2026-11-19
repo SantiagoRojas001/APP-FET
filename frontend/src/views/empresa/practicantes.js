@@ -1,7 +1,7 @@
 import { api } from '../../api/client.js';
 import { html, mount } from '../../lib/html.js';
 import { formatDate, initials } from '../../lib/format.js';
-import { badge, emptyState, hoursMeter, icon, pageHeader, statusBadge } from '../../lib/ui.js';
+import { badge, emptyState, hoursMeter, icon, pageHeader, showFieldErrors, statusBadge, toast, withBusy } from '../../lib/ui.js';
 import { documentosTabla, wireDocumentos } from '../documentos.js';
 import { evidenciasTabla, wireEvidencias } from '../evidencias.js';
 
@@ -62,6 +62,13 @@ export default async function practicantesView({ root, navigate }) {
             : ''}
         </div>
         ${evidenciasTabla(evidencias, { revisar: v.puede.revisar_evidencias, vacio: 'El practicante aún no reporta semanas.' })}
+        <h3>Tutor en la empresa</h3>
+        <form class="form-grid" data-tutor="${v.id}" novalidate>
+          ${[['nombre', 'Nombre'], ['cargo', 'Cargo'], ['correo', 'Correo'], ['telefono', 'Teléfono']].map(
+            ([c, l]) => html`<div class="field"><label for="${c}${v.id}">${l}</label><input class="input" id="${c}${v.id}" name="${c}" value="${v.tutor_empresa?.[c] ?? ''}" /></div>`,
+          )}
+          <div class="actions"><button class="btn sec sm" type="submit">Guardar tutor</button></div>
+        </form>
         <h3>Entregas</h3>
         ${documentosTabla(v.documentos, { aprobarEmpresa: v.puede.revisar_evidencias, vacio: 'El practicante aún no sube documentos.' })}`,
     );
@@ -70,6 +77,19 @@ export default async function practicantesView({ root, navigate }) {
       const recargar = () => cargar(id, detalle);
       wireEvidencias(detalle, recargar);
       wireDocumentos(detalle, recargar);
+      detalle.addEventListener('submit', (e) => {
+        const form = e.target.closest('[data-tutor]');
+        if (!form) return;
+        e.preventDefault();
+        withBusy(e.submitter, async () => {
+          try {
+            await api.put(`/empresa/vinculaciones/${form.dataset.tutor}/tutor`, Object.fromEntries(new FormData(form)));
+            toast('Tutor guardado.');
+          } catch (error) {
+            showFieldErrors(form, error.errors) || toast(error.message);
+          }
+        });
+      });
     }
   }
 

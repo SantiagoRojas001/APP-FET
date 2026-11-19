@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Programa académico de la FET. Se cursa por ciclos (ver App\Enums\Ciclo).
  */
 #[Table('programa', timestamps: false)]
-#[Fillable(['nombre', 'total_semestres'])]
+#[Fillable(['nombre', 'total_semestres', 'snies', 'resolucion'])]
 class Programa extends Model
 {
     use HasFactory;

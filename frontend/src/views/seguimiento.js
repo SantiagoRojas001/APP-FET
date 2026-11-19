@@ -107,6 +107,10 @@ export default async function seguimientoView({ root, params, navigate, refresh 
             <dd>${v.semestre_al_vincular}.º</dd>
           </div>
           <div>
+            <dt>Fin previsto</dt>
+            <dd>${formatDate(v.fecha_fin_prevista)}</dd>
+          </div>
+          <div>
             <dt>Docente tutor</dt>
             <dd>${v.tutor?.correo ?? 'Sin asignar'}</dd>
           </div>
@@ -136,6 +140,7 @@ export default async function seguimientoView({ root, params, navigate, refresh 
                 </button>`
               : ''
           }
+          <button class="btn sec sm" data-go="/vinculacion/${v.id}/formatos">${icon('file-text')}Formatos</button>
           ${role === 'ESTUDIANTE' ? '' : html`<a class="btn sec sm" href="#/estudiantes/${v.estudiante.id}">${icon('file-cv')}Hoja de vida</a>`}
           ${activa && role !== 'ADMIN' ? html`<button class="btn sec sm" data-go="/reportar?vinculacion=${v.id}">${icon('flag')}Reportar un problema</button>` : ''}
         </div>

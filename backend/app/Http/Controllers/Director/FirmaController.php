@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Datos con los que el director firma las cartas de presentación: nombre,
- * documento de identidad y firma dibujada (ver FirmaService).
+ * Datos con los que el director firma las cartas y el docente los formatos de
+ * práctica: nombre, documento de identidad y firma dibujada (ver FirmaService).
  */
 class FirmaController extends Controller
 {
@@ -62,7 +62,7 @@ class FirmaController extends Controller
         return [
             'nombre' => $director->nombre,
             'documento' => $director->documento,
-            'url_firma' => $director->firma_url ? '/api/director/firma/imagen' : null,
+            'url_firma' => $director->firma_url ? '/api/'.strtolower($director->rol->value).'/firma/imagen' : null,
             'completa' => $director->puedeFirmarCartas(),
         ];
     }

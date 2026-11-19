@@ -50,6 +50,7 @@ class VinculacionResource extends Recurso
                     'docente' => $this->calificaciones->contains(fn ($c) => $c->momento === $momento && $c->parte === ParteCalificacion::Docente),
                 ], array_keys(config('calificacion.momentos'))),
             ]),
+            'tutor_empresa' => $this->tutor_empresa,
             'fecha_fin_prevista' => $this->fecha_inicio->copy()->addWeeks(config('fet.practica.semanas'))->toDateString(),
             'evaluaciones' => $this->whenLoaded('evaluaciones', fn () => [
                 'habilitadas' => app(EvaluacionService::class)->habilitada($this->resource),

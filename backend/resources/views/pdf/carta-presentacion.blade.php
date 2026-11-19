@@ -1,8 +1,25 @@
 {{-- Carta de presentación del estudiante ante la empresa (dompdf). --}}
 @php
     $e = $cita->estudiante;
-    $modalidad = mb_strtolower(($cita->vacante?->modalidad ?? $e->modalidad_grado)?->label() ?? 'práctica');
+    $modalidad = mb_strtolower(($cita->vacante?->modalidad ?? $e->modalidad_grado)?->label() ?? 'práctica profesional');
     $inicio = $cita->fecha_inicio_practica ?? today();
+    $programa = $e->programa;
+    $ciclo = match ($e->ciclo()) {
+        \App\Enums\Ciclo::Tecnico => 'ciclo técnico',
+        \App\Enums\Ciclo::Tecnologo => 'ciclo tecnólogo',
+        \App\Enums\Ciclo::Profesional => str_starts_with($programa->nombre, 'Ingeniería') ? 'ciclo de Ingeniería' : 'ciclo profesional',
+    };
+    $creditos = config('fet.practica.creditos');
+    $semanas = config('fet.practica.semanas');
+    $meses = (int) round($semanas / 4);
+    $horas = \App\Models\Parametro::horasRequeridas();
+    $director = $firmante?->nombre ?? 'Director(a) de programa';
+    $registro = $programa->snies
+        ? " cuenta con Código SNIES {$programa->snies}".($programa->resolucion ? " y Resolución del Ministerio de Educación Nacional {$programa->resolucion}" : '').', el cual'
+        : '';
+    $identificacion = $e->documento
+        ? ', identificado(a) con C.C. No. '.number_format((float) $e->documento, 0, '', '.').($e->lugar_expedicion ? " de {$e->lugar_expedicion}" : '')
+        : '';
 @endphp
 <!doctype html>
 <html lang="es">
@@ -29,49 +46,40 @@
 
 <p class="fecha">Neiva, {{ ($cita->presentada_en ?? now())->locale('es')->translatedFormat('j \d\e F \d\e Y') }}</p>
 
-<p>Señores<br><b>{{ $cita->empresa->razon_social }}</b><br>NIT {{ $cita->empresa->nit }}</p>
+<p>Estimado<br><b>{{ $cita->empresa->razon_social }}</b><br>Ciudad</p>
 
-<h1>Carta de presentación</h1>
-
-<p>
-    Reciban un cordial saludo. La Fundación Escuela Tecnológica de Neiva «Jesús Oviedo Pérez» presenta a
-    <b>{{ $e->nombre_completo }}</b>, estudiante de {{ $e->programa->nombre }} (ciclo {{ mb_strtolower($e->ciclo()->label()) }}), para realizar su {{ $modalidad }}
-    en su organización, de acuerdo con el proceso de selección que adelantaron y el convenio vigente con la institución.
-</p>
-
-<table>
-    <tr><td class="k">Estudiante</td><td>{{ $e->nombre_completo }}</td></tr>
-    @if ($e->documento)
-        <tr><td class="k">Documento de identidad</td><td>{{ $e->documento }}</td></tr>
-    @endif
-    @if ($e->codigo)
-        <tr><td class="k">Código estudiantil</td><td>{{ $e->codigo }}</td></tr>
-    @endif
-    <tr><td class="k">Programa y semestre</td><td>{{ $e->programa->nombre }}, {{ $e->semestre_actual }}.º semestre</td></tr>
-    <tr><td class="k">Modalidad</td><td>{{ ucfirst($modalidad) }}</td></tr>
-    @if ($cita->vacante)
-        <tr><td class="k">Cargo o vacante</td><td>{{ $cita->vacante->titulo }}</td></tr>
-    @endif
-    <tr><td class="k">Fecha de inicio</td><td>{{ $inicio->format('d/m/Y') }}</td></tr>
-    <tr><td class="k">Horas requeridas</td><td>{{ \App\Models\Parametro::horasRequeridas() }}</td></tr>
-    <tr><td class="k">Docente tutor</td><td>{{ $e->hojaVida?->revisor?->correo ?? 'Por asignar' }}</td></tr>
-</table>
+<p>Cordial saludo.</p>
 
 <p>
-    Durante la práctica, la empresa aprobará en APP FET las horas semanales del estudiante y, al finalizar,
-    responderá su evaluación. Agradecemos el apoyo a la formación de nuestros estudiantes.
+    En calidad de director del Programa de {{ $programa->nombre }} de la Fundación Escuela Tecnológica de Neiva
+    «Jesús Oviedo Pérez» presento al estudiante, como requisito de cumplimiento para desarrollar y terminar el proceso
+    de formación del {{ $ciclo }} de nuestro programa académico.
 </p>
+
+<p>
+    Teniendo en cuenta que nuestro Programa {{ $programa->nombre }}{{ $registro }} tiene en su plan de estudios la {{ $modalidad }}
+    como requisito, con una cantidad de {{ $creditos }} créditos académicos, correspondientes a {{ $horas }} horas para
+    ejecutar en {{ $semanas }} semanas ({{ $meses }} meses), solicitamos contemplen la posibilidad de vincular a
+    <b>{{ mb_strtoupper($e->nombre_completo) }}</b>{{ $identificacion }}, quien cursa
+    {{ $e->semestre_actual }}.º semestre y cumple con los requisitos exigidos por la institución para la realización de
+    la {{ $modalidad }} en el período académico {{ \App\Support\Periodo::deFecha($inicio) }}.
+</p>
+
+@if ($firmante?->correo)
+    <p>Ante cualquier inquietud se puede comunicar al correo: {{ $firmante->correo }}.</p>
+@endif
+
+<p>Atentamente,</p>
 
 <div class="firma">
     @if ($firma)
         <img src="{{ $firma }}" alt="Firma">
     @endif
     <div class="linea">
-        <b>{{ $firmante?->nombre ?? 'Director(a) de programa' }}</b><br>
+        <b>{{ mb_strtoupper($director) }}</b><br>
         @if ($firmante?->documento)C.C. {{ $firmante->documento }}<br>@endif
-        Director(a) de programa · {{ $e->programa->nombre }}<br>
-        {{ $firmante?->correo }}<br>
-        Fundación Escuela Tecnológica de Neiva
+        Director del Programa de {{ $programa->nombre }}<br>
+        Fundación Escuela Tecnológica de Neiva «Jesús Oviedo Pérez»
     </div>
 </div>
 </body>

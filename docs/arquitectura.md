@@ -26,12 +26,12 @@ Empresa con convenio vigente ve las APROBADAS ──asigna cita──▶ PROGRAM
                                                                 ├─empresa cancela─▶ CANCELADA                     │
                                                                 └─empresa rechaza─▶ RECHAZADO                     │
                      director de programa envía la carta de presentación ──▶ PRESENTADO + vinculación ACTIVA ◀───┘
-                     (carta adjunta al correo de la empresa; tutor: el docente que aprobó la hoja de vida;
+                     (carta adjunta al correo de la empresa; tutor: el que asignó el director o quien aprobó la hoja de vida;
                       hoja de vida deshabilitada, demás citas canceladas)
 
-Vinculación ACTIVA ──semanas aprobadas por la empresa suman las horas del ciclo (320/480/640)──▶ horas cumplidas (sigue ACTIVA)
-       │                                                                                      │
-       │                                                 empresa responde su evaluación ──────┴─▶ FINALIZADA (reconocida)
+Vinculación ACTIVA ──semanas aprobadas por la empresa suman 384 horas──▶ horas cumplidas (sigue ACTIVA)
+       │                                                                        │
+       │              notas de empresa y docente en los dos momentos ───────────┴─▶ docente tutor cierra ─▶ FINALIZADA (reconocida)
        └─ docente con ≥ 3 reportes ─▶ FINALIZADA si cumplió horas, si no CANCELADA («Terminada anticipadamente»)
 ```
 
@@ -44,33 +44,35 @@ desde el perfil). Las páginas no llevan textos descriptivos.
    revisión docente (si vuelve con recomendaciones, la corrige y la envía de nuevo) y ve las citas
    que le asignan las empresas (puede tener varias). Cuando empieza la práctica pasa al
    entorno de pasantía: Mi pasantía (resumen), Horas semanales (el único lugar donde reporta horas),
-   Entregas (sube ARL, bitácora, control de asistencia e informes, con vista previa y descarga) y
-   Hoja de vida.
+   Formatos (plan de trabajo, firmas y PDF), Entregas (sube sus documentos y descarga los materiales
+   de su docente) y Hoja de vida.
 2. **Docente**: pertenece a un programa (sin programa asignado, atiende a todos) y solo trabaja con
    sus estudiantes. En «Cargar listado» sube el listado de modalidades de grado (PDF, Excel o CSV):
    la app filtra a quienes eligieron pasantía o práctica en su programa y el docente confirma la
    vista previa con el promedio de cada uno (si el listado no lo trae, lo escribe ahí): al
    confirmar sale el correo con el resultado. «Estudiantes» es solo de consulta. Revisa las hojas de vida: las aprueba (solo entonces las ven las empresas) o
-   las devuelve con recomendaciones; quien la aprueba queda como tutor si el estudiante empieza la
-   práctica. Ve las vacantes de las empresas y les recomienda estudiantes. Hace el seguimiento de
-   las vinculaciones, revisa los documentos, evalúa al practicante y puede finalizar una práctica
-   que acumule reportes.
+   las devuelve con recomendaciones. Atiende a su grupo: los estudiantes que el director le asignó
+   y los que aún no tienen tutor. Al cargar el listado elige a los pasantes técnicos y tecnólogos
+   sin pasarse de los cupos. Ve las vacantes y los convenios, comparte materiales, sube documentos
+   (quedan aprobados), diligencia el acta de inicio y la evaluación de convenio, califica lo
+   cognitivo en cada momento y cierra la práctica.
 3. **Empresa**: sube su convenio con la FET. Con el convenio aprobado y vigente revisa las hojas de
    vida aprobadas por los docentes (primero las que un docente le recomendó) y asigna citas. Según
    cada cita acepta al estudiante (con la fecha de inicio) o lo rechaza, y recibe la carta de
    presentación del director. Publica vacantes, que solo ven los docentes. Durante la práctica
    aprueba las horas semanales con acceso a todo lo que envió el practicante: en Mis practicantes
    cada uno se despliega con sus semanas (con soporte) y sus entregas, con vista previa y descarga,
-   y su hoja de vida. Al final lo evalúa: con esa evaluación la práctica culmina. Puede registrarse sola en `/empresasRegistro` y espera la validación de la FET.
+   y su hoja de vida. Registra a su tutor, puede subir documentos y dar visto bueno a los informes, firma los formatos y califica lo actitudinal y lo procedimental en los dos momentos. Puede registrarse sola en `/empresasRegistro` y espera la validación de la FET.
 4. **Director de programa**: consulta los convenios de las empresas (existentes y pendientes, sin
    aprobarlos), ve los estudiantes de su programa con su ciclo académico y si cursan pasantía,
    práctica o aún no, y envía la carta de presentación de los estudiantes que una empresa aceptó:
    con la carta empieza la práctica. La carta lleva su nombre, su documento y su firma dibujada
-   (los registra una vez en Cartas de presentación; sin ellos no puede enviarlas).
+   (los registra una vez en Cartas de presentación; sin ellos no puede enviarlas). Asigna a cada
+   estudiante su docente tutor y define los cupos de pasantía del programa en cada periodo.
 5. **Administrador**: crea las cuentas de docentes, directores y administradores y asigna su
    programa, corrige los datos de los estudiantes, valida empresas, aprueba o rechaza sus convenios
-   y define los parámetros generales (promedio mínimo y, por ciclo, semestres habilitados y horas
-   de práctica); atiende los reportes y consulta el resumen, los informes y la bitácora de
+   y define los parámetros generales (promedio mínimo, semestres habilitados por ciclo, horas
+   mínimas de práctica y SNIES y resolución de cada programa); atiende los reportes y consulta el resumen, los informes y la bitácora de
    auditoría.
 
 Todos los roles reciben notificaciones (dentro de la app y por correo) y pueden reportar problemas.
@@ -102,11 +104,18 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
   la administración (tabla `parametro`).
 - **Primer ingreso**: la cuenta con contraseña inicial (`usuario.debe_cambiar_password`) solo puede
   cambiarla (`POST /api/auth/primer-ingreso`, middleware `primer-ingreso`) y aceptar la política.
-- **Revisión de la hoja de vida** (`HojaVidaService`): el estudiante la envía a revisión cuando
-  está completa (100 %), está habilitado y no cursa práctica; se avisa a los docentes. El docente
-  la aprueba o la devuelve con recomendaciones (obligatorias). Mientras está en revisión no se
-  edita; si el estudiante edita una aprobada, vuelve a borrador y necesita otra aprobación. Las
-  empresas solo encuentran hojas aprobadas.
+- **Revisión de la hoja de vida** (`HojaVidaService`): al guardarla completa (100 %, con cédula,
+  foto y firma), si el estudiante está habilitado y no cursa práctica, se envía sola a revisión y
+  se avisa a su tutor (o a los docentes del programa si no tiene). Incompleta queda en borrador. El
+  docente la aprueba o la devuelve con recomendaciones (obligatorias). En revisión no se edita. Si
+  el estudiante edita una aprobada, `version_aprobada` conserva sus datos, foto, firma y PDF: las
+  empresas siguen viendo esa copia hasta que se apruebe la versión nueva.
+- **Cédula** (`CedulaEstudianteController`): número, lugar de expedición y fotos de ambas caras;
+  no las ven las empresas. El estudiante marca su firma en el frente y `FirmaService::similitud`
+  calcula un parecido orientativo con la firma dibujada. No es una verificación: decide el docente.
+- **Tutores y cupos** (`CupoService`, tabla `cupo_pasantia`): el director asigna `estudiante.tutor_id`
+  y define los cupos por programa y periodo (5 técnico y 5 tecnólogo por defecto). Solo cuentan los
+  pasantes de esos ciclos; la práctica y el ciclo profesional no tienen límite.
 - **Convenios** (`AcuerdoService`, tabla `acuerdo`): la empresa sube su convenio en PDF con
   vigencia; la administración lo aprueba o lo rechaza con un motivo y el director lo consulta. Solo
   con un convenio aprobado y vigente la empresa asigna citas. En el código y la base se llama
@@ -117,8 +126,8 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
   de la cita la empresa acepta (con la fecha de inicio) o rechaza. Si acepta, se avisa al director
   del programa (o a la administración si no hay director), que envía la carta de presentación
   (`CartaPresentacion`, adjunta al correo de la empresa, con el nombre, el documento y la firma del
-  director; también el documento y el código del estudiante si se conocen): se crea la vinculación con el docente
-  que aprobó la hoja de vida como tutor, se avisa al estudiante, su hoja de vida se deshabilita y sus demás citas abiertas se cancelan. Las decisiones bloquean la fila
+  director y los datos académicos del programa): se crea la vinculación con el tutor asignado o, si
+  no hay, con el docente que aprobó la hoja de vida, se avisa al estudiante, su hoja de vida se deshabilita y sus demás citas abiertas se cancelan. Las decisiones bloquean la fila
   (`SELECT … FOR UPDATE`).
 - **Recomendaciones** (`RecomendacionService`): un docente recomienda estudiantes disponibles
   para una vacante; la empresa los ve primero en Hojas de vida.
@@ -137,19 +146,24 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
 - **Horas y cierre** (`PracticaService`): el estudiante reporta una evidencia por semana (0,5 a 60
   horas, actividades y soporte opcional en PDF o foto, desde la semana de inicio y hasta hoy). La
   empresa la aprueba o la devuelve con un comentario sobre las horas; el estudiante corrige las
-  devueltas y vuelven a quedar por revisar. Solo cuentan las horas aprobadas: cuando la suma
-  alcanza las horas del ciclo que cursaba el estudiante al empezar (parámetros `horas_tecnico`,
-  `horas_tecnologo` y `horas_profesional`: 320, 480 y 640 por defecto) se guarda `horas_cumplidas_en` y se avisa
-  al estudiante, a la empresa y al tutor; la vinculación sigue activa. Cuando la empresa responde
-  su evaluación con las horas cumplidas, la práctica queda `FINALIZADA` sin un paso de aprobación
-  aparte y el estudiante recibe el aviso de que culminó. El docente tutor (o cualquiera, si no hay tutor) puede
-  finalizarla con `fet.reportes_para_finalizar` (3) reportes ligados; si faltan horas debe
-  justificarlo y queda `CANCELADA`, sin reconocimiento.
-- **Evaluaciones** (`EvaluacionService`, `config/evaluaciones.php`): docente → practicante,
-  empresa → practicante y practicante → empresa, con preguntas de opción múltiple y abiertas. Se
-  habilitan con las horas cumplidas o la práctica cerrada; una por tipo y no se editan. Cada
-  respuesta guarda el texto de su pregunta. La empresa no lee la evaluación que le hizo el
-  practicante.
+  devueltas y vuelven a quedar por revisar. Sin ARL entregada no se reportan horas. Solo cuentan
+  las horas aprobadas: al llegar al parámetro `horas_practica` (384, un mínimo igual para todos) se
+  guarda `horas_cumplidas_en` y se avisa al estudiante, a la empresa y al tutor; la vinculación
+  sigue activa. La cierra el docente tutor con las horas y las notas de los dos momentos, o antes
+  con `fet.reportes_para_finalizar` (3) reportes ligados; si faltan horas debe justificarlo y queda
+  `CANCELADA`, sin reconocimiento.
+- **Calificaciones** (`CalificacionService`, `config/calificacion.php`, formato PM-GFO-F-015): de 1
+  a 5 en dos momentos (40 % desde la semana 8 y 60 % al completar las horas). La empresa califica
+  lo actitudinal (25 %) y lo procedimental (35 %); el docente, los ítems cognitivos (40 %) que
+  decide evaluar. No se editan. La fórmula de la nota final está pendiente de confirmar.
+- **Formatos** (`FormatoService`, `config/formatos.php`, tabla `formato_practica`): acta de inicio
+  y evaluación de convenio (docente), plan de trabajo (estudiante), registro de asistencia (sale de
+  las horas semanales) y evaluación cuantitativa. Las partes los firman con su firma registrada y
+  se descargan en PDF; también se puede subir la copia firmada como documento. Cambiar lo
+  diligenciado borra las firmas.
+- **Evaluación de la empresa** (`EvaluacionService`, `config/evaluaciones.php`): cuestionario
+  opcional del practicante, habilitado con las horas cumplidas o la práctica cerrada. La empresa no
+  la lee.
 - **Reportes**: cualquier usuario reporta un problema; si es de una práctica propia, queda ligado a
   ella. Los reportes de una práctica solo los ven docentes y administración. La administración los
   atiende y quien reportó recibe la respuesta.
@@ -170,9 +184,9 @@ Están en `app/Services` y las cubren las pruebas de `tests/Feature`.
   que sea un PNG transparente con trazos oscuros de un solo color, ni vacío ni relleno; la imagen
   se vuelve a generar con GD antes de guardarla. El porcentaje mide datos personales, foto, contacto de
   emergencia, referencias (una familiar y una personal), perfil, competencias y repositorios.
-- **Documentos**: los sube el estudiante en Entregas (ARL, bitácora, control de asistencia,
-  informes); los ven con vista previa y descarga el estudiante, la empresa y la FET, y solo el
-  docente los revisa.
+- **Documentos**: los suben el estudiante, la empresa (opcional) y el docente (quedan aprobados);
+  todos los ven con vista previa y descarga. Solo el docente los revisa, y la empresa puede dar su
+  visto bueno para agilizar esa revisión. El docente comparte materiales con su grupo.
 - **Datos personales** (Ley 1581 de 2012): el registro exige aceptar la política y guarda la
   versión aceptada en `consentimiento_datos`. Las empresas no ven el documento de identidad.
 
@@ -226,16 +240,20 @@ Todas las respuestas son JSON. Los enums se envían como `{ "valor": "APROBADA",
 | `PATCH /api/evidencias/{id}/revision` · `POST /api/vinculaciones/{id}/evidencias/aprobacion` | Empresa | Aprueba o devuelve una semana; aprueba todas las pendientes |
 | `GET /api/evidencias/{id}/archivo` | Según permisos | Soporte de la semana |
 | `GET/POST /api/vinculaciones/{id}/evaluaciones` | Según permisos | Cuestionario del usuario y evaluaciones que puede leer |
+| `GET/POST /api/vinculaciones/{id}/calificaciones` | Según permisos | Notas por momento |
+| `GET /api/vinculaciones/{id}/formatos` · `PUT …/{tipo}` · `POST …/{tipo}/firma` · `GET …/{tipo}/pdf` | Según permisos | Formatos de la práctica |
+| `GET/POST/DELETE /api/docente/materiales` · `GET /api/estudiante/materiales` | Docente · estudiante | Materiales del grupo |
+| `GET/PUT /api/director/cupos` · `GET /api/director/docentes` · `POST /api/director/estudiantes/tutor` | Director | Cupos y tutores |
 | `GET /api/vinculaciones/{id}/reportes` | Docente, admin | Reportes ligados a la práctica |
 | `GET /api/estudiante/hoja-vida.pdf` · `/api/estudiantes/{id}/hoja-vida.pdf` | Estudiante · empresa, docente, admin | Hoja de vida en PDF institucional |
-| `POST /api/docente/vinculaciones/{id}/finalizacion` | Docente | Finalización anticipada |
+| `POST /api/docente/vinculaciones/{id}/finalizacion` | Docente | Cierre de la práctica o finalización anticipada |
 | `GET /api/proyectos/{id}/repositorio` | Dueño, empresa, docente, admin | Vista previa del repositorio de GitHub (caché de 30 min) |
 | `GET/PUT /api/estudiante/perfil` | Estudiante | Hoja de vida completa (formato PA-GTH-F-10) |
 | `POST /api/estudiante/foto` · `GET /api/estudiantes/{id}/foto` | Estudiante · quien consulta perfiles | Foto de la hoja de vida (vertical 4:5) |
 | `POST /api/estudiante/firma` · `GET /api/estudiantes/{id}/firma` | Estudiante · quien consulta perfiles | Firma dibujada de la hoja de vida |
 | `GET /api/estudiante/elegibilidad` | Estudiante | Modalidades permitidas y requisitos |
 | `POST /api/auth/primer-ingreso` | Estudiante con contraseña inicial | Cambia la contraseña y acepta la política |
-| `POST /api/estudiante/hoja-vida/envio` | Estudiante | Envía la hoja de vida a revisión docente |
+| `POST /api/estudiante/cedula` · `GET /api/estudiantes/{id}/cedula/{lado}` | Estudiante · FET | Fotos de la cédula |
 | `GET /api/estudiante/citas` · `/vinculaciones` | Estudiante | Empresas interesadas (citas) y prácticas propias |
 | `POST /api/docente/importaciones` · `…/confirmacion` | Docente | Vista previa del listado de modalidades; crea las cuentas y avisa a los no habilitados |
 | `GET /api/docente/estudiantes` | Docente | Estudiantes de su programa (consulta) |
@@ -274,7 +292,7 @@ llaves. Se agregaron:
    se conserve en cualquier equipo.
 5. **Restricciones `CHECK`** en las columnas de estado y tipo (`rol`, `modalidad`, `estado`,
    `nivel`, etc.), con los valores de los enums de `app/Enums`.
-6. **Horas por ciclo en `parametro`** (`horas_tecnico`, `horas_tecnologo`, `horas_profesional`);
+6. **Horas únicas en `parametro`** (`horas_practica`, 384);
    `programa.horas_requeridas` se eliminó y todos los programas tienen 10 semestres.
 7. **`vinculacion.horas_cumplidas_en`, `finalizada_por`**; `observacion_final` guarda la
    justificación del docente al finalizar. El periodo se calcula con `fecha_inicio`
@@ -289,6 +307,11 @@ llaves. Se agregaron:
     residencia, dirección, R-H, contacto de emergencia y firma (`firma_url`) (la `formacion` en
     texto libre se reemplazó); `empresa` suma el representante legal y su firma; `experiencia` suma dirección, teléfono, jefe inmediato y dedicación; tablas
     `formacion_academica`, `curso`, `actividad_investigativa` y `referencia`.
+
+11. **Formatos oficiales**: `estudiante.lugar_expedicion` y `tutor_id`; `hoja_vida.cedula_*`,
+    `firma_similitud` y `version_aprobada`; `vinculacion.tutor_empresa`; `programa.snies` y
+    `resolucion`; `documento_seguimiento.aprobado_empresa_en`; tablas `cupo_pasantia`,
+    `material_docente`, `calificacion` y `formato_practica`.
 
 Además están las tablas propias de Laravel: `personal_access_tokens` (Sanctum),
 `password_reset_tokens`, `invitacion_tokens`, `notifications`, `cache` y `jobs`.
@@ -309,7 +332,9 @@ Además están las tablas propias de Laravel: `personal_access_tokens` (Sanctum)
 | `reporte.categoria` | FALLA_PLATAFORMA, PRACTICA, DATOS, OTRO |
 | `reporte.estado` | ABIERTO, EN_REVISION, RESUELTO |
 | `evaluacion.tipo` | DOCENTE_A_PRACTICANTE, EMPRESA_A_PRACTICANTE, PRACTICANTE_A_EMPRESA |
-| `documento_seguimiento.tipo` | ARL, BITACORA, CONTROL_ASISTENCIA, INFORME_AVANCE, INFORME_FINAL |
+| `documento_seguimiento.tipo` | ARL, BITACORA, CONTROL_ASISTENCIA, INFORME_AVANCE, INFORME_FINAL, ACTA_INICIO, PLAN_TRABAJO, REGISTRO_ASISTENCIA, EVALUACION_CUANTITATIVA, EVALUACION_CONVENIO, OTRO |
+| `calificacion.parte` | EMPRESA, DOCENTE |
+| `formato_practica.tipo` | ACTA_INICIO, PLAN_TRABAJO, REGISTRO_ASISTENCIA, EVALUACION_CUANTITATIVA, EVALUACION_CONVENIO |
 | `documento_seguimiento.estado_revision`, `evidencia_semanal.estado` | PENDIENTE, APROBADO, OBSERVADO |
 | `formacion_academica.nivel` | MAESTRIA, ESPECIALIZACION, PREGRADO, TECNOLOGO, TECNICO |
 | `actividad_investigativa.tipo` | GRUPO, PROYECTO, TUTORIA_POSGRADO, TUTORIA_PREGRADO, PAR_EVALUADOR, INFORME_TECNICO, PUBLICACION, ORGANIZACION, PONENCIA |
@@ -321,5 +346,5 @@ Además están las tablas propias de Laravel: `personal_access_tokens` (Sanctum)
 - Inicio de sesión con la cuenta institucional (Microsoft o Google) si la FET lo habilita; hoy se
   restringe el dominio del correo.
 - Carga masiva de estudiantes desde un archivo de la oficina de registro.
-- Ajustar los cuestionarios a los formatos oficiales de la FET y las notas (60 % empresa, 40 % universidad).
-- Convenio institución–empresa, carta de presentación, acta de inicio y plan de trabajo.
+- Confirmar la fórmula de la nota final y aplicar la nota mínima de 3,0.
+- Completar la evaluación de convenio con los aspectos 1 a 5 del formato oficial.

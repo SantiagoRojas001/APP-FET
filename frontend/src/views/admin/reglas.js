@@ -51,7 +51,36 @@ export default async function reglasView({ root, refresh }) {
         </section>
         <div class="actions"><button class="btn" type="submit">Guardar parámetros</button></div>
         <div id="paramError"></div>
-      </form>`,
+      </form>
+      <section class="panel">
+        <h2>Datos de la carta por programa</h2>
+        <div class="lines">
+          ${param.programas.map(
+            (p) => html`<form class="line" data-programa="${p.id}" novalidate>
+              <div><b>${p.nombre}</b></div>
+              <div class="actions">
+                <input class="input narrow" name="snies" value="${p.snies ?? ''}" placeholder="SNIES" aria-label="SNIES de ${p.nombre}" />
+                <input class="input" name="resolucion" value="${p.resolucion ?? ''}" placeholder="Resolución" aria-label="Resolución de ${p.nombre}" />
+                <button class="btn sec sm" type="submit">Guardar</button>
+              </div>
+            </form>`,
+          )}
+        </div>
+      </section>`,
+  );
+
+  root.querySelectorAll('[data-programa]').forEach((f) =>
+    f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      withBusy(e.submitter, async () => {
+        try {
+          await api.put(`/admin/programas/${f.dataset.programa}`, { snies: f.snies.value.trim() || null, resolucion: f.resolucion.value.trim() || null });
+          toast('Programa actualizado.');
+        } catch (error) {
+          toast(error.message);
+        }
+      });
+    }),
   );
 
   const form = root.querySelector('#paramForm');

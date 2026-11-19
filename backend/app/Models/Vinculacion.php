@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'estudiante_id', 'empresa_id', 'vacante_id', 'tutor_id', 'tipo', 'semestre_al_vincular',
     'fecha_inicio', 'fecha_fin', 'estado', 'reconocida_como_practica', 'observacion_final',
-    'horas_cumplidas_en', 'finalizada_por',
+    'horas_cumplidas_en', 'finalizada_por', 'tutor_empresa',
 ])]
 #[UsePolicy(VinculacionPolicy::class)]
 class Vinculacion extends Model
@@ -48,6 +48,7 @@ class Vinculacion extends Model
             'fecha_fin' => 'date',
             'reconocida_como_practica' => 'boolean',
             'horas_cumplidas_en' => 'datetime',
+            'tutor_empresa' => 'array',
         ];
     }
 
@@ -147,6 +148,12 @@ class Vinculacion extends Model
     public function reportes(): HasMany
     {
         return $this->hasMany(Reporte::class)->orderByDesc('creado_en');
+    }
+
+    /** @return HasMany<FormatoPractica, $this> */
+    public function formatos(): HasMany
+    {
+        return $this->hasMany(FormatoPractica::class);
     }
 
     /** @return HasMany<Calificacion, $this> */

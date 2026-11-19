@@ -25,6 +25,7 @@ use App\Http\Controllers\Seguimiento\CalificacionController;
 use App\Http\Controllers\Seguimiento\DocumentoController;
 use App\Http\Controllers\Seguimiento\EvaluacionController;
 use App\Http\Controllers\Seguimiento\EvidenciaController;
+use App\Http\Controllers\Seguimiento\FormatoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -81,6 +82,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('vinculaciones/{vinculacion}/evaluaciones', [EvaluacionController::class, 'store']);
         Route::get('vinculaciones/{vinculacion}/calificaciones', [CalificacionController::class, 'index']);
         Route::post('vinculaciones/{vinculacion}/calificaciones', [CalificacionController::class, 'store']);
+        Route::get('vinculaciones/{vinculacion}/formatos', [FormatoController::class, 'index']);
+        Route::put('vinculaciones/{vinculacion}/formatos/{tipo}', [FormatoController::class, 'update']);
+        Route::post('vinculaciones/{vinculacion}/formatos/{tipo}/firma', [FormatoController::class, 'firmar']);
+        Route::get('vinculaciones/{vinculacion}/formatos/{tipo}/pdf', [FormatoController::class, 'pdf']);
         Route::get('vinculaciones/{vinculacion}/reportes', [ReporteController::class, 'deVinculacion']);
 
         // Carta de presentación y acuerdos (permisos en cada controlador)
@@ -111,6 +116,9 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::prefix('docente')->middleware('rol:DOCENTE')->group(function () {
+            Route::get('firma', [Director\FirmaController::class, 'show']);
+            Route::post('firma', [Director\FirmaController::class, 'update'])->middleware('throttle:10,1');
+            Route::get('firma/imagen', [Director\FirmaController::class, 'imagen']);
             Route::get('materiales', [MaterialDocenteController::class, 'deDocente']);
             Route::post('materiales', [MaterialDocenteController::class, 'store']);
             Route::delete('materiales/{material}', [MaterialDocenteController::class, 'destroy']);
@@ -140,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('vacantes', [Empresa\VacanteController::class, 'store']);
             Route::patch('vacantes/{vacante}', [Empresa\VacanteController::class, 'update'])->whereNumber('vacante');
             Route::get('vinculaciones', [Empresa\VinculacionController::class, 'index']);
+            Route::put('vinculaciones/{vinculacion}/tutor', [Empresa\VinculacionController::class, 'tutor']);
         });
 
         Route::prefix('director')->middleware('rol:DIRECTOR')->group(function () {
@@ -176,6 +185,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('acuerdos/{acuerdo}/revision', [AcuerdoController::class, 'revisar']);
             Route::get('parametros', [Admin\ParametroController::class, 'show']);
             Route::put('parametros', [Admin\ParametroController::class, 'update']);
+            Route::put('programas/{programa}', [Admin\ParametroController::class, 'actualizarPrograma']);
             Route::get('reportes', [Admin\ReporteController::class, 'index']);
             Route::patch('reportes/{reporte}', [Admin\ReporteController::class, 'update']);
             Route::get('informes', [Admin\InformeController::class, 'show']);

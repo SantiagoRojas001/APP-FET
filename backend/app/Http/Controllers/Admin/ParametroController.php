@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\Ciclo;
 use App\Http\Controllers\Controller;
 use App\Models\Parametro;
+use App\Models\Programa;
 use App\Services\Auditoria;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,18 @@ class ParametroController extends Controller
 {
     public function show(): JsonResponse
     {
+        return response()->json($this->valores());
+    }
+
+    /** SNIES y resolución del programa, que aparecen en la carta de presentación. */
+    public function actualizarPrograma(Request $request, Programa $programa): JsonResponse
+    {
+        $programa->update($request->validate([
+            'snies' => ['nullable', 'string', 'max:20'],
+            'resolucion' => ['nullable', 'string', 'max:120'],
+        ]));
+        Auditoria::registrar('programa.actualizado', $request->user(), ['programa_id' => $programa->id]);
+
         return response()->json($this->valores());
     }
 
@@ -47,6 +60,7 @@ class ParametroController extends Controller
             'promedio_minimo' => Parametro::promedioMinimo(),
             'semestres_habilitados' => Parametro::semestresHabilitados(),
             'horas' => Parametro::horasRequeridas(),
+            'programas' => Programa::query()->orderBy('nombre')->get(['id', 'nombre', 'snies', 'resolucion']),
             'ciclos' => array_map(fn (Ciclo $c) => [
                 'valor' => $c->value,
                 'etiqueta' => $c->label(),
